@@ -47,7 +47,7 @@ gives each of them a price from `fuelix/LLM-Inventory`:
 
 | Model | Live registry before | Plugin catalog price (in / out / cache read / cache write, USD per 1M) | Plugin catalog limits |
 | --- | --- | --- | --- |
-| `fuelix-openai/gpt-6.0-sol` | `cost: []`, 200000 / 32000 | 2 / 10 / 0.2 / 0 | pending (Phase 2 step) |
+| `fuelix-openai/gpt-6.0-sol` | `cost: []`, 200000 / 32000 | 2 / 10 / 0.2 / 0 | 1050000 / 128000 (from `gpt-6-sol`, same model) |
 | `fuelix/gemini-3.5-flash-ca` | `cost: []`, 200000 / 32000 | 1.5 / 9 / 0.15 / 0 | 1000000 / 64000 |
 | `fuelix/gemini-4-argon` | `cost: []`, 1048576 / 65536 | 2 / 10 / 0.1 / 0 | 1048576 / 65536 |
 | `fuelix-anthropic/claude-haiku-5` | `cost: []`, 200000 / 32000 | 0.1 / 0.5 / 0.01 / 0.125 | 1000000 / 128000 |
