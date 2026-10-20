@@ -1,0 +1,3710 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-20T02:43:01.847Z",
+  "sources": [
+    "OpenCode configuration (routing seed)",
+    "fuelix/LLM-Inventory (local copy)",
+    "GET /v1/models (live IDs)"
+  ],
+  "models": {
+    "c-haiku-4-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Haiku 4.5",
+      "limit": {
+        "context": 200000,
+        "output": 8000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1,
+        "output": 5,
+        "cacheRead": 0.1,
+        "cacheWrite": 1.25
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-haiku-4-5@20251001."
+      ]
+    },
+    "claude-3-5-haiku": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Claude 3.5 Haiku",
+      "limit": {
+        "context": 200000,
+        "output": 8000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 1,
+        "output": 5,
+        "cacheRead": 0.08,
+        "cacheWrite": 1
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "claude-3-5-haiku-20241022": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Claude 3.5 Haiku (2024-10-22)",
+      "limit": {
+        "context": 200000,
+        "output": 8000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 1,
+        "output": 5,
+        "cacheRead": 0.08,
+        "cacheWrite": 1
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "claude-3-7-sonnet": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Claude 3.7 Sonnet",
+      "limit": {
+        "context": 200000,
+        "output": 8192
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0."
+      ]
+    },
+    "claude-3-7-sonnet-20250219": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Claude 3.7 Sonnet (2025-02-19)",
+      "limit": {
+        "context": 200000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "claude-4-sonnet": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude 4 Sonnet",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-sonnet-4-6@default."
+      ]
+    },
+    "claude-haiku": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Haiku (Latest)",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.1,
+        "output": 0.5,
+        "cacheRead": 0.01,
+        "cacheWrite": 0.125
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 0.5,
+          "output": 2.5,
+          "cacheRead": 0.05,
+          "cacheWrite": 0.625
+        }
+      ],
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-haiku-5-5@default."
+      ]
+    },
+    "claude-haiku-4": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Haiku 4",
+      "limit": {
+        "context": 200000,
+        "output": 8000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1,
+        "output": 5,
+        "cacheRead": 0.1,
+        "cacheWrite": 1.25
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-haiku-4-5@20251001."
+      ]
+    },
+    "claude-haiku-4-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Haiku 4.5",
+      "limit": {
+        "context": 200000,
+        "output": 8000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1,
+        "output": 5,
+        "cacheRead": 0.1,
+        "cacheWrite": 1.25
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-haiku-4-5 (highest input price). Limits are the minimum across: anthropic/claude-haiku-4-5, vertex_ai/claude-haiku-4-5@20251001."
+      ]
+    },
+    "claude-haiku-4-5-20251001": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Haiku 4.5 (2025-10-01)",
+      "limit": {
+        "context": 200000,
+        "output": 8000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1,
+        "output": 5,
+        "cacheRead": 0.1,
+        "cacheWrite": 1.25
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-haiku-4-5@20251001."
+      ]
+    },
+    "claude-haiku-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Haiku 5",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.1,
+        "output": 0.5,
+        "cacheRead": 0.01,
+        "cacheWrite": 0.125
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 0.5,
+          "output": 2.5,
+          "cacheRead": 0.05,
+          "cacheWrite": 0.625
+        }
+      ],
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-haiku-5-5@default."
+      ]
+    },
+    "claude-haiku-5-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Haiku 5.5",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.1,
+        "output": 0.5,
+        "cacheRead": 0.01,
+        "cacheWrite": 0.125
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-haiku-5-5 (highest input price). Limits are the minimum across: anthropic/claude-haiku-5-5, vertex_ai/claude-haiku-5-5@default."
+      ]
+    },
+    "claude-opus": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Opus (Latest)",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 4,
+        "output": 20,
+        "cacheRead": 0.2,
+        "cacheWrite": 5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-opus-5-5 (highest input price). Limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
+      ]
+    },
+    "claude-opus-4-8": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Opus 4.8",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 5,
+        "output": 25,
+        "cacheRead": 0.5,
+        "cacheWrite": 6.25
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-opus-4-8@default."
+      ]
+    },
+    "claude-opus-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Opus 5",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 4,
+        "output": 20,
+        "cacheRead": 0.2,
+        "cacheWrite": 5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-opus-5-5 (highest input price). Limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
+      ]
+    },
+    "claude-opus-5-0": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Opus 5.0",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 5,
+        "output": 25,
+        "cacheRead": 0.5,
+        "cacheWrite": 6.25
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-opus-5@default."
+      ]
+    },
+    "claude-opus-5-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Opus 5.5",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 4,
+        "output": 20,
+        "cacheRead": 0.2,
+        "cacheWrite": 5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-opus-5-5 (highest input price). Limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
+      ]
+    },
+    "claude-sonnet": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet (Latest)",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-5-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
+      ]
+    },
+    "claude-sonnet-4": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet 4",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-4-6 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-4-6, vertex_ai/claude-sonnet-4-6@default."
+      ]
+    },
+    "claude-sonnet-4-20250514": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet 4 (2025-05-14)",
+      "limit": {
+        "context": 200000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-sonnet-4-5@20250929."
+      ]
+    },
+    "claude-sonnet-4-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet 4.5",
+      "limit": {
+        "context": 200000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-4-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-4-5, vertex_ai/claude-sonnet-4-5@20250929."
+      ]
+    },
+    "claude-sonnet-4-5-20250929": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet 4.5 (2025-09-29)",
+      "limit": {
+        "context": 200000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-sonnet-4-5@20250929."
+      ]
+    },
+    "claude-sonnet-4-5-bedrock": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Claude Sonnet 4.5 (Bedrock)",
+      "limit": {
+        "context": 200000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0."
+      ]
+    },
+    "claude-sonnet-4-6": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet 4.6",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-4-6 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-4-6, vertex_ai/claude-sonnet-4-6@default."
+      ]
+    },
+    "claude-sonnet-4-legacy": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Claude Sonnet 4 (Legacy)",
+      "limit": {
+        "context": 200000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 6,
+          "output": 22.5,
+          "cacheRead": 0.6,
+          "cacheWrite": 7.5
+        }
+      ],
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-sonnet-4@20250514."
+      ]
+    },
+    "claude-sonnet-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet 5",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-5-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
+      ]
+    },
+    "claude-sonnet-5-0": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet 5.0",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-sonnet-5@default."
+      ]
+    },
+    "claude-sonnet-5-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Sonnet 5.5",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-5-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
+      ]
+    },
+    "cursor-c-3-7-sonnet": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Cursor Claude 3.7 Sonnet",
+      "limit": {
+        "context": 200000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "cursor-c-4-sonnet": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Cursor Claude 4 Sonnet",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-sonnet-4-6@default."
+      ]
+    },
+    "cursor-c-sonnet-4-6": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Cursor Claude Sonnet 4.6",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 3,
+        "output": 15,
+        "cacheRead": 0.3,
+        "cacheWrite": 3.75
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/claude-sonnet-4-6@default."
+      ]
+    },
+    "cursor-c-sonnet-5": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Cursor Claude Sonnet 5",
+      "limit": {
+        "context": 1000000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-5-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
+      ]
+    },
+    "dall-e-3": {
+      "provider": "fuelix",
+      "kind": "image",
+      "name": "DALL-E 3",
+      "limit": {
+        "context": 4000,
+        "output": 0
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "image"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "deepseek-v4.1-flash": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "DeepSeek V4.1 Flash",
+      "limit": {
+        "context": 1000000,
+        "output": 384000
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.375,
+        "output": 1.5,
+        "cacheRead": 0.008,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/DeepSeek-V4.1-Flash."
+      ]
+    },
+    "gemini-2.5-flash": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 2.5 Flash",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.15,
+        "output": 0.6,
+        "cacheRead": 0.03,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-2-5-flash (highest input price). Limits are the minimum across: openai/gemini-2-5-flash, vertex_ai/gemini-2.5-flash."
+      ]
+    },
+    "gemini-2.5-flash-lite": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 2.5 Flash Lite",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.1,
+        "output": 0.4,
+        "cacheRead": 0.01,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-2.5-flash-lite."
+      ]
+    },
+    "gemini-2.5-pro": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 2.5 Pro",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 2.5,
+          "output": 15,
+          "cacheRead": 0.25,
+          "cacheWrite": 0
+        }
+      ],
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from gemini/gemini-2.5-pro (highest input price). Limits are the minimum across: gemini/gemini-2.5-pro, vertex_ai/gemini-2.5-pro."
+      ]
+    },
+    "gemini-3-flash": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3 Flash",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.75,
+        "output": 3.75,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.8-flash."
+      ]
+    },
+    "gemini-3-flash-preview": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3 Flash Preview",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.5,
+        "output": 3,
+        "cacheRead": 0.05,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3-flash-preview."
+      ]
+    },
+    "gemini-3-pro": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3 Pro",
+      "limit": {
+        "context": 1048576,
+        "output": 65536
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 12,
+        "cacheRead": 0.2,
+        "cacheWrite": 0
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 4,
+          "output": 18,
+          "cacheRead": 0.4,
+          "cacheWrite": 0
+        }
+      ],
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.1-pro-preview."
+      ]
+    },
+    "gemini-3-pro-preview": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3 Pro Preview",
+      "limit": {
+        "context": 1048576,
+        "output": 65536
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 12,
+        "cacheRead": 0.2,
+        "cacheWrite": 0
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 4,
+          "output": 18,
+          "cacheRead": 0.4,
+          "cacheWrite": 0
+        }
+      ],
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.1-pro-preview."
+      ]
+    },
+    "gemini-3.1-flash-image": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.1 Flash Image",
+      "limit": {
+        "context": 65536,
+        "output": 1290
+      },
+      "input": [
+        "text",
+        "image",
+        "video",
+        "pdf"
+      ],
+      "output": [
+        "text",
+        "image"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0.3,
+        "output": 30,
+        "cacheRead": 0.03,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory mode is image_generation. Kept as chat because the routing seed lists text and image output.",
+        "Inventory deployment: vertex_ai/gemini-3.1-flash-image."
+      ]
+    },
+    "gemini-3.1-flash-lite": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.1 Flash Lite",
+      "limit": {
+        "context": 1000000,
+        "output": 65536
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.25,
+        "output": 1.5,
+        "cacheRead": 0.025,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.1-flash-lite."
+      ]
+    },
+    "gemini-3.1-flash-lite-preview": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.1 Flash Lite Preview",
+      "limit": {
+        "context": 1000000,
+        "output": 65536
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.25,
+        "output": 1.5,
+        "cacheRead": 0.025,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.1-flash-lite."
+      ]
+    },
+    "gemini-3.1-pro": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.1 Pro",
+      "limit": {
+        "context": 1048576,
+        "output": 65536
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 12,
+        "cacheRead": 0.2,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-3-1-pro (highest input price). Limits are the minimum across: openai/gemini-3-1-pro, vertex_ai/gemini-3.1-pro-preview."
+      ]
+    },
+    "gemini-3.1-pro-preview": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.1 Pro Preview",
+      "limit": {
+        "context": 1048576,
+        "output": 65536
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 12,
+        "cacheRead": 0.2,
+        "cacheWrite": 0
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 4,
+          "output": 18,
+          "cacheRead": 0.4,
+          "cacheWrite": 0
+        }
+      ],
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.1-pro-preview."
+      ]
+    },
+    "gemini-3.5-flash": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.5 Flash",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.5,
+        "output": 9,
+        "cacheRead": 0.15,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.5-flash."
+      ]
+    },
+    "gemini-3.5-flash-ca": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.5 Flash CA",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.5,
+        "output": 9,
+        "cacheRead": 0.15,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.5-flash."
+      ]
+    },
+    "gemini-3.5-flash-lite": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.5 Flash Lite",
+      "limit": {
+        "context": 1000000,
+        "output": 65536
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.3,
+        "output": 2.5,
+        "cacheRead": 0.03,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-3.5-flash-lite."
+      ]
+    },
+    "gemini-3.6-flash": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.6 Flash",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.75,
+        "output": 3.75,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-3.8-flash (highest input price). Limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
+      ]
+    },
+    "gemini-3.7-flash": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.7 Flash",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.75,
+        "output": 3.75,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-3.8-flash (highest input price). Limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
+      ]
+    },
+    "gemini-3.8-flash": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.8 Flash",
+      "limit": {
+        "context": 1000000,
+        "output": 64000
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "pdf",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.75,
+        "output": 3.75,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-3.8-flash (highest input price). Limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
+      ]
+    },
+    "gemini-4-argon": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 4 Argon",
+      "limit": {
+        "context": 1048576,
+        "output": 65536
+      },
+      "input": [
+        "text",
+        "image",
+        "audio",
+        "video"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.1,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-4-argon."
+      ]
+    },
+    "gemma-4-26b-a4b-it": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemma 4 26B-A4B IT",
+      "limit": {
+        "context": 262144,
+        "output": 32768
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.15,
+        "output": 0.6,
+        "cacheRead": 0.015,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: gemini/gemma-4-26b-a4b-it."
+      ]
+    },
+    "gemma-4-31b-it": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemma 4 31B IT",
+      "limit": {
+        "context": 256000,
+        "output": 32768
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.14,
+        "output": 0.4,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from openai/google.gemma-4-31b (highest input price). Limits are the minimum across: openai/google.gemma-4-31b, gemini/gemma-4-31b-it."
+      ]
+    },
+    "gemma-4-saif-kidc": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemma 4 SAIF Kidc (Free, TELUS Sovereign, Canada)",
+      "limit": {
+        "context": 128000,
+        "output": 32768
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from openai/gemma-4-31b-it-saif-kidc (highest input price). Limits are the minimum across: openai/gemma-4-31b-it-saif-kidc, openai/kpn01-gemma4-31b-it-fp8."
+      ]
+    },
+    "gpt-4-0125-preview": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "GPT-4 Turbo (0125 Preview)",
+      "limit": {
+        "context": 128000,
+        "output": 4096
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 10,
+        "output": 30,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "gpt-4.1": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4.1",
+      "limit": {
+        "context": 1047576,
+        "output": 32768
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 2,
+        "output": 8,
+        "cacheRead": 0.5,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt41_20250414-useast2."
+      ]
+    },
+    "gpt-4.1-2025-04-14": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4.1 (2025-04-14)",
+      "limit": {
+        "context": 1047576,
+        "output": 32768
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 2,
+        "output": 8,
+        "cacheRead": 0.5,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt41_20250414-useast2."
+      ]
+    },
+    "gpt-4.1-mini": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4.1 Mini",
+      "limit": {
+        "context": 128000,
+        "output": 16384
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 1,
+        "output": 4,
+        "cacheRead": 0.1,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from azure/gpt41_mini_20250414-ca-east (highest input price). Limits are the minimum across: azure/gpt41_mini_20250414-ca-east, azure/gpt41_mini_20250414-useast2."
+      ]
+    },
+    "gpt-4.1-mini-canada": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4.1 Mini (Canada)",
+      "limit": {
+        "context": 128000,
+        "output": 16384
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 1,
+        "output": 4,
+        "cacheRead": 0.1,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt41_mini_20250414-ca-east."
+      ]
+    },
+    "gpt-4o": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4o",
+      "limit": {
+        "context": 128000,
+        "output": 4096
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 5,
+        "output": 15,
+        "cacheRead": 1.25,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 4 inventory deployments. Price and capabilities come from azure/gpt4o_20240513-useast (highest input price). Limits are the minimum across: azure/gpt4o_20240513-useast, azure/gpt4o_20241120-ca-east, azure/gpt4o_20241120-useast2, azure/gpt4o_20240513-useast2.",
+        "Price spread above 1% across deployments (input/output per 1M tokens): azure/gpt4o_20240513-useast (5/15), azure/gpt4o_20241120-ca-east (2.5/10), azure/gpt4o_20241120-useast2 (2.5/10), azure/gpt4o_20240513-useast2 (2.5/10)."
+      ]
+    },
+    "gpt-4o-2024-05-13": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4o (2024-05-13)",
+      "limit": {
+        "context": 128000,
+        "output": 4096
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 5,
+        "output": 15,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 3 inventory deployments. Price and capabilities come from azure/gpt4o_20240513-useast (highest input price). Limits are the minimum across: azure/gpt4o_20240513-useast, openai/gpt-4o-2024-05-13, azure/gpt4o_20240513-useast2.",
+        "Price spread above 1% across deployments (input/output per 1M tokens): azure/gpt4o_20240513-useast (5/15), openai/gpt-4o-2024-05-13 (5/15), azure/gpt4o_20240513-useast2 (2.5/10)."
+      ]
+    },
+    "gpt-4o-2024-05-13-content-filter": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4o (2024-05-13, Content Filter)",
+      "limit": {
+        "context": 128000,
+        "output": 4096
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 5,
+        "output": 15,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/telus-gpt-4o-2024-05-13-content-filter."
+      ]
+    },
+    "gpt-4o-2024-08-06": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4o (2024-08-06)",
+      "limit": {
+        "context": 128000,
+        "output": 16384
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 1.25,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from azure/gpt4o_20240806-useast2 (highest input price). Limits are the minimum across: azure/gpt4o_20240806-useast2, openai/gpt-4o-2024-08-06."
+      ]
+    },
+    "gpt-4o-mini": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4o Mini",
+      "limit": {
+        "context": 128000,
+        "output": 16384
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.165,
+        "output": 0.66,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt4o_mini_20240718-useast2."
+      ]
+    },
+    "gpt-4o-mini-2024-07-18": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4o Mini (2024-07-18)",
+      "limit": {
+        "context": 128000,
+        "output": 16384
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.165,
+        "output": 0.66,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt4o_mini_20240718-useast2."
+      ]
+    },
+    "gpt-4o-mini-2024-07-18-ptu": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-4o Mini (2024-07-18, PTU)",
+      "limit": {
+        "context": 128000,
+        "output": 16384
+      },
+      "input": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.165,
+        "output": 0.66,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "gpt-4o-transcribe": {
+      "provider": "fuelix",
+      "kind": "transcription",
+      "name": "GPT-4o Transcribe",
+      "limit": {
+        "context": 128000,
+        "output": 4096
+      },
+      "input": [
+        "text",
+        "audio"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt4o_transcribe_20250320-useast2."
+      ]
+    },
+    "gpt-4o-transcribe-2025-03-20": {
+      "provider": "fuelix",
+      "kind": "transcription",
+      "name": "GPT-4o Transcribe (2025-03-20)",
+      "limit": {
+        "context": 128000,
+        "output": 4096
+      },
+      "input": [
+        "text",
+        "audio"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 2.5,
+        "output": 10,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt4o_transcribe_20250320-useast2."
+      ]
+    },
+    "gpt-5": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt5_20250807-useast2."
+      ]
+    },
+    "gpt-5-2025-08-07": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5 (2025-08-07)",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt5_20250807-useast2."
+      ]
+    },
+    "gpt-5-chat": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5 Chat",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt5_chat_20250807-useast2."
+      ]
+    },
+    "gpt-5-chat-2025-08-07": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5 Chat (2025-08-07)",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.25,
+        "output": 10,
+        "cacheRead": 0.125,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt5_chat_20250807-useast2."
+      ]
+    },
+    "gpt-5-mini": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5 Mini",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.25,
+        "output": 2,
+        "cacheRead": 0.025,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt5_mini_20250807-useast2."
+      ]
+    },
+    "gpt-5-mini-2025-08-07": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5 Mini (2025-08-07)",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.25,
+        "output": 2,
+        "cacheRead": 0.025,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt5_mini_20250807-useast2."
+      ]
+    },
+    "gpt-5-nano": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5 Nano",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.05,
+        "output": 0.4,
+        "cacheRead": 0.005,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt5_nano_20250807-useast2."
+      ]
+    },
+    "gpt-5-nano-2025-08-07": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5 Nano (2025-08-07)",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.05,
+        "output": 0.4,
+        "cacheRead": 0.005,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt5_nano_20250807-useast2."
+      ]
+    },
+    "gpt-5.2-2025-12-11": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.2 (2025-12-11)",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt-5.2."
+      ]
+    },
+    "gpt-5.2-chat": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.2 Chat",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt-5.2-chat."
+      ]
+    },
+    "gpt-5.2-chat-2025-12-11": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.2 Chat (2025-12-11)",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.75,
+        "output": 14,
+        "cacheRead": 0.175,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt-5.2-chat."
+      ]
+    },
+    "gpt-5.4": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.4",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2.5,
+        "output": 15,
+        "cacheRead": 0.25,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt54_20260305-useast2."
+      ]
+    },
+    "gpt-5.4-2026-03-05": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.4 (2026-03-05)",
+      "limit": {
+        "context": 272000,
+        "output": 128000
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2.5,
+        "output": 15,
+        "cacheRead": 0.25,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt54_20260305-useast2."
+      ]
+    },
+    "gpt-5.4-mini": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.4 Mini",
+      "limit": {
+        "context": 400000,
+        "output": 128000
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.75,
+        "output": 4.5,
+        "cacheRead": 0.075,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt54_mini_20260317-useast2."
+      ]
+    },
+    "gpt-5.4-nano": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.4 Nano",
+      "limit": {
+        "context": 400000,
+        "output": 128000
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.2,
+        "output": 1.25,
+        "cacheRead": 0.02,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from azure/gpt54_nano_20260317-useast2 (highest input price). Limits are the minimum across: azure/gpt54_nano_20260317-useast2, openai/gpt-5.4-nano."
+      ]
+    },
+    "gpt-5.6-luna": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.6 Luna",
+      "limit": {
+        "context": 1050000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.2,
+        "output": 1.2,
+        "cacheRead": 0.02,
+        "cacheWrite": 0.25
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt-5-6-luna-useast2."
+      ]
+    },
+    "gpt-5.6-terra": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-5.6 Terra",
+      "limit": {
+        "context": 1050000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 12,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt-5-6-terra-useast2."
+      ]
+    },
+    "gpt-6-luna": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-6 Luna",
+      "limit": {
+        "context": 1050000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 0.1,
+        "output": 0.5,
+        "cacheRead": 0.01,
+        "cacheWrite": 0.125
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 0.2,
+          "output": 0.75,
+          "cacheRead": 0.02,
+          "cacheWrite": 0.125
+        }
+      ],
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt-6-luna-uswest."
+      ]
+    },
+    "gpt-6-sol": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-6 Sol",
+      "limit": {
+        "context": 1050000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.1,
+        "cacheWrite": 2.5
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: openai/openai.gpt-6.1-sol."
+      ]
+    },
+    "gpt-6.0-sol": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-6.0 Sol",
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.2,
+        "cacheWrite": 0
+      },
+      "costTiers": [
+        {
+          "contextOver": 200000,
+          "input": 4,
+          "output": 15,
+          "cacheRead": 0.4,
+          "cacheWrite": 0
+        }
+      ],
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: azure/gpt-6-sol-uswest."
+      ]
+    },
+    "gpt-6.1-sol": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-6.1 Sol",
+      "limit": {
+        "context": 1050000,
+        "output": 128000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 2,
+        "output": 10,
+        "cacheRead": 0.1,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: openai/openai.gpt-6.1-sol."
+      ]
+    },
+    "imagen-3": {
+      "provider": "fuelix",
+      "kind": "image",
+      "name": "Imagen 3 ($0.04/image, not token-billed)",
+      "limit": {
+        "context": 480,
+        "output": 0
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "image"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "imagen-3-fast": {
+      "provider": "fuelix",
+      "kind": "image",
+      "name": "Imagen 3 Fast ($0.02/image, not token-billed)",
+      "limit": {
+        "context": 480,
+        "output": 0
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "image"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "imagen-4": {
+      "provider": "fuelix",
+      "kind": "image",
+      "name": "Imagen 4 ($0.04/image, not token-billed)",
+      "limit": {
+        "context": 480,
+        "output": 1290
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "image"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-2.5-flash-image."
+      ]
+    },
+    "imagen-4-ultra": {
+      "provider": "fuelix",
+      "kind": "image",
+      "name": "Imagen 4 Ultra ($0.06/image, not token-billed)",
+      "limit": {
+        "context": 480,
+        "output": 1290
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "image"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/gemini-2.5-flash-image."
+      ]
+    },
+    "llama-3.2-90b": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Llama 3.2 90B Vision Instruct",
+      "limit": {
+        "context": 128000,
+        "output": 8192
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.35,
+        "output": 0.4,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "llama-4-maverick-17b-128e": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Llama 4 Maverick 17B-128E Instruct",
+      "limit": {
+        "context": 1000000,
+        "output": 1000000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.35,
+        "output": 1.15,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas."
+      ]
+    },
+    "llama-4-scout-17b-16e": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Llama 4 Scout 17B-16E Instruct",
+      "limit": {
+        "context": 10000000,
+        "output": 10000000
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 0.25,
+        "output": 0.7,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: vertex_ai/meta/llama-4-scout-17b-16e-instruct-maas."
+      ]
+    },
+    "mistral-large": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Mistral Large",
+      "limit": {
+        "context": 32000,
+        "output": 8191
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 8,
+        "output": 24,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Inventory deployment: bedrock/mistral.mistral-large-2402-v1:0."
+      ]
+    },
+    "mistral-large-24.11": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Mistral Large 24.11",
+      "limit": {
+        "context": 131072,
+        "output": 32768
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": false,
+      "cost": {
+        "input": 2,
+        "output": 6,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "No active inventory deployment matches this ID. Metadata comes from the routing seed."
+      ]
+    },
+    "o3-mini": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "OpenAI o3 mini",
+      "limit": {
+        "context": 200000,
+        "output": 100000
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.1,
+        "output": 4.4,
+        "cacheRead": 0.55,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Inventory deployment: openai/o3-mini-2025-01-31."
+      ]
+    },
+    "o4-mini": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "OpenAI o4 mini",
+      "limit": {
+        "context": 128000,
+        "output": 8192
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "cost": {
+        "input": 1.1,
+        "output": 4.4,
+        "cacheRead": 0.275,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "inventory"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from azure/o4_mini_20250416-useast2 (highest input price). Limits are the minimum across: azure/o4_mini_20250416-useast2, openai/o4-mini-2025-04-16."
+      ]
+    },
+    "text-embedding-3-large": {
+      "provider": "fuelix",
+      "kind": "embedding",
+      "name": "Text Embedding 3 Large",
+      "limit": {
+        "context": 8191,
+        "output": 8191
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0.13,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 2 inventory deployments. Price and capabilities come from azure/text_embedding_3_large-ca-east (highest input price). Limits are the minimum across: azure/text_embedding_3_large-ca-east, azure/text_embedding_3_large-useast2."
+      ]
+    },
+    "text-embedding-3-small": {
+      "provider": "fuelix",
+      "kind": "embedding",
+      "name": "Text Embedding 3 Small",
+      "limit": {
+        "context": 8191,
+        "output": 8191
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0.02,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 5 inventory deployments. Price and capabilities come from azure/text_embedding_3_small-useast (highest input price). Limits are the minimum across: azure/text_embedding_3_small-useast, azure/text_embedding_3_small-useast2, azure/text_embedding_3_small-uswest, azure/text_embedding_3_small_global-ca-east, azure/text_embedding_3_small_global-useast2."
+      ]
+    },
+    "text-embedding-ada-002": {
+      "provider": "fuelix",
+      "kind": "embedding",
+      "name": "Text Embedding Ada 002 (legacy)",
+      "limit": {
+        "context": 8191,
+        "output": 8191
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0.1,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "mixed"
+      },
+      "notes": [
+        "Matched 3 inventory deployments. Price and capabilities come from azure/telus-text-embedding-ada-002 (highest input price). Limits are the minimum across: azure/telus-text-embedding-ada-002, azure/text-embedding-ada-002-ca-east, azure/text_embedding_ada-useast2."
+      ]
+    },
+    "tts-1": {
+      "provider": "fuelix",
+      "kind": "speech",
+      "name": "TTS-1 (Free on FuelIX)",
+      "limit": {
+        "context": 4096,
+        "output": 0
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "audio"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "Inventory deployment: openai/tts-1."
+      ]
+    },
+    "tts-1-hd": {
+      "provider": "fuelix",
+      "kind": "speech",
+      "name": "TTS-1 HD (Free on FuelIX)",
+      "limit": {
+        "context": 4096,
+        "output": 0
+      },
+      "input": [
+        "text"
+      ],
+      "output": [
+        "audio"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "active",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "Inventory deployment: openai/tts-1-hd."
+      ]
+    },
+    "whisper-1": {
+      "provider": "fuelix",
+      "kind": "transcription",
+      "name": "Whisper 1 (Free on FuelIX)",
+      "limit": {
+        "context": 0,
+        "output": 0
+      },
+      "input": [
+        "audio"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": false,
+      "reasoning": false,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "status": "deprecated",
+      "listed": true,
+      "sources": {
+        "routing": "config",
+        "metadata": "config"
+      },
+      "notes": [
+        "Inventory deployment: openai/whisper-1."
+      ]
+    }
+  }
+}

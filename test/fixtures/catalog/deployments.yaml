@@ -1,0 +1,95 @@
+- active: true
+  alias:
+    current:
+      - alpha
+      - alpha-2026
+  model:
+    name: alpha
+    version: ""
+  deployment: vertex_ai/alpha@default
+  provider: vertex_ai
+  litellm:
+    mode: chat
+    supported_modalities: [text, image, pdf]
+    supports_function_calling: true
+    supports_reasoning: true
+  api_key: "sk-test-not-a-real-key"
+  aws_access_key_id: "AKIAFAKEFAKEFAKE"
+  aws_secret_access_key: "fake-aws-secret-value"
+- active: true
+  alias:
+    current: alpha
+  model:
+    name: alpha
+  deployment: anthropic/alpha
+  provider: anthropic
+  litellm:
+    mode: chat
+    supported_modalities: [text]
+    supports_function_calling: false
+    supports_reasoning: false
+  api_key: "sk-test-not-a-real-key"
+- active: true
+  alias:
+    current: [alpha]
+  model:
+    name: alpha
+  deployment: vertex_ai/alpha@old
+  provider: vertex_ai
+  litellm:
+    mode: chat
+  deprecation:
+    status: retired
+    date: "2026-01-01"
+- active: false
+  alias:
+    current: [alpha]
+  model:
+    name: alpha
+  deployment: vertex_ai/alpha@inactive
+  provider: vertex_ai
+  litellm:
+    mode: chat
+- active: true
+  alias:
+    current: beta
+  model:
+    name: beta
+  deployment: azure/beta
+  provider: azure
+  litellm:
+    mode: chat
+    supported_modalities: [text, image]
+    supports_function_calling: true
+    supports_reasoning: true
+  deprecation:
+    status: deprecated
+    date: "2027-01-01"
+- active: true
+  alias:
+    current: [emb]
+  model:
+    name: emb
+  deployment: azure/emb
+  provider: azure
+  litellm:
+    mode: embedding
+- active: true
+  alias:
+    current: [img-chat]
+  model:
+    name: img-chat
+  deployment: vertex_ai/img-chat
+  provider: vertex_ai
+  litellm:
+    mode: image_generation
+    supported_modalities: [text, image]
+- active: true
+  alias:
+    current: [no-cost]
+  model:
+    name: no-cost
+  deployment: azure/no-cost
+  provider: azure
+  litellm:
+    mode: chat

@@ -1,0 +1,61 @@
+{
+  "provider": {
+    "fuelix-openai": {
+      "npm": "@ai-sdk/openai",
+      "name": "FueliX OpenAI",
+      "options": { "baseURL": "https://api.fuelix.ai/v1", "apiKey": "sk-test-not-a-real-key" },
+      "models": {
+        "beta": {
+          "name": "Beta",
+          "limit": { "context": 400000, "output": 100000 },
+          "attachment": true,
+          "reasoning": true,
+          "tool_call": true,
+          "modalities": { "input": ["text", "image"], "output": ["text"] },
+          "cost": { "input": 1, "output": 2, "cache_read": 0.5, "cache_write": 1.5 }
+        },
+        "seed-only": {
+          "name": "Seed Only",
+          "limit": { "context": 128000, "output": 8000 },
+          "reasoning": false,
+          "tool_call": true,
+          "modalities": { "input": ["text"], "output": ["text"] },
+          "cost": { "input": 0.5, "output": 1.5, "cache_read": 0.05, "cache_write": 0.6 }
+        }
+      }
+    },
+    "fuelix": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "FueliX",
+      "options": { "baseURL": "https://api.fuelix.ai/v1", "headers": { "Authorization": "Bearer fake-token-not-real" } },
+      "models": {
+        "emb": { "name": "Embedding", "limit": { "context": 8191, "output": 0 } },
+        "img-chat": {
+          "name": "Image Chat",
+          "modalities": { "input": ["text", "image"], "output": ["text", "image"] }
+        }
+      }
+    },
+    "unrelated": {
+      "options": { "apiKey": "sk-test-other-provider" },
+      "models": { "ignored-model": { "name": "Ignored" } }
+    }
+  },
+  "providers": {
+    "fuelix-anthropic": {
+      "name": "FueliX Anthropic",
+      "package": "@opencode/ai/providers/anthropic",
+      "settings": { "baseURL": "https://api.fuelix.ai", "apiKey": "sk-test-not-a-real-key" },
+      "headers": { "Authorization": "Bearer fake-token-not-real" },
+      "models": {
+        "alpha": {
+          "modelID": "alpha",
+          "name": "Alpha",
+          "capabilities": { "tools": true, "input": ["text", "image", "pdf"], "output": ["text"] },
+          "cost": { "input": 4, "output": 20, "cache": { "read": 0.4, "write": 5 } },
+          "limit": { "context": 500000, "output": 64000 }
+        }
+      }
+    }
+  }
+}
