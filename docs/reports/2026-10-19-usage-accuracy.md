@@ -65,5 +65,44 @@ gives each of them a price from `fuelix/LLM-Inventory`:
 
 ## Token parity per provider
 
-Pending: the live probe (`test/integration/live-usage.test.ts`) compares each FueliX `usage` object with the tokens and
-cost that OpenCode records for the same model call.
+`test/integration/live-usage.test.ts` ran on 2026-10-20 against the real gateway. An isolated OpenCode server loaded
+the plugin, and a recording proxy between OpenCode and FueliX stored each FueliX `usage` object. Each model received
+two prompts, so the second call could use the prompt cache. The table compares each agent call with the
+`session.step.ended` event that OpenCode emitted for it. Cost is USD; OpenCode output includes reasoning tokens.
+
+| Model | Call | Input (FueliX / OpenCode) | Output (FueliX / OpenCode) | Cache read | Cache write | Cost (FueliX-derived / OpenCode) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fuelix-openai/gpt-5-nano` | 1 | 4418 / 4418 | 117 / 117 | 0 / 0 | 0 / 0 | 0.0002677 / 0.0002677 |
+| `fuelix-openai/gpt-5-nano` | 2 | 84 / 84 | 113 / 113 | 4352 / 4352 | 0 / 0 | 0.00007116 / 0.00007116 |
+| `fuelix-anthropic/claude-haiku-4-5` | 1 | 3 / 3 | 4 / 4 | 0 / 0 | 6115 / 6115 | 0.00766675 / 0.00766675 |
+| `fuelix-anthropic/claude-haiku-4-5` | 2 | 3 / 3 | 4 / 4 | 0 / 0 | 6129 / 6129 | 0.00768425 / 0.00768425 |
+| `fuelix/gemini-2.5-flash-lite` | 1 | 4169 / 4169 | 2 / 2 | 0 / 0 | 0 / 0 | 0.0004177 / 0.0004177 |
+| `fuelix/gemini-2.5-flash-lite` | 2 | 140 / 140 | 2 / 2 | 4038 / 4038 | 0 / 0 | 0.00005518 / 0.00005518 |
+
+"FueliX-derived" cost applies the catalog price to the FueliX `usage` object; FueliX itself returns no cost. Every
+field matched, every cost matched within `1e-9` USD, and every FueliX request carried `Authorization: Bearer` and
+returned HTTP 200 (including Anthropic). `test/integration/wire-replay.test.ts` replays the recorded streams offline
+and asserts the same values, so a regression shows without a FueliX key.
+
+## Other findings
+
+- **Session totals include title generation.** OpenCode also asks the session model for a title. The title call has no
+  `session.step.ended` event, but its cost is in the session total. With `gpt-5-nano`, the title call used 944 output
+  tokens (reasoning), more than both agent calls together.
+- **Anthropic prompt cache across user turns.** In the probe, the second user turn wrote a new 6,129-token cache entry
+  instead of reading the 6,115-token entry that the first turn wrote. FueliX itself keeps the cache: three identical
+  direct requests to `/v1/messages` with a 9,902-token cached system block returned cache write 9,902, then cache read
+  9,902 twice. So the prefix that OpenCode sent changed between the two turns. Real sessions from the last 14 days still
+  read the cache 14 to 23 times per write (`claude-opus`, `claude-sonnet-5-5` in `session_v2`), which suggests that the
+  cache works inside a turn's tool loop and is rewritten when a new user turn starts. This is a cost-efficiency issue in
+  OpenCode's request assembly, not a reporting error. It is listed as a follow-up in the plan.
+- **Chat Completions path.** The `fuelix` provider sends requests to `https://api.fuelix.ai/chat/completions` (no
+  `/v1`). FueliX accepts that path.
+
+## Result
+
+- Before the plugin, eight FueliX models showed `$0` because they had no price, and seven of them also had the default
+  limits, so the context percentage was wrong for them. With the plugin, every FueliX chat model has a price and limits.
+- For the models measured, the tokens and cost in OpenCode, and therefore in the TUI and in the OpenChamber session
+  panel, equal the FueliX usage priced at the catalog rate.
+- Displayed turn costs below $0.005 round to `$0` in the OpenChamber panel. That is display rounding, not missing data.

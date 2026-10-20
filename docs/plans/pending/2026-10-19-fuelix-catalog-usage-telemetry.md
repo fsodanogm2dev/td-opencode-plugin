@@ -5,8 +5,8 @@ Owner: Fabricio Sodano · Created: 2026-10-19 · Target: OpenCode `v2.0.32`, `@o
 ## Steps
 
 - [x] Phase 0: Bootstrap the repository (package, type check, tests, agent rules)
-- [ ] Phase 1: Load the FueliX catalog from `/v1/models` and resolve one API key securely
-- [ ] Phase 2: Verify that the TUI and OpenChamber report accurate tokens, cost, and context
+- [x] Phase 1: Load the FueliX catalog from `/v1/models` and resolve one API key securely
+- [x] Phase 2: Verify that the TUI and OpenChamber report accurate tokens, cost, and context
 - [ ] Phase 3: Emit td-telemetry events from OpenCode sessions
 
 ## Context
@@ -161,6 +161,14 @@ with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays 
 2. Integration test: an isolated td-telemetry pair (scratch `TD_DATA_DIR`, `HOME`, and ports) and an isolated OpenCode
    server with the plugin. After one prompt, the `events` table has an `api_request` row with a non-zero `cost_usd`, the
    `segments` table has a row with project and branch, and the dashboard API shows the session cost.
+
+## Follow-ups found during the work
+
+- **Anthropic prompt cache across user turns**: in the Phase 2 probe, a new user turn rewrote the cache instead of
+  reading it, although FueliX keeps the cache for identical requests. Compare two consecutive OpenCode request bodies
+  to find the block that changes. Evidence: `docs/reports/2026-10-19-usage-accuracy.md`, "Other findings".
+- **Title generation cost**: OpenCode generates titles with the session model. Check whether OpenCode V2 lets a user
+  choose a cheaper title model, and document it.
 
 ## Out of scope
 
