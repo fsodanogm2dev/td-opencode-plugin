@@ -1,0 +1,23 @@
+// Reduced global OpenCode configuration with this plugin.
+// Copy the parts you need into ~/.config/opencode/opencode.json.
+// This file is in examples/ on purpose: OpenCode does not load it from here.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "fuelix-openai/gpt-6-luna",
+  "plugins": [
+    {
+      "package": "github:fsodanogm2dev/td-opencode-plugin",
+      "options": {
+        "fuelix": {
+          "keychainService": "fuelix-api-key",
+          "refreshMinutes": 60
+        },
+        "telemetry": {
+          "enabled": true
+        }
+      }
+    }
+  ]
+  // No "provider" or "providers" blocks for fuelix, fuelix-openai, or fuelix-anthropic:
+  // the plugin registers these providers and their models.
+}

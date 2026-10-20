@@ -66,18 +66,31 @@ providers, and no API response exposes it.
   not on Anthropic Messages). Rules route unknown IDs by family (`gpt-*`/`o*` → Responses, `claude-*` → Anthropic,
   others → Chat Completions).
 - **Metadata order**: curated table → OpenCode built-in catalog for the matching upstream model → safe defaults with a
-  warning. The curated table holds price per 1M tokens (input, output, cache read, cache write), limits, input and output
-  modalities, tool support, and reasoning support.
+  warning. The curated table holds price per 1M tokens (input, output, cache read, cache write, 200k context tier),
+  limits, input and output modalities, tool support, and reasoning support. `scripts/build-catalog.ts` generates it at
+  development time from `fuelix/LLM-Inventory` (`data/deployments.yaml`, `data/costs.yaml`) plus the routing seed. The
+  runtime does not need GitHub access (decision D8).
+- **Variants**: the plugin replicates the OpenCode `2.0.32` variant rules for its three packages
+  (`packages/core/src/variant.ts`), because that module is not exported to plugins. Today every configured model gets
+  reasoning variants, including models that do not reason (for example `gpt-4.1`). The plugin adds no variants to a
+  model that the catalog marks `reasoning: false` (decision D7).
 - **Non-chat models** (embeddings, text-to-speech, transcription, image generation) are not registered by default,
   because the chat model picker cannot use them. Option `includeNonChatModels` restores them (decision D3).
 - **Key resolution order**, first match wins:
   1. macOS Keychain item `fuelix-api-key` (option `keychainService`), read with `/usr/bin/security`.
   2. OpenCode credential store: the active connection of the `fuelix` integration (`/connect` → FuelIX).
   3. Environment variable `FUELIX_API_KEY`.
-- **Key injection**: the plugin keeps the key in memory and sets `Authorization: Bearer <key>` on each FueliX request
-  with a `session.hook("http.request")` scoped to the three providers. Provider `settings` and `headers` carry no secret
-  (decision D2). Research item: confirm the packages start without a real `apiKey`; if not, set a fixed non-secret
-  placeholder.
+- **One credential**: all three providers set `integrationID: "fuelix"`. OpenCode then injects the credential-store key
+  of the `fuelix` integration as the runtime `apiKey` of each provider, without exposing it in `settings` (decision D5).
+  The user's existing `/connect` credential for `fuelix` works without change.
+- **Key injection**: a `session.hook("http.request")` scoped to each FueliX provider sets `Authorization: Bearer <key>`.
+  It moves the `x-api-key` value that the Anthropic package sends (FueliX rejects it), and it applies a Keychain key
+  (override) or `FUELIX_API_KEY` (fallback). Provider `settings` and `headers` carry no secret (decisions D2, D6).
+  An integration `command` method that runs `security` is not used, because OpenCode stores the command output in the
+  `credential` table, which would copy the Keychain secret into `opencode.db`.
+- **Activation**: `enabled` when the plugin holds a Keychain or environment key, otherwise `auto` (the providers appear
+  when the `fuelix` integration has a connection). With `enabled` and no key, OpenCode sends requests without
+  credentials, and FueliX rejects them.
 - **Configuration migration**: `examples/opencode.jsonc` shows the reduced configuration. A dry-run script prints the
   user's configuration without the FueliX blocks; it never writes the file.
 
@@ -171,3 +184,15 @@ with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays 
 - **D2**: Keep secrets out of provider `settings` and `headers`. Inject the key per request.
 - **D3**: Do not register non-chat models by default.
 - **D4**: Feed td-telemetry only through its public interfaces (OTLP receiver and hook scripts).
+- **D5**: Use `integrationID: "fuelix"` on all three providers, so one credential serves them.
+- **D6**: Authenticate with an `http.request` hook that sets `Authorization: Bearer`. Do not use provider headers or a
+  `command` integration method.
+- **D7**: Replicate the OpenCode `2.0.32` variant rules. Add no variants to models that the catalog marks
+  `reasoning: false`.
+- **D8**: Generate the catalog from `fuelix/LLM-Inventory` at development time. When one model ID maps to several
+  deployments, use the highest base input price (list rate) and the smallest limits. Contracted Anthropic rates are
+  lower and private, so the cost shown can be higher than the metered cost for requests that FueliX routes to the
+  `anthropic/*` deployment.
+- **D9**: In td-telemetry, report subagent activity under the root session ID with `query_source = agent:builtin:<agent>`,
+  because td-telemetry attributes subagent spend inside the parent session. Report the tools named in
+  `subagentToolNames` as `Task`, so td-telemetry builds subagent run windows.
