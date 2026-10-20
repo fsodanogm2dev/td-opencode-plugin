@@ -7,7 +7,19 @@ Owner: Fabricio Sodano · Created: 2026-10-19 · Target: OpenCode `v2.0.32`, `@o
 - [x] Phase 0: Bootstrap the repository (package, type check, tests, agent rules)
 - [x] Phase 1: Load the FueliX catalog from `/v1/models` and resolve one API key securely
 - [x] Phase 2: Verify that the TUI and OpenChamber report accurate tokens, cost, and context
-- [ ] Phase 3: Emit td-telemetry events from OpenCode sessions
+- [x] Phase 3: Emit td-telemetry events from OpenCode sessions
+
+## Gate evidence
+
+| Phase | Evidence |
+| --- | --- |
+| 0 | A fresh clone passes `bun run typecheck` and `bun test test/unit`. `.github/workflows/ci.yml` runs both. |
+| 1 | `test/integration/fuelix-plugin.test.ts`: the three providers, every chat model with a price and limits, discovery reload, Bearer auth, no key in `GET /api/model` or `GET /api/provider`. `test/integration/live-usage.test.ts`: one live prompt per provider, HTTP 200 with Bearer auth. `scripts/migrate-config.ts`: the author's configuration goes from 2,659 to 80 lines. |
+| 2 | [`docs/reports/2026-10-19-usage-accuracy.md`](../../reports/2026-10-19-usage-accuracy.md) (live token and cost parity, all fields equal), [`docs/reports/2026-10-20-registry-comparison.md`](../../reports/2026-10-20-registry-comparison.md) (every change between the current configuration and the plugin). `test/integration/wire-replay.test.ts` replays the live streams offline. |
+| 3 | `test/unit/telemetry/normalizer-compat.test.ts` decodes the emitted payloads with td-telemetry's own normalizer. `test/integration/td-telemetry.test.ts` runs a real td-telemetry receiver: plain prompt, tool call, idle `SessionEnd`, branch recorded as the feature key, stored `cost_usd` equal to OpenCode's step cost. |
+
+The integration tests need the `opencode` CLI and run on a developer machine (`test/integration/README.md`). CI runs
+the type check and the unit tests.
 
 ## Context
 
@@ -204,9 +216,13 @@ with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays 
 - **D9**: In td-telemetry, report subagent activity under the root session ID with `query_source = agent:builtin:<agent>`,
   because td-telemetry attributes subagent spend inside the parent session. Report the tools named in
   `subagentToolNames` as `Task`, so td-telemetry builds subagent run windows.
-- **D10**: Keep one telemetry emitter per plugin instance. OpenCode loads one plugin instance per location, and its bus
-  delivers each session's events only to the instance of that session's location (`packages/core/src/bus.ts`,
-  `local()` filter). Prompt hooks also run per session location. So each session is reported once.
+- **D10**: Report each session from exactly one plugin instance. OpenCode loads one plugin instance per location, and
+  sometimes two for one directory with two spellings (`/var/...` and `/private/var/...` on macOS). The bus filters
+  routed events by location, but it delivers events without a route or location to every instance
+  (`packages/core/src/bus.ts`, `local()`), so several instances can see one session; the real-receiver test stored two
+  segments for one session in about 1 run in 10 before this rule. Instances register their location in a process-wide
+  registry (`src/telemetry/ownership.ts`). An instance reports a session only when the session directory is its exact
+  location or, without an exact owner, when it is the smallest registered directory with the same real path.
 - **D11**: Ship a root `index.ts` that re-exports `src/index.ts`. OpenCode loads a local plugin directory through
   `<dir>/index.*` or `<dir>/server.*` and ignores `package.json` `exports`.
 - **D12**: Per-field source priority in the catalog. Prices: LLM-Inventory first, because FueliX meters with those rows.
