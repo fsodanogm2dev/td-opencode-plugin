@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { createMemoryLogger } from "../../../src/log.ts"
@@ -300,5 +300,48 @@ describe("setupTelemetry", () => {
     const log = createMemoryLogger()
     const cleanup = await setupTelemetry({} as never, options(), log, deps)
     await cleanup()
+  })
+})
+
+describe("plugin instances for aliased directories", () => {
+  test("an instance whose location is an alias of the session location emits nothing", async () => {
+    const real = path.join(dir, "real")
+    const alias = path.join(dir, "alias")
+    mkdirSync(real)
+    symlinkSync(real, alias)
+    const { deps, hookCalls } = fakes()
+    const feed = channel()
+    const { ctx } = fakeContext(feed)
+    ;(ctx as any).location = { directory: alias }
+    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_alias", location: { directory: real } } })
+    feed.push({
+      type: "session.step.ended",
+      created: 2,
+      data: { sessionID: "ses_alias", assistantMessageID: "m", cost: 0.1, tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } } },
+    })
+    await sleep(100)
+    await cleanup()
+    expect(bodies).toEqual([])
+    expect(hookCalls).toEqual([])
+  })
+
+  test("an instance whose location equals the session location emits", async () => {
+    const real = path.join(dir, "real")
+    mkdirSync(real)
+    const { deps } = fakes()
+    const feed = channel()
+    const { ctx } = fakeContext(feed)
+    ;(ctx as any).location = { directory: real }
+    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_same", location: { directory: real } } })
+    feed.push({
+      type: "session.step.ended",
+      created: 2,
+      data: { sessionID: "ses_same", assistantMessageID: "m", cost: 0.1, tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } } },
+    })
+    await sleep(100)
+    await cleanup()
+    expect(allRecords()).toHaveLength(1)
   })
 })

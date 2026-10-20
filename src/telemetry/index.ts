@@ -6,6 +6,7 @@ import type { TelemetryOptions } from "../options.ts"
 import { checkNode, defaultLocateFs, locateRoot } from "./locate.ts"
 import type { LocateFs } from "./locate.ts"
 import { Mapper } from "./mapper.ts"
+import { createOwnership } from "./ownership.ts"
 import { defaultRun, defaultSpawnDetached } from "./process.ts"
 import type { RunProcess, SpawnDetached } from "./process.ts"
 import { Segments } from "./segments.ts"
@@ -110,7 +111,7 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
 
   // Start the receiver and dashboard pair. The script always exits 0 and runs detached.
   ;(deps.spawnDetached ?? defaultSpawnDetached)(options.node, [path.join(root, "lib", "process-manager.mjs")], env)
-  log.info("telemetry is on", { root })
+  log.info("telemetry is on", { root, directory: ctx.location?.directory })
 
   const mapper = new Mapper({ subagentToolNames: options.subagentToolNames, now })
   const segments = new Segments({
@@ -173,6 +174,8 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     if (parentID) await ensureKnown(parentID, depth + 1)
   }
 
+  const ownsSession = createOwnership(ctx.location?.directory)
+
   const segmentInfo = (rootID: string) => ({ directory: mapper.directoryOf(rootID), title: mapper.titleOf(rootID) })
 
   const handleEvent = async (event: OpenCodeEvent): Promise<void> => {
@@ -187,6 +190,8 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     }
     const records = mapper.event(event)
     const rootID = mapper.rootOf(sessionID)
+    // Another plugin instance owns a session whose location is an alias of this instance's location.
+    if (!ownsSession(mapper.directoryOf(rootID))) return
     const isRoot = rootID === sessionID
     if (event.type === "session.renamed" && isRoot) {
       const title = mapper.titleOf(sessionID)
@@ -207,6 +212,7 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     await ensureKnown(sessionID)
     const rootID = mapper.rootOf(sessionID)
     if (rootID !== sessionID) return
+    if (!ownsSession(mapper.directoryOf(rootID))) return
     segments.prompt(rootID, segmentInfo(rootID))
     transport.enqueue(mapper.promptHook(sessionID, messageID, now()))
   }

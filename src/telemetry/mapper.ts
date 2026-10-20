@@ -186,6 +186,9 @@ export class Mapper {
       case "session.step.ended":
       case "session.step.failed":
         return sessionID ? this.stepEnded(sessionID, data, at, event.type === "session.step.failed") : []
+      case "session.tool.input.started":
+        // OpenCode 2.0.32 puts the tool name only on this event. `session.tool.called` and the result events carry none.
+        return sessionID ? this.toolInputStarted(sessionID, data, at) : []
       case "session.tool.called":
         return sessionID ? this.toolCalled(sessionID, data, at) : []
       case "session.tool.success":
@@ -296,10 +299,20 @@ export class Mapper {
     return this.subagentTools.has(name.toLowerCase()) ? "Task" : name
   }
 
-  private toolCalled(sessionID: string, data: Record<string, unknown>, at: number): TelemetryRecord[] {
+  private toolInputStarted(sessionID: string, data: Record<string, unknown>, at: number): TelemetryRecord[] {
     const id = str(data, "id")
     const name = str(data, "name")
     if (id && name) setBounded(this.tools, id, { sessionID, name, startMs: at, decided: false })
+    return []
+  }
+
+  private toolCalled(sessionID: string, data: Record<string, unknown>, at: number): TelemetryRecord[] {
+    const id = str(data, "id")
+    if (!id) return []
+    const existing = this.tools.get(id)
+    const name = str(data, "name") ?? existing?.name
+    // The call starts here. The input stream started earlier.
+    if (name) setBounded(this.tools, id, { sessionID, name, startMs: at, decided: existing?.decided ?? false })
     return []
   }
 

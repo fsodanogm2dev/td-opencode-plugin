@@ -252,3 +252,28 @@ describe("mapper: sessions", () => {
     expect(completed[0]?.attributes).toMatchObject({ model: "model-a", final_model: "model-b", model_swapped: "true" })
   })
 })
+
+describe("mapper: tool name source", () => {
+  test("the tool name comes from session.tool.input.started, as in OpenCode 2.0.32", () => {
+    const mapper = newMapper()
+    mapper.registerSession("s", {})
+    mapper.event({ type: "session.tool.input.started", created: 5, data: { sessionID: "s", assistantMessageID: "m", id: "c", name: "read" } })
+    mapper.event({ type: "session.tool.called", created: 10, data: { sessionID: "s", assistantMessageID: "m", id: "c", input: {}, executed: false } })
+    const records = mapper.event({ type: "session.tool.success", created: 30, data: { sessionID: "s", assistantMessageID: "m", id: "c", content: [], executed: true } })
+    expect(records.map(view)).toEqual([
+      { name: "tool_decision", session: "s", ms: 10, attributes: { tool_use_id: "c", tool_name: "read", decision: "accept", source: "config" } },
+      { name: "tool_result", session: "s", ms: 30, attributes: { tool_name: "read", duration_ms: 20, success: "true", tool_use_id: "c" } },
+    ])
+  })
+
+  test("a permission reply before the call event still finds the tool name", () => {
+    const mapper = newMapper()
+    mapper.event({ type: "session.tool.input.started", created: 5, data: { sessionID: "s", id: "c", name: "bash" } })
+    mapper.event({ type: "permission.asked", created: 6, data: { id: "p", sessionID: "s", source: { type: "tool", messageID: "m", id: "c" } } })
+    const decision = mapper.event({ type: "permission.replied", created: 7, data: { sessionID: "s", requestID: "p", reply: "once" } })
+    expect(decision[0]?.attributes).toMatchObject({ tool_name: "bash", decision: "accept", source: "user_temporary" })
+    mapper.event({ type: "session.tool.called", created: 8, data: { sessionID: "s", id: "c", input: {} } })
+    const records = mapper.event({ type: "session.tool.success", created: 9, data: { sessionID: "s", id: "c" } })
+    expect(records.map((record) => record.eventName)).toEqual(["tool_result"])
+  })
+})
