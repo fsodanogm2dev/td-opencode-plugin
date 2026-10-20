@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-19T00:00:00.000Z",
+  "sources": ["test fixture"],
+  "models": {
+    "gpt-6-luna": {
+      "provider": "fuelix-openai",
+      "kind": "chat",
+      "name": "GPT-6 Luna",
+      "limit": { "context": 400000, "output": 128000 },
+      "input": ["text", "image"],
+      "output": ["text"],
+      "tools": true,
+      "reasoning": true,
+      "cost": { "input": 2.5, "output": 10, "cacheRead": 0.25, "cacheWrite": 0 },
+      "costTiers": [{ "contextOver": 200000, "input": 5, "output": 15, "cacheRead": 0.5, "cacheWrite": 0 }],
+      "listed": true,
+      "sources": { "routing": "config", "metadata": "inventory" }
+    },
+    "claude-opus": {
+      "provider": "fuelix-anthropic",
+      "kind": "chat",
+      "name": "Claude Opus",
+      "limit": { "context": 200000, "output": 128000 },
+      "input": ["text", "image", "pdf"],
+      "output": ["text"],
+      "tools": true,
+      "cost": { "input": 15, "output": 75, "cacheRead": 1.5, "cacheWrite": 18.75 },
+      "listed": true,
+      "sources": { "routing": "config", "metadata": "inventory" }
+    },
+    "gemini-3.5-flash": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Gemini 3.5 Flash",
+      "limit": { "context": 1000000, "output": 65536 },
+      "reasoning": false,
+      "cost": { "input": 0.3, "output": 2.5, "cacheRead": 0.03, "cacheWrite": 0 },
+      "listed": true,
+      "sources": { "routing": "config", "metadata": "inventory" }
+    },
+    "text-embedding-4": {
+      "provider": "fuelix",
+      "kind": "embedding",
+      "name": "Text Embedding 4",
+      "listed": true,
+      "sources": { "routing": "rule", "metadata": "none" }
+    },
+    "claude-3-7-sonnet": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Claude 3.7 Sonnet (chat route)",
+      "limit": { "context": 200000, "output": 64000 },
+      "cost": { "input": 3, "output": 15, "cacheRead": 0.3, "cacheWrite": 3.75 },
+      "listed": false,
+      "sources": { "routing": "config", "metadata": "inventory" }
+    }
+  }
+}
