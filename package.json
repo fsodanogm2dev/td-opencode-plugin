@@ -9,9 +9,10 @@
     ".": "./src/index.ts"
   },
   "files": [
-    "src",
+    "README.md",
     "data",
-    "README.md"
+    "index.ts",
+    "src"
   ],
   "scripts": {
     "test": "bun test test/unit",
