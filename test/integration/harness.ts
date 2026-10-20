@@ -135,6 +135,8 @@ export async function startIsolatedServer(input: {
     OPENCODE_CONFIG_CONTENT: JSON.stringify(config),
     OPENCODE_SERVER_PASSWORD: password,
     ...(isolateHome ? { HOME: dirs.home } : process.env.HOME ? { HOME: process.env.HOME } : {}),
+    // The plugin honors a custom FueliX base URL only with this opt-in. Tests point it at a local mock gateway.
+    TD_OPENCODE_ALLOW_CUSTOM_FUELIX_URL: "1",
     ...input.env,
   }
 

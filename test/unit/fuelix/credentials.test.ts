@@ -1,6 +1,16 @@
 import { describe, expect, test } from "bun:test"
 import { createMemoryLogger } from "../../../src/log.ts"
-import { resolveKeys, type ExecFn } from "../../../src/fuelix/credentials.ts"
+import {
+  globalKeychainCache,
+  KEYCHAIN_RETRY_MS,
+  resolveKeys as resolveKeysWithCache,
+  type ExecFn,
+  type ResolveKeysInput,
+} from "../../../src/fuelix/credentials.ts"
+
+// Each test gets its own Keychain memo unless it passes one.
+const resolveKeys = (input: Omit<ResolveKeysInput, "keychainCache"> & Partial<ResolveKeysInput>) =>
+  resolveKeysWithCache({ keychainCache: new Map(), ...input })
 
 const KEYCHAIN = "sk-test-keychain-not-real"
 const STORE = "sk-test-store-not-real"
@@ -122,5 +132,84 @@ describe("resolveKeys", () => {
     expect(keys.source).toBe("credential-store")
     expect(log.lines.join("\n")).not.toContain(STORE)
     expect(log.lines.join("\n")).not.toContain(ENV)
+  })
+})
+
+describe("Keychain memo", () => {
+  const base = (run: ExecFn, cache: Map<string, never>, now: () => number, store?: string) => ({
+    keychainService: "fuelix-api-key" as const,
+    platform: "darwin",
+    exec: run,
+    env: {},
+    integration: integration(store),
+    log: createMemoryLogger(),
+    keychainCache: cache as never,
+    now,
+  })
+
+  test("a found key is read once", async () => {
+    const run = exec(0, KEYCHAIN)
+    const cache = new Map<string, never>()
+    let clock = 0
+    for (let i = 0; i < 3; i++) {
+      const keys = await resolveKeysWithCache(base(run, cache, () => (clock += KEYCHAIN_RETRY_MS * 10)))
+      expect(keys.keychainKey).toBe(KEYCHAIN)
+    }
+    expect(run.calls.length).toBe(1)
+  })
+
+  test("concurrent reads share one command", async () => {
+    const run = exec(0, KEYCHAIN)
+    const cache = new Map<string, never>()
+    await Promise.all([1, 2, 3].map(() => resolveKeysWithCache(base(run, cache, () => 0))))
+    expect(run.calls.length).toBe(1)
+  })
+
+  test("a miss retries at most once every 5 minutes", async () => {
+    const run = exec(44)
+    const cache = new Map<string, never>()
+    let clock = 1000
+    await resolveKeysWithCache(base(run, cache, () => clock))
+    clock += KEYCHAIN_RETRY_MS - 1
+    await resolveKeysWithCache(base(run, cache, () => clock))
+    expect(run.calls.length).toBe(1)
+    clock += 1
+    await resolveKeysWithCache(base(run, cache, () => clock))
+    expect(run.calls.length).toBe(2)
+    await resolveKeysWithCache(base(run, cache, () => clock))
+    expect(run.calls.length).toBe(2)
+  })
+
+  test("a timeout counts as a miss and retries later", async () => {
+    let calls = 0
+    const run: ExecFn = async () => {
+      calls++
+      if (calls === 1) throw new Error("command timed out")
+      return { exitCode: 0, stdout: KEYCHAIN }
+    }
+    const cache = new Map<string, never>()
+    let clock = 0
+    expect((await resolveKeysWithCache(base(run, cache, () => clock))).keychainKey).toBeUndefined()
+    clock += KEYCHAIN_RETRY_MS
+    expect((await resolveKeysWithCache(base(run, cache, () => clock))).keychainKey).toBe(KEYCHAIN)
+  })
+
+  test("the credential store is read on every call", async () => {
+    let reads = 0
+    const store = {
+      connection: {
+        active: async () => ({ id: "c" }),
+        resolve: async () => ({ type: "key", key: `${STORE}-${++reads}` }),
+      },
+    } as never
+    const run = exec(44)
+    const cache = new Map<string, never>()
+    const input = { ...base(run, cache, () => 0), integration: store }
+    expect((await resolveKeysWithCache(input)).credentialStoreKey).toBe(`${STORE}-1`)
+    expect((await resolveKeysWithCache(input)).credentialStoreKey).toBe(`${STORE}-2`)
+  })
+
+  test("the default memo is process-wide", () => {
+    expect(globalKeychainCache()).toBe(globalKeychainCache())
   })
 })

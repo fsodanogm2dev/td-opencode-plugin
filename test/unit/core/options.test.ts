@@ -12,6 +12,7 @@ describe("parseOptions", () => {
       refreshMinutes: 60,
       includeNonChatModels: false,
       discoveryTimeoutMs: 5000,
+      scrubShellEnv: true,
     })
     expect(parsed.telemetry).toEqual({
       enabled: true,
@@ -53,6 +54,14 @@ describe("parseOptions", () => {
     expect(parsed.telemetry.subagentToolNames).toEqual(["task", "subagent"])
     expect(parsed.debug).toBe(false)
     expect(parsed.warnings.length).toBe(6)
+  })
+
+  test("scrubShellEnv defaults to true, accepts false, and rejects other values", () => {
+    expect(parseOptions({ fuelix: {} }, {}).fuelix.scrubShellEnv).toBe(true)
+    expect(parseOptions({ fuelix: { scrubShellEnv: false } }, {}).fuelix.scrubShellEnv).toBe(false)
+    const parsed = parseOptions({ fuelix: { scrubShellEnv: "no" } }, {})
+    expect(parsed.fuelix.scrubShellEnv).toBe(true)
+    expect(parsed.warnings).toEqual(["options.fuelix.scrubShellEnv must be true or false; using true"])
   })
 
   test("warns when a section is not an object", () => {

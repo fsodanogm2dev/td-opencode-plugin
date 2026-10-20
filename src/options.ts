@@ -19,6 +19,8 @@ export interface FuelixOptions {
   readonly includeNonChatModels: boolean
   /** Timeout of the `/v1/models` request in milliseconds. */
   readonly discoveryTimeoutMs: number
+  /** Remove `FUELIX_API_KEY` from the environment of agent shell commands. */
+  readonly scrubShellEnv: boolean
 }
 
 export interface TelemetryOptions {
@@ -118,6 +120,7 @@ export function parseOptions(raw: unknown, env: Env = process.env): ParsedOption
     refreshMinutes: readNumber(fuelixRaw, "fuelix", "refreshMinutes", 60, 0, 24 * 60),
     includeNonChatModels: readBoolean(fuelixRaw, "fuelix", "includeNonChatModels", false),
     discoveryTimeoutMs: readNumber(fuelixRaw, "fuelix", "discoveryTimeoutMs", 5000, 500, 60000),
+    scrubShellEnv: readBoolean(fuelixRaw, "fuelix", "scrubShellEnv", true),
   }
 
   const telemetryRaw = section("telemetry")

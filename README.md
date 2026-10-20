@@ -56,15 +56,42 @@ The plugin looks for the key in this order and uses the first one it finds:
 | 2 | OpenCode credential store | `/connect`, then choose **FuelIX** | Clear text in `~/.local/share/opencode/opencode.db` (mode `0600`) |
 | 3 | `FUELIX_API_KEY` | Environment of the OpenCode service, for example `~/.config/opencode/service.json` | Clear text in that file |
 
-The Keychain is the recommended source. With a Keychain key you can delete the key from `service.json` and from the
-credential store.
-
 How the plugin uses the key:
 
 - All three providers set `integrationID: "fuelix"`, so one credential serves them.
-- A `session.hook("http.request")` sets `Authorization: Bearer <key>` on each FueliX request. FueliX rejects the
-  `x-api-key` header that the Anthropic package sends, so the hook moves that value into the `Authorization` header.
-- The key stays in memory. It is never written to a file or a log line.
+- A `session.hook("http.request")` sets `Authorization: Bearer <key>` on each FueliX session request (chat, titles,
+  compaction). FueliX rejects the `x-api-key` header that the Anthropic package sends, so the hook moves that value into
+  the `Authorization` header.
+- The key never goes into provider `settings` or `headers`, which `GET /api/model` returns to every local client, and
+  never into a log line or a file.
+- The plugin removes `FUELIX_API_KEY` from the environment of agent shell commands (option `fuelix.scrubShellEnv`,
+  default `true`). OpenCode builds every agent shell environment from the server environment, so without this an agent
+  that runs `env` would print the key into the conversation.
+
+What each source protects against:
+
+- An agent that runs shell commands acts as your user. It can read the credential store database, `service.json`, or a
+  Keychain item that your user can read without a prompt. No source stops a deliberate read; the sources differ in how
+  easily the key leaks by accident.
+- The Keychain encrypts the key at rest and keeps it out of every environment. The credential store keeps it out of
+  every environment but stores it in clear text. `FUELIX_API_KEY` in `service.json` is clear text and goes into the
+  environment of the server and of every process it starts.
+- Recommended: the Keychain or `/connect`. Remove `FUELIX_API_KEY` from `service.json` after you set one of them.
+
+Known limitation: OpenCode does not run plugin request hooks for `POST /api/generate` (`ctx.generate.text`), which
+some clients and plugins use for helper text. Those requests carry only the native credential:
+
+| Key source | `fuelix-openai` and `fuelix` on `/api/generate` | `fuelix-anthropic` on `/api/generate` |
+| --- | --- | --- |
+| `/connect` credential | Works (native `Bearer`) | Fails with HTTP 401 (`x-api-key`) |
+| Keychain only | Fails with HTTP 401 (no credential) | Fails with HTTP 401 |
+
+Session traffic is not affected. If you use a feature that calls `/api/generate`, keep a `/connect` credential as well.
+
+A non-default `fuelix.baseURL` takes effect only when the environment of the OpenCode service sets
+`TD_OPENCODE_ALLOW_CUSTOM_FUELIX_URL=1` and the URL uses `https` (plain `http` only for `127.0.0.1`, `localhost`, and
+`::1`). Plugin options can come from a project configuration, and the key follows the base URL, so a cloned repository
+must not be able to redirect it.
 
 ## Options
 
@@ -77,7 +104,8 @@ How the plugin uses the key:
       "keychainService": "fuelix-api-key",  // false disables the Keychain lookup
       "refreshMinutes": 60,                 // /v1/models refresh interval; 0 disables it
       "includeNonChatModels": false,        // also register embedding, speech, transcription, and image models
-      "discoveryTimeoutMs": 5000
+      "discoveryTimeoutMs": 5000,
+      "scrubShellEnv": true                 // remove FUELIX_API_KEY from agent shell environments
     },
     "telemetry": {
       "enabled": true,                      // telemetry stays off when td-telemetry is not installed

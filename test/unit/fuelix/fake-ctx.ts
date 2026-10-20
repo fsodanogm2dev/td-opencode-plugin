@@ -27,6 +27,10 @@ export interface FakeOptions {
   readonly upstream?: Record<string, Record<string, AnyRecord>>
   readonly storage?: Record<string, unknown>
   readonly connectionKey?: string
+  /** Provider records that `provider.get` returns, by provider ID (the client shape is `{ data }`). */
+  readonly configured?: Record<string, AnyRecord>
+  /** Makes `session.hook` throw for this provider ID. */
+  readonly failHookFor?: string
 }
 
 /** Builds a fake plugin context. Casts once; tests read the recorded state. */
@@ -38,6 +42,10 @@ export function createFakeCtx(options: FakeOptions = {}) {
   const storage = new Map<string, unknown>(Object.entries(options.storage ?? {}))
   const providerTransforms: ((editor: any) => void)[] = []
   const integrationTransforms: ((editor: any) => void)[] = []
+  const shellHooks: { name: string; callback: (event: any) => void }[] = []
+  const gets: string[] = []
+  const order: string[] = []
+  let connectionKey = options.connectionKey
   const state = { reloads: 0, transformRuns: 0, storageWrites: 0 }
 
   const seedUpstream = () => {
@@ -99,12 +107,13 @@ export function createFakeCtx(options: FakeOptions = {}) {
         return { dispose: async () => {} }
       },
       connection: {
-        active: async () => (options.connectionKey ? { id: "connection-1" } : undefined),
-        resolve: async () => (options.connectionKey ? { type: "key", key: options.connectionKey } : undefined),
+        active: async () => (connectionKey ? { id: "connection-1" } : undefined),
+        resolve: async () => (connectionKey ? { type: "key", key: connectionKey } : undefined),
       },
     },
     provider: {
       transform: async (callback: (editor: any) => void) => {
+        order.push("provider.transform")
         providerTransforms.push(callback)
         return { dispose: async () => {} }
       },
@@ -112,9 +121,23 @@ export function createFakeCtx(options: FakeOptions = {}) {
         state.reloads++
         runProviderTransforms()
       },
+      get: async (input: { providerID: string }) => {
+        gets.push(input.providerID)
+        const data = options.configured?.[input.providerID]
+        if (!data) throw new Error("not found")
+        return { data }
+      },
+    },
+    shell: {
+      hook: async (name: string, callback: (event: any) => void) => {
+        shellHooks.push({ name, callback })
+        return { dispose: async () => {} }
+      },
     },
     session: {
       hook: async (name: string, callback: (event: any) => void, hookOptions?: { providerID?: string }) => {
+        if (options.failHookFor && hookOptions?.providerID === options.failHookFor) throw new Error("hook failed")
+        order.push(`hook:${hookOptions?.providerID ?? ""}`)
         const hook: FakeHook = { name, callback, options: hookOptions, disposed: false }
         hooks.push(hook)
         return {
@@ -149,6 +172,12 @@ export function createFakeCtx(options: FakeOptions = {}) {
     state,
     integrationMethods,
     integrationNames,
+    shellHooks,
+    order,
+    gets,
+    setConnectionKey: (key: string | undefined) => {
+      connectionKey = key
+    },
     /** Runs the registered provider transforms against a fresh editor, as OpenCode does on load. */
     runProviderTransforms,
   }

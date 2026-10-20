@@ -17,7 +17,7 @@ import {
   waitForFuelixModels,
   type MockFuelix,
 } from "./fuelix-helpers.ts"
-import { type IsolatedServer, waitFor } from "./harness.ts"
+import { type IsolatedServer, pluginEntry, startIsolatedServer, waitFor } from "./harness.ts"
 
 const TIMEOUT = 120_000
 const NEW_ID = "gpt-7-preview-test"
@@ -159,4 +159,50 @@ describe("FueliX plugin in an isolated OpenCode server", () => {
     }, 10_000)
     expect(info.status).toBe(200)
   })
+})
+
+describe("FueliX plugin hardening in isolated OpenCode servers", () => {
+  test("a custom base URL without the opt-in is ignored and the key never goes to it", async () => {
+    const mock = startMockFuelix({ models: listedChatIDs() })
+    const server = await startIsolatedServer({
+      config: { plugins: [pluginEntry({ fuelix: { baseURL: mock.url, keychainService: false, refreshMinutes: 0 } })] },
+      env: { FUELIX_API_KEY: FAKE_KEY, TD_OPENCODE_ALLOW_CUSTOM_FUELIX_URL: "0" },
+    })
+    try {
+      const { providers } = await waitFor(async () => {
+        const listed = await listProviders(server)
+        return listed.providers.some((p) => isFuelix(p.id)) ? listed : undefined
+      }, 60_000, "FueliX providers")
+      const fuelix = providers.find((p) => p.id === "fuelix")
+      expect(fuelix?.settings?.baseURL).toBe("https://api.fuelix.ai")
+      await waitFor(async () => (server.logs().includes("fuelix.baseURL is ignored") ? true : undefined), 30_000, "warning")
+      expect(mock.requests).toEqual([])
+      expect(server.logs()).not.toContain(FAKE_KEY)
+    } finally {
+      await server.stop()
+      mock.stop()
+    }
+  }, TIMEOUT)
+
+  test("a FueliX provider block with a key in the configuration produces one warning without the key", async () => {
+    const mock = startMockFuelix({ models: listedChatIDs() })
+    const server = await startIsolatedServer({
+      config: {
+        plugins: [pluginEntry({ fuelix: { baseURL: mock.url, keychainService: false, refreshMinutes: 0 } })],
+        providers: { "fuelix-anthropic": { settings: { apiKey: FAKE_KEY } } },
+      },
+      env: { FUELIX_API_KEY: FAKE_KEY },
+    })
+    try {
+      await listProviders(server) // Boots the location and runs plugin setup.
+      await waitFor(async () => (server.logs().includes("hold a credential") ? true : undefined), 60_000, "stale configuration warning")
+      const warnings = server.logs().split("\n").filter((line) => line.includes("hold a credential"))
+      expect(warnings.length).toBe(1)
+      expect(warnings[0]).toContain("fuelix-anthropic settings.apiKey")
+      expect(warnings[0]).not.toContain(FAKE_KEY)
+    } finally {
+      await server.stop()
+      mock.stop()
+    }
+  }, TIMEOUT)
 })

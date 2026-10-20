@@ -14,6 +14,7 @@ const options: FuelixOptions = {
   refreshMinutes: 0,
   includeNonChatModels: false,
   discoveryTimeoutMs: 1000,
+  scrubShellEnv: true,
 }
 
 const noKeychain = async () => ({ exitCode: 44, stdout: "" })
@@ -32,6 +33,9 @@ function deps(extra: Partial<FuelixDeps> = {}): FuelixDeps {
     exec: noKeychain,
     env: {},
     platform: "darwin",
+    keychainCache: new Map(),
+    staleConfigHolder: {},
+    staleConfigDelaysMs: [0],
     fetch: async () => {
       throw new Error("unexpected fetch")
     },

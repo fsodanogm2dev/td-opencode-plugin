@@ -43,6 +43,38 @@ export interface ResolveKeysInput {
   readonly env: Readonly<Record<string, string | undefined>>
   readonly integration: Pick<Plugin.Context["integration"], "connection">
   readonly log: Logger
+  /** Memo of Keychain reads. Defaults to the process-wide memo. */
+  readonly keychainCache?: KeychainCache
+  /** Clock in milliseconds. For tests. */
+  readonly now?: () => number
+}
+
+/** Minimum time between two Keychain reads that found no key. */
+export const KEYCHAIN_RETRY_MS = 5 * 60_000
+
+export interface KeychainEntry {
+  readonly promise: Promise<string | undefined>
+  readonly startedAt: number
+  /** Set when the read finished without a key. */
+  missedAt?: number
+}
+
+export type KeychainCache = Map<string, KeychainEntry>
+
+const KEYCHAIN_CACHE_KEY = Symbol.for("td-opencode-plugin.fuelix.keychain")
+
+/**
+ * Keychain reads shared by all plugin instances in this process. Each instance (one per project) would otherwise
+ * run its own `security` process at startup.
+ */
+export function globalKeychainCache(): KeychainCache {
+  const holder = globalThis as unknown as Record<symbol, KeychainCache | undefined>
+  let cache = holder[KEYCHAIN_CACHE_KEY]
+  if (!cache) {
+    cache = new Map()
+    holder[KEYCHAIN_CACHE_KEY] = cache
+  }
+  return cache
 }
 
 function clean(value: string | undefined): string | undefined {
@@ -50,10 +82,9 @@ function clean(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined
 }
 
-async function readKeychain(input: ResolveKeysInput): Promise<string | undefined> {
-  if (input.platform !== "darwin" || input.keychainService === false) return undefined
+async function runKeychain(input: ResolveKeysInput, service: string): Promise<string | undefined> {
   try {
-    const result = await input.exec(["/usr/bin/security", "find-generic-password", "-s", input.keychainService, "-w"], {
+    const result = await input.exec(["/usr/bin/security", "find-generic-password", "-s", service, "-w"], {
       timeoutMs: KEYCHAIN_TIMEOUT_MS,
     })
     if (result.exitCode === 0) return clean(result.stdout)
@@ -62,6 +93,28 @@ async function readKeychain(input: ResolveKeysInput): Promise<string | undefined
     input.log.debug("keychain lookup failed", { reason: error instanceof Error ? error.message : "unknown" })
   }
   return undefined
+}
+
+/**
+ * Memoized Keychain read. A found key stays memoized. A read that found no key (or timed out) repeats at most once
+ * every `KEYCHAIN_RETRY_MS`.
+ */
+async function readKeychain(input: ResolveKeysInput): Promise<string | undefined> {
+  if (input.platform !== "darwin" || input.keychainService === false) return undefined
+  const service = input.keychainService
+  const cache = input.keychainCache ?? globalKeychainCache()
+  const now = input.now ?? Date.now
+  const existing = cache.get(service)
+  if (existing && (existing.missedAt === undefined || now() - existing.missedAt < KEYCHAIN_RETRY_MS)) return existing.promise
+  const entry: KeychainEntry = {
+    startedAt: now(),
+    promise: runKeychain(input, service).then((key) => {
+      if (key === undefined) entry.missedAt = now()
+      return key
+    }),
+  }
+  cache.set(service, entry)
+  return entry.promise
 }
 
 async function readCredentialStore(input: ResolveKeysInput): Promise<string | undefined> {

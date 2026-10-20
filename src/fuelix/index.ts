@@ -2,6 +2,7 @@ import type { Plugin } from "@opencode/plugin"
 import type { Logger } from "../log.ts"
 import { DEFAULT_KEYCHAIN_SERVICE, type FuelixOptions } from "../options.ts"
 import { applyAuth } from "./auth.ts"
+import { resolveBaseURL } from "./base-url.ts"
 import { loadCatalog as defaultLoadCatalog, type LoadedCatalog } from "./catalog.ts"
 import { FUELIX_PROVIDER_IDS, type Catalog, type CatalogEntry, type FuelixProviderID } from "./catalog-types.ts"
 import {
@@ -10,11 +11,13 @@ import {
   FUELIX_INTEGRATION_ID,
   resolveKeys,
   type ExecFn,
+  type KeychainCache,
   type ResolvedKeys,
 } from "./credentials.ts"
 import { fetchModelIDs, readCachedModels, writeCachedModels, type FetchFn } from "./discovery.ts"
-import { buildModelInfo, buildProviderInfo, enrichFromUpstream, type IncompleteField } from "./models.ts"
+import { buildModelInfo, buildProviderInfo, enrichFromUpstream, type BuiltModel } from "./models.ts"
 import { classifyKind, routeModel } from "./rules.ts"
+import { warnStaleFuelixConfig } from "./stale-config.ts"
 
 export type Cleanup = () => Promise<void> | void
 
@@ -28,7 +31,18 @@ export interface FuelixDeps {
   readonly setInterval?: (callback: () => void, ms: number) => unknown
   readonly clearInterval?: (handle: unknown) => void
   readonly loadCatalog?: () => Promise<LoadedCatalog>
+  /** Keychain memo. Defaults to the process-wide memo. */
+  readonly keychainCache?: KeychainCache
+  /** Holder of the once-per-process stale configuration flag. Defaults to `globalThis`. */
+  readonly staleConfigHolder?: Record<symbol, unknown>
+  /** Timeout of each provider read in the stale configuration check, in milliseconds. */
+  readonly staleConfigTimeoutMs?: number
+  /** Delays of the stale configuration checks in milliseconds. */
+  readonly staleConfigDelaysMs?: readonly number[]
 }
+
+/** A discovery result may drop at most this share of the current IDs. */
+export const MAX_DROP_SHARE = 0.3
 
 interface PlannedModel {
   readonly id: string
@@ -77,6 +91,34 @@ async function safely(label: string, log: Logger, action: () => Promise<unknown>
   }
 }
 
+function sameKeys(a: ResolvedKeys, b: ResolvedKeys): boolean {
+  return a.keychainKey === b.keychainKey && a.credentialStoreKey === b.credentialStoreKey && a.envKey === b.envKey
+}
+
+function activationFor(keys: ResolvedKeys): "enabled" | "auto" {
+  return keys.keychainKey || keys.envKey ? "enabled" : "auto"
+}
+
+/** Why a discovery result must not replace the current list, or `undefined` when it is acceptable. */
+function rejectDrop(
+  current: readonly string[],
+  found: readonly string[],
+  currentPlan: Plan,
+  foundPlan: Plan,
+): { reason: string; dropped: string[] } | undefined {
+  const present = new Set(found)
+  const dropped = current.filter((id) => !present.has(id))
+  if (dropped.length === 0) return undefined
+  const emptied = FUELIX_PROVIDER_IDS.filter(
+    (providerID) => currentPlan.byProvider[providerID].length > 0 && foundPlan.byProvider[providerID].length === 0,
+  )
+  if (dropped.length > current.length * MAX_DROP_SHARE) {
+    return { reason: `drops ${dropped.length} of ${current.length} models`, dropped }
+  }
+  if (emptied.length > 0) return { reason: `removes every model of ${emptied.join(", ")}`, dropped }
+  return undefined
+}
+
 /**
  * Registers the FueliX integration, providers, models, and per-request auth hooks.
  * Discovery of `/v1/models` runs in the background and never throws into the caller.
@@ -92,6 +134,7 @@ export async function setupFuelix(
   const now = deps.now ?? (() => new Date())
   const startInterval = deps.setInterval ?? ((callback, ms) => setInterval(callback, ms))
   const stopInterval = deps.clearInterval ?? ((handle) => clearInterval(handle as ReturnType<typeof setInterval>))
+  const baseURL = resolveBaseURL(options.baseURL, env, log)
 
   const loaded = await (deps.loadCatalog ?? defaultLoadCatalog)()
   const catalog = loaded.catalog
@@ -119,58 +162,105 @@ export async function setupFuelix(
     }),
   )
 
-  // 2. Key resolution.
-  const keys: ResolvedKeys = await resolveKeys({
+  // 2. Key resolution. The auth hook and the provider transform read this mutable state.
+  const resolveInput = {
     keychainService: options.keychainService,
     platform: deps.platform ?? process.platform,
     exec: deps.exec ?? defaultExec,
     env,
     integration: ctx.integration,
     log,
-  })
-  const activation = keys.keychainKey || keys.envKey ? "enabled" : "auto"
+    ...(deps.keychainCache ? { keychainCache: deps.keychainCache } : {}),
+    now: () => now().getTime(),
+  }
+  const initialKeys = await resolveKeys(resolveInput)
+  const state = { keys: initialKeys, activation: activationFor(initialKeys) as "enabled" | "auto" }
 
-  // 3. Model state. Initial IDs: cache, then listed catalog entries, then the whole catalog.
+  // 3. Auth hooks. FueliX accepts only `Authorization: Bearer`. They go before the provider transform.
+  for (const providerID of FUELIX_PROVIDER_IDS) {
+    try {
+      registrations.push(
+        await ctx.session.hook(
+          "http.request",
+          (event) => {
+            try {
+              applyAuth(event.request.headers, { override: state.keys.keychainKey, fallback: state.keys.envKey })
+            } catch (error) {
+              log.warn("could not apply FueliX auth", { error: errorMessage(error) })
+            }
+          },
+          { providerID },
+        ),
+      )
+    } catch (error) {
+      log.error("could not register the FueliX auth hook", { providerID, error: errorMessage(error) })
+    }
+  }
+
+  // 4. Shell hook: agent shell commands must not inherit the key.
+  if (options.scrubShellEnv) {
+    try {
+      registrations.push(
+        await ctx.shell.hook("create.before", (event) => {
+          delete event.env[FUELIX_ENV_NAME]
+        }),
+      )
+    } catch (error) {
+      log.error("could not register the FueliX shell hook", { error: errorMessage(error) })
+    }
+  }
+
+  // 5. Model state. Initial IDs: cache, then listed catalog entries, then the whole catalog.
   const cached = await readCachedModels(ctx.storage)
   let ids = initialIDs(catalog, cached?.ids)
+  let trusted = cached !== undefined // The list comes from an earlier discovery.
   let plan = planModels(catalog, ids, options.includeNonChatModels)
 
-  // 4. Providers. The transform is synchronous and reads the captured plan.
+  const failedBuilds = new Set<string>()
+  const safeBuild = (providerID: FuelixProviderID, id: string, entry: CatalogEntry | undefined): BuiltModel | undefined => {
+    try {
+      return buildModelInfo(providerID, id, entry)
+    } catch (error) {
+      if (!failedBuilds.has(id)) {
+        failedBuilds.add(id)
+        log.warn("FueliX model skipped because its metadata is invalid", { providerID, modelID: id, error: errorMessage(error) })
+      }
+      return undefined
+    }
+  }
+
+  // 6. Providers. The transform is synchronous and reads the captured plan and state.
   registrations.push(
     await ctx.provider.transform((editor) => {
       for (const providerID of FUELIX_PROVIDER_IDS) {
-        const built = plan.byProvider[providerID].map(({ id, entry }) => ({ id, ...buildModelInfo(providerID, id, entry) }))
+        const built: { id: string; model: BuiltModel }[] = []
+        for (const { id, entry } of plan.byProvider[providerID]) {
+          const model = safeBuild(providerID, id, entry)
+          if (model) built.push({ id, model })
+        }
         editor.add({
-          info: buildProviderInfo(providerID, options.baseURL, activation),
-          models: built.map((item) => item.info),
+          info: buildProviderInfo(providerID, baseURL, state.activation),
+          models: built.map((item) => item.model.info),
         })
-        for (const item of built) enrichFromUpstream(editor, providerID, item.id, item.info, item.incomplete)
+        for (const item of built) {
+          try {
+            enrichFromUpstream(editor, providerID, item.id, item.model.info, item.model.incomplete)
+          } catch (error) {
+            if (!failedBuilds.has(`enrich:${item.id}`)) {
+              failedBuilds.add(`enrich:${item.id}`)
+              log.warn("FueliX upstream metadata not applied", { providerID, modelID: item.id, error: errorMessage(error) })
+            }
+          }
+        }
       }
     }),
   )
 
-  // 5. Auth hooks. FueliX accepts only `Authorization: Bearer`.
-  for (const providerID of FUELIX_PROVIDER_IDS) {
-    registrations.push(
-      await ctx.session.hook(
-        "http.request",
-        (event) => {
-          try {
-            applyAuth(event.request.headers, { override: keys.keychainKey, fallback: keys.envKey })
-          } catch (error) {
-            log.warn("could not apply FueliX auth", { error: errorMessage(error) })
-          }
-        },
-        { providerID },
-      ),
-    )
-  }
-
-  // 6. Summary.
+  // 7. Summary.
   const incompleteIDs: string[] = []
   for (const providerID of FUELIX_PROVIDER_IDS) {
     for (const { id, entry } of plan.byProvider[providerID]) {
-      if (buildModelInfo(providerID, id, entry).incomplete.length > 0) incompleteIDs.push(id)
+      if ((safeBuild(providerID, id, entry)?.incomplete.length ?? 0) > 0) incompleteIDs.push(id)
     }
   }
   log.info("FueliX models registered", {
@@ -185,30 +275,57 @@ export async function setupFuelix(
     incompleteIDs: incompleteIDs.slice(0, 10).join(","),
   })
 
-  // 7. Background discovery.
+  // 8. Background discovery. Each cycle re-resolves the keys, so a later /connect, a rotated key, or a new Keychain
+  // item takes effect without a restart. The Keychain read is memoized and retries at most every 5 minutes.
   let disposed = false
   let running = false
-  const discover = async (): Promise<void> => {
-    if (disposed || running || !keys.key) return
+  const discover = async (skipKeys = false): Promise<void> => {
+    if (disposed || running) return
     running = true
     try {
-      const found = await fetchModelIDs({
-        baseURL: options.baseURL,
-        key: keys.key,
-        timeoutMs: options.discoveryTimeoutMs,
-        fetch: doFetch,
-      })
-      if (disposed) return
-      if (found.length === 0) {
-        log.warn("FueliX discovery returned no models; keeping the current list")
-        return
+      let activationChanged = false
+      if (!skipKeys) {
+        const next = await resolveKeys(resolveInput)
+        if (disposed) return
+        if (!sameKeys(state.keys, next)) {
+          state.keys = next
+          const activation = activationFor(next)
+          activationChanged = activation !== state.activation
+          state.activation = activation
+        }
       }
-      if (sameIDs(found, ids)) return
-      ids = found
-      plan = planModels(catalog, ids, options.includeNonChatModels)
-      await safely("FueliX model cache write", log, () => writeCachedModels(ctx.storage, ids, now()))
-      await ctx.provider.reload()
-      log.info("FueliX models refreshed", { count: ids.length })
+      const key = state.keys.key
+      let idsChanged = false
+      if (key) {
+        const found = await fetchModelIDs({ baseURL, key, timeoutMs: options.discoveryTimeoutMs, fetch: doFetch })
+        if (disposed) return
+        if (found.length === 0) {
+          log.warn("FueliX discovery returned no models; keeping the current list")
+        } else if (!sameIDs(found, ids)) {
+          const foundPlan = planModels(catalog, found, options.includeNonChatModels)
+          const rejected = trusted ? rejectDrop(ids, found, plan, foundPlan) : undefined
+          if (rejected) {
+            log.warn(`FueliX discovery ${rejected.reason}; keeping the current list`, {
+              current: ids.length,
+              found: found.length,
+              dropped: rejected.dropped.length,
+              droppedIDs: rejected.dropped.slice(0, 10).join(","),
+            })
+          } else {
+            ids = found
+            plan = foundPlan
+            trusted = true
+            idsChanged = true
+            await safely("FueliX model cache write", log, () => writeCachedModels(ctx.storage, ids, now()))
+          }
+        } else {
+          trusted = true
+        }
+      }
+      if (idsChanged || activationChanged) {
+        await ctx.provider.reload()
+        if (idsChanged) log.info("FueliX models refreshed", { count: ids.length })
+      }
     } catch (error) {
       log.warn("FueliX discovery failed; keeping the current list", { error: errorMessage(error) })
     } finally {
@@ -216,18 +333,31 @@ export async function setupFuelix(
     }
   }
 
-  let interval: unknown
-  if (keys.key) {
-    void Promise.resolve().then(discover)
-    if (options.refreshMinutes > 0) {
-      interval = startInterval(() => void discover(), options.refreshMinutes * 60_000)
-      ;(interval as { unref?: () => void } | undefined)?.unref?.()
-    }
-  } else {
+  if (!state.keys.key) {
     const service = options.keychainService === false ? DEFAULT_KEYCHAIN_SERVICE : options.keychainService
     log.warn(
       `No FueliX API key found. Run /connect and choose FuelIX, or run: security add-generic-password -U -s ${service} -a "$USER" -w`,
     )
+  }
+  // The stale configuration check runs before the first reload, because the plugin client stops showing the
+  // configuration overlay after a reload.
+  void Promise.resolve()
+    .then(async () => {
+      if (!disposed) {
+        await warnStaleFuelixConfig(ctx, log, {
+          ...(deps.staleConfigHolder ? { holder: deps.staleConfigHolder } : {}),
+          ...(deps.staleConfigTimeoutMs !== undefined ? { timeoutMs: deps.staleConfigTimeoutMs } : {}),
+          ...(deps.staleConfigDelaysMs ? { delaysMs: deps.staleConfigDelaysMs } : {}),
+        })
+      }
+      if (state.keys.key) await discover(true)
+    })
+    .catch(() => {})
+
+  let interval: unknown
+  if (options.refreshMinutes > 0) {
+    interval = startInterval(() => void discover(), options.refreshMinutes * 60_000)
+    ;(interval as { unref?: () => void } | undefined)?.unref?.()
   }
 
   return async () => {

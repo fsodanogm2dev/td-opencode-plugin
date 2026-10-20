@@ -174,7 +174,26 @@ with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays 
    server with the plugin. After one prompt, the `events` table has an `api_request` row with a non-zero `cost_usd`, the
    `segments` table has a row with project and branch, and the dashboard API shows the session cost.
 
+## Review decisions
+
+An independent review of the final code (2 high, 4 medium, 10 low findings; no blocker) led to these decisions:
+
+- **D13**: Remove `FUELIX_API_KEY` from agent shell environments with `shell.hook("create.before")`. OpenCode builds
+  every agent shell environment from the server environment (`packages/core/src/shell.ts`, lines 259–273).
+- **D14**: Honor a non-default `fuelix.baseURL` only with `TD_OPENCODE_ALLOW_CUSTOM_FUELIX_URL=1` in the service
+  environment and an `https` URL (plain `http` for loopback only). Plugin options can come from a project
+  configuration, and the key follows the base URL.
+- **D15**: Give td-telemetry child processes an allowlisted environment. td-telemetry's process manager passes its
+  environment to long-lived daemons.
+- **D16**: Warn once when the configuration still exposes a FueliX key through old provider blocks. Configured providers
+  apply after plugin providers, so the blocks undo decision D2 without notice.
+- **D17**: Document, do not work around, the `/api/generate` limitation: OpenCode runs no plugin request hooks on that
+  path, and the Anthropic packages send a stored key only as `x-api-key`.
+
 ## Follow-ups found during the work
+
+- **Upstream request to OpenCode**: run session HTTP hooks for `Generate` requests, or let a provider send a stored key
+  credential as `Authorization: Bearer` on the Anthropic packages. Either removes the `/api/generate` limitation (D17).
 
 - **Anthropic prompt cache across user turns**: in the Phase 2 probe, a new user turn rewrote the cache instead of
   reading it, although FueliX keeps the cache for identical requests. Compare two consecutive OpenCode request bodies
