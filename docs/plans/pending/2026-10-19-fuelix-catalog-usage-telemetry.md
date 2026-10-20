@@ -209,3 +209,8 @@ with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays 
   `local()` filter). Prompt hooks also run per session location. So each session is reported once.
 - **D11**: Ship a root `index.ts` that re-exports `src/index.ts`. OpenCode loads a local plugin directory through
   `<dir>/index.*` or `<dir>/server.*` and ignores `package.json` `exports`.
+- **D12**: Per-field source priority in the catalog. Prices: LLM-Inventory first, because FueliX meters with those rows.
+  Limits, modalities, tool and reasoning flags: the working configuration first, LLM-Inventory only for gaps, and an
+  inventory output limit at or above its context limit is ignored. Reason: inventory limits and capabilities come from
+  generic registry defaults and contain errors (for example, `llama-4-scout` lists 10,000,000 output tokens), and
+  OpenCode sends `max_tokens = min(limit.output, 256000)`, so a wrong output limit can break a working model.

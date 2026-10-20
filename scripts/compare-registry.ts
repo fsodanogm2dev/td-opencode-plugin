@@ -55,7 +55,10 @@ export function summarize(model: unknown): ModelSummary | undefined {
   if (!providerID || !id || !providerID.startsWith("fuelix")) return undefined
   const limit = isRecord(model.limit) ? model.limit : {}
   const capabilities = isRecord(model.capabilities) ? model.capabilities : {}
-  const input = Array.isArray(capabilities.input) ? capabilities.input.filter((item) => typeof item === "string") : []
+  // Modality order has no meaning, so compare a sorted list.
+  const input = Array.isArray(capabilities.input)
+    ? capabilities.input.filter((item): item is string => typeof item === "string").sort()
+    : []
   const variants = Array.isArray(model.variants)
     ? model.variants.map((variant) => (isRecord(variant) && typeof variant.id === "string" ? variant.id : "?"))
     : []

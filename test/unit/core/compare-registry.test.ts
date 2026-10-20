@@ -57,6 +57,12 @@ describe("compare-registry", () => {
     expect(tiered.get("fuelix/tiered")?.cost).toBe("1/2/0.1/0; >200000: 2/4/0.2/0")
   })
 
+  test("ignores the order of input modalities", () => {
+    const a = readRegistry([model("fuelix", "m", { capabilities: { tools: true, input: ["text", "pdf", "image"], output: ["text"] } })])
+    const b = readRegistry([model("fuelix", "m", { capabilities: { tools: true, input: ["image", "text", "pdf"], output: ["text"] } })])
+    expect(diffRegistries(a, b).changed).toEqual([])
+  })
+
   test("never prints settings or headers", () => {
     const markdown = renderMarkdown(diff)
     expect(markdown).not.toContain("sk-test-not-a-real-key")
