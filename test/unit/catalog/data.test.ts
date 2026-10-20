@@ -10,10 +10,7 @@ const catalog = JSON.parse(text) as Catalog
 const liveIds = (await Bun.file(join(FIXTURES, "live-ids-2026-10-19.json")).json()) as string[]
 
 /** Chat entries that have no cost or limit in the inventory or the routing seed. */
-const KNOWN_GAPS: Readonly<Record<string, string>> = {
-  "gpt-6.0-sol":
-    "The inventory deployment azure/gpt-6-sol-uswest has no context or output limit. The routing seed lists no limit for this ID. The ID gpt-6-sol resolves to a different deployment (openai/openai.gpt-6.1-sol), so the limit cannot be borrowed.",
-}
+const KNOWN_GAPS: Readonly<Record<string, string>> = {}
 
 describe("data/fuelix-models.json", () => {
   test("has the catalog envelope", () => {

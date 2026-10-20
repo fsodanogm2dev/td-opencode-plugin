@@ -107,3 +107,89 @@ describe("field borrowing", () => {
     expect(notes).toContain("reasoning support borrowed from m-b (same deployment azure/m).")
   })
 })
+
+describe("borrowing by model name", () => {
+  const limits = { context: 1050000, output: 128000 }
+
+  test("borrows limit and modalities from the ID that equals the model name", () => {
+    const models = build(
+      {
+        "m-sol": seed({ ...limits, inputModalities: ["text", "image"], cost: { input: 9, output: 9 }, tools: false }),
+        "m-sol-alias": seed({ cost: { input: 1, output: 2 }, tools: true, reasoning: true }),
+      },
+      [
+        deployment("openai/m-1", ["m-sol"], { modelName: "m-1" }),
+        deployment("azure/m-uswest", ["m-sol-alias"], { modelName: "m-sol", prices: {} }),
+      ],
+    )
+    const entry = models["m-sol-alias"]
+    expect(entry?.limit).toEqual(limits)
+    expect(entry?.input).toEqual(["text", "image"])
+    expect(entry?.notes).toContain(
+      "limit borrowed from m-sol (same model m-sol, deployment azure/m-uswest).",
+    )
+    expect(entry?.notes).toContain(
+      "input modalities borrowed from m-sol (same model m-sol, deployment azure/m-uswest).",
+    )
+    expect(entry?.sources.metadata).toBe("mixed")
+  })
+
+  test("never borrows cost, tools, or reasoning by model name", () => {
+    const models = build(
+      {
+        "m-sol": seed({ ...limits, cost: { input: 9, output: 9 }, tools: true, reasoning: true }),
+        "m-sol-alias": seed(),
+      },
+      [
+        deployment("openai/m-1", ["m-sol"], { modelName: "m-1" }),
+        deployment("azure/m-uswest", ["m-sol-alias"], { modelName: "m-sol", prices: {} }),
+      ],
+    )
+    const entry = models["m-sol-alias"]
+    expect(entry?.limit).toEqual(limits)
+    expect(entry?.cost).toBeUndefined()
+    expect(entry?.tools).toBeUndefined()
+    expect(entry?.reasoning).toBeUndefined()
+    expect(entry?.notes?.some((note) => /cost|tool|reasoning/.test(note.replace(/deployment.*/, "")))).toBe(false)
+  })
+
+  test("uses another ID with the same model name when no ID equals it", () => {
+    const models = build(
+      {
+        "m-b": seed(),
+        "m-c": seed({ ...limits }),
+      },
+      [
+        deployment("azure/one", ["m-b"], { modelName: "m-x" }),
+        deployment("azure/two", ["m-c"], { modelName: "m-x" }),
+      ],
+    )
+    expect(models["m-b"]?.limit).toEqual(limits)
+    expect(models["m-b"]?.notes).toContain("limit borrowed from m-c (same model m-x, deployment azure/one).")
+  })
+
+  test("the same-deployment pass wins over the model-name pass", () => {
+    const models = build(
+      {
+        "m-sol": seed({ context: 1, output: 1 }),
+        "m-a": seed(),
+        "m-b": seed({ context: 2, output: 2 }),
+      },
+      [
+        deployment("openai/m-1", ["m-sol"], { modelName: "m-sol" }),
+        deployment("azure/shared", ["m-a", "m-b"], { modelName: "m-sol" }),
+      ],
+    )
+    expect(models["m-a"]?.limit).toEqual({ context: 2, output: 2 })
+    expect(models["m-a"]?.notes).toContain("limit borrowed from m-b (same deployment azure/shared).")
+    expect(models["m-a"]?.notes?.some((note) => note.includes("same model"))).toBe(false)
+  })
+
+  test("does not borrow across different model names", () => {
+    const models = build(
+      { "m-a": seed(), "m-b": seed({ ...limits }) },
+      [deployment("azure/one", ["m-a"], { modelName: "x" }), deployment("azure/two", ["m-b"], { modelName: "y" })],
+    )
+    expect(models["m-a"]?.limit).toBeUndefined()
+  })
+})

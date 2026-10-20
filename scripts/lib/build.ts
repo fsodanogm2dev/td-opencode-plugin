@@ -42,6 +42,8 @@ interface Built {
   readonly entry: CatalogEntry
   /** Name of the chosen inventory deployment. */
   readonly deployment?: string
+  /** `model.name` of the chosen inventory deployment. */
+  readonly model?: string
   /** Where each present field came from. */
   readonly origin: Partial<Record<Field, Origin>>
 }
@@ -185,7 +187,12 @@ function buildEntry(id: string, input: BuildInput): Built {
     sources: { routing, metadata },
     notes,
   }
-  return { entry, ...(chosen ? { deployment: chosen.deployment } : {}), origin }
+  return {
+    entry,
+    ...(chosen ? { deployment: chosen.deployment } : {}),
+    ...(chosen?.modelName ? { model: chosen.modelName } : {}),
+    origin,
+  }
 }
 
 const FIELD_LABEL: Readonly<Record<Field, string>> = {
@@ -266,11 +273,63 @@ function borrowFields(built: ReadonlyMap<string, Built>): Map<string, CatalogEnt
   return result
 }
 
+/** Fields that a second pass may borrow by model name. Prices and features can differ per deployment. */
+const MODEL_FIELDS: readonly Field[] = ["limit", "input", "output"]
+
+/**
+ * Fill `limit`, `input`, and `output` modalities that an ID still lacks from the catalog ID that equals the chosen
+ * deployment's `model.name`. If that ID has no value, use another ID whose chosen deployment has the same
+ * `model.name` (first in sort order). Never borrows cost, tools, or reasoning.
+ */
+function borrowByModel(entries: ReadonlyMap<string, CatalogEntry>, built: ReadonlyMap<string, Built>): Map<string, CatalogEntry> {
+  const byModel = new Map<string, string[]>()
+  for (const [id, item] of built) {
+    if (!item.model) continue
+    byModel.set(item.model, [...(byModel.get(item.model) ?? []), id])
+  }
+  const result = new Map<string, CatalogEntry>()
+  for (const [id, original] of entries) {
+    const item = built.get(id) as Built
+    let entry = original
+    const extra: string[] = []
+    if (item.model && item.deployment) {
+      const named = entries.has(item.model) ? [item.model] : []
+      const peers = [...named, ...(byModel.get(item.model) ?? []).filter((peer) => peer !== item.model)].filter(
+        (peer) => peer !== id,
+      )
+      for (const field of MODEL_FIELDS) {
+        if (hasField(entry, field)) continue
+        const donor = peers.find((peer) => hasField(entries.get(peer) as CatalogEntry, field))
+        if (!donor) continue
+        const source = entries.get(donor) as CatalogEntry
+        entry = {
+          ...entry,
+          ...(field === "limit" ? { limit: source.limit } : {}),
+          ...(field === "input" ? { input: source.input } : {}),
+          ...(field === "output" ? { output: source.output } : {}),
+        }
+        extra.push(
+          `${FIELD_LABEL[field]} borrowed from ${donor} (same model ${item.model}, deployment ${item.deployment}).`,
+        )
+      }
+    }
+    if (extra.length > 0) {
+      entry = {
+        ...entry,
+        sources: { ...entry.sources, metadata: "mixed" },
+        notes: [...(entry.notes ?? []), ...extra],
+      }
+    }
+    result.set(id, entry)
+  }
+  return result
+}
+
 export function buildCatalog(input: BuildInput): Catalog {
   const ids = new Set<string>([...input.seed.keys(), ...(input.liveIds ?? [])])
   const sorted = [...ids].sort()
   const built = new Map(sorted.map((id) => [id, buildEntry(id, input)] as const))
-  const borrowed = borrowFields(built)
+  const borrowed = borrowByModel(borrowFields(built), built)
   const models: Record<string, CatalogEntry> = {}
   for (const id of sorted) models[id] = borrowed.get(id) as CatalogEntry
   return { version: 1, generatedAt: input.generatedAt, sources: [...input.sources], models }

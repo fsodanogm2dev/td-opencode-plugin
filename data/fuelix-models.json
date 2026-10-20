@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-20T02:43:01.847Z",
+  "generatedAt": "2026-10-20T02:51:19.630Z",
   "sources": [
     "OpenCode configuration (routing seed)",
     "fuelix/LLM-Inventory (local copy)",
@@ -3123,11 +3123,16 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt-6-sol-uswest."
-      ]
+        "Inventory deployment: azure/gpt-6-sol-uswest.",
+        "limit borrowed from gpt-6-sol (same model gpt-6-sol, deployment azure/gpt-6-sol-uswest)."
+      ],
+      "limit": {
+        "context": 1050000,
+        "output": 128000
+      }
     },
     "gpt-6.1-sol": {
       "provider": "fuelix-openai",
