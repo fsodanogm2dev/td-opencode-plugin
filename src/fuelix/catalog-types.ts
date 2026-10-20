@@ -56,6 +56,11 @@ export interface CatalogEntry {
   /** Additional context-size price tiers, in ascending `contextOver` order. */
   readonly costTiers?: readonly CatalogCostTier[]
   readonly status?: "active" | "deprecated" | "beta" | "alpha"
+  /**
+   * `true` when the ID was in the live `/v1/models` list at build time. On a first start without a cached
+   * model list, the plugin registers only listed entries until discovery finishes.
+   */
+  readonly listed?: boolean
   readonly sources: {
     readonly routing: RoutingSource
     readonly metadata: MetadataSource
