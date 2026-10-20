@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-19T00:00:00.000Z",
+  "sources": [],
+  "models": {
+    "good": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Good",
+      "limit": { "context": 1000, "output": 100 },
+      "cost": { "input": 1, "output": 2, "cacheRead": 0, "cacheWrite": 0 },
+      "costTiers": [{ "contextOver": 500, "input": 2, "output": 4, "cacheRead": 0, "cacheWrite": 0 }],
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "bad-limit": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Bad limit",
+      "limit": { "context": 1000.5, "output": 100 },
+      "cost": { "input": 1, "output": 2, "cacheRead": 0, "cacheWrite": 0 }
+    },
+    "zero-output": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Zero output",
+      "limit": { "context": 1000, "output": 0 }
+    },
+    "bad-cost": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Bad cost",
+      "limit": { "context": 1000, "output": 100 },
+      "cost": { "input": -1, "output": 2, "cacheRead": 0, "cacheWrite": 0 }
+    },
+    "bad-tiers": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Bad tiers",
+      "cost": { "input": 1, "output": 2, "cacheRead": 0, "cacheWrite": 0 },
+      "costTiers": { "contextOver": 5 }
+    },
+    "bad-tier-item": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Bad tier item",
+      "cost": { "input": 1, "output": 2, "cacheRead": 0, "cacheWrite": 0 },
+      "costTiers": [{ "contextOver": 5, "input": "x", "output": 4, "cacheRead": 0, "cacheWrite": 0 }]
+    },
+    "bad-modalities": {
+      "provider": "fuelix",
+      "kind": "chat",
+      "name": "Bad modalities",
+      "input": "text",
+      "output": ["text", 5]
+    },
+    "bad-entry": { "provider": "nowhere", "kind": "chat", "name": "Bad entry" }
+  }
+}
