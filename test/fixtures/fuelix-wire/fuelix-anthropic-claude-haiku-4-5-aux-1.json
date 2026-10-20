@@ -1,0 +1,20 @@
+{
+  "providerID": "fuelix-anthropic",
+  "modelID": "claude-haiku-4-5",
+  "path": "/v1/messages",
+  "status": 200,
+  "contentType": "text/event-stream; charset=utf-8",
+  "bodyFile": "fuelix-anthropic-claude-haiku-4-5-aux-1.sse",
+  "tools": false,
+  "kind": "anthropic",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 565,
+    "output_tokens": 4
+  }
+}

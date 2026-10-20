@@ -13,6 +13,20 @@ import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
+/** One server-sent event from `GET /api/event`. `data` is the parsed OpenCode event (`type`, `data`, ...). */
+export interface ServerEvent {
+  readonly type: string
+  readonly data: any
+  readonly raw: any
+}
+
+export interface EventFeed {
+  readonly events: ServerEvent[]
+  /** Resolves with the first collected event (past or future) that matches `predicate`. */
+  waitFor(predicate: (event: ServerEvent) => boolean, timeoutMs?: number, label?: string): Promise<ServerEvent>
+  close(): void
+}
+
 export interface IsolatedServer {
   readonly url: string
   readonly dirs: {
@@ -25,6 +39,8 @@ export interface IsolatedServer {
     project: string
   }
   api<T = unknown>(method: string, path: string, body?: unknown): Promise<{ status: number; json: T }>
+  /** Subscribes to `GET /api/event` and collects events until `close()` or `stop()`. */
+  subscribe(): Promise<EventFeed>
   logs(): string
   stop(): Promise<void>
 }
@@ -204,5 +220,69 @@ export async function startIsolatedServer(input: {
     throw new Error(`opencode did not answer on ${url} in time. Logs:\n${logs}`)
   }
 
-  return { url, dirs, api, logs: () => output, stop }
+  const feeds: EventFeed[] = []
+  const subscribe: IsolatedServer["subscribe"] = async () => {
+    const controller = new AbortController()
+    const response = await fetch(`${url}/api/event`, {
+      headers: { authorization, accept: "text/event-stream" },
+      signal: controller.signal,
+    })
+    if (!response.ok || !response.body) throw new Error(`GET /api/event failed with HTTP ${response.status}`)
+    const events: ServerEvent[] = []
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    void (async () => {
+      let buffer = ""
+      try {
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          let index = buffer.indexOf("\n\n")
+          while (index >= 0) {
+            const frame = buffer.slice(0, index)
+            buffer = buffer.slice(index + 2)
+            index = buffer.indexOf("\n\n")
+            const data = frame
+              .split("\n")
+              .filter((line) => line.startsWith("data:"))
+              .map((line) => line.slice(5).trimStart())
+              .join("\n")
+            if (data === "") continue
+            try {
+              let parsed: any = JSON.parse(data)
+              if (typeof parsed === "string") parsed = JSON.parse(parsed)
+              events.push({ type: String(parsed?.type ?? ""), data: parsed?.data, raw: parsed })
+            } catch {
+              // Ignore frames that are not JSON.
+            }
+          }
+        }
+      } catch {
+        // The feed closed.
+      }
+    })()
+    const feed: EventFeed = {
+      events,
+      waitFor: async (predicate, timeoutMs = 60_000, label = "event") => {
+        const deadline = Date.now() + timeoutMs
+        while (Date.now() < deadline) {
+          const found = events.find(predicate)
+          if (found) return found
+          await sleep(100)
+        }
+        throw new Error(`timed out waiting for ${label}. Seen: ${[...new Set(events.map((e) => e.type))].join(", ")}`)
+      },
+      close: () => controller.abort(),
+    }
+    feeds.push(feed)
+    return feed
+  }
+  const stopAll = stop
+  const stopWithFeeds = async () => {
+    for (const feed of feeds) feed.close()
+    await stopAll()
+  }
+
+  return { url, dirs, api, subscribe, logs: () => output, stop: stopWithFeeds }
 }

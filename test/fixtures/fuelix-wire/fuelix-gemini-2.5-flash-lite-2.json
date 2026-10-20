@@ -1,0 +1,24 @@
+{
+  "providerID": "fuelix",
+  "modelID": "gemini-2.5-flash-lite",
+  "path": "/chat/completions",
+  "status": 200,
+  "contentType": "text/event-stream; charset=utf-8",
+  "bodyFile": "fuelix-gemini-2.5-flash-lite-2.sse",
+  "tools": true,
+  "kind": "chat",
+  "usage": {
+    "completion_tokens": 2,
+    "prompt_tokens": 4178,
+    "total_tokens": 4180,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 2
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 4038,
+      "text_tokens": 140
+    },
+    "cache_read_input_tokens": 4038
+  }
+}

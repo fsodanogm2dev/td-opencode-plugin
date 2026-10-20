@@ -1,0 +1,22 @@
+{
+  "providerID": "fuelix-openai",
+  "modelID": "gpt-5-nano",
+  "path": "/v1/responses",
+  "status": 200,
+  "contentType": "text/event-stream; charset=utf-8",
+  "bodyFile": "fuelix-openai-gpt-5-nano-aux-1.sse",
+  "tools": false,
+  "kind": "responses",
+  "usage": {
+    "input_tokens": 521,
+    "input_tokens_details": {
+      "cache_write_tokens": 0,
+      "cached_tokens": 0
+    },
+    "output_tokens": 944,
+    "output_tokens_details": {
+      "reasoning_tokens": 896
+    },
+    "total_tokens": 1465
+  }
+}

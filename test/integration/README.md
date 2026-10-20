@@ -84,3 +84,26 @@ GET  /api/plugin   GET /api/provider   GET /api/model   GET /api/info   GET /ope
 ```
 
 The prompt body has no `model` field. Set the model when you create the session, or with `POST /api/session/{id}/model`.
+
+## FueliX tests
+
+| File | Needs | What it checks |
+| --- | --- | --- |
+| `fuelix-plugin.test.ts` | OpenCode only | Providers, models, variants, discovery, and key handling, with a mock FueliX gateway and a fake key |
+| `wire-replay.test.ts` | OpenCode only | Per-step tokens and cost from recorded FueliX responses in `test/fixtures/fuelix-wire/` |
+| `live-usage.test.ts` | `TD_LIVE=1` and `FUELIX_API_KEY` | Parity of FueliX usage and OpenCode tokens and cost, through a recording proxy |
+
+Run the live test, and record new fixtures, like this (the key stays in the environment):
+
+```bash
+FUELIX_API_KEY=... TD_LIVE=1 RECORD_FIXTURES=1 bun test test/integration/live-usage.test.ts --timeout 300000
+```
+
+The live test sends 2 prompts to each of 3 cheap models. It prints one Markdown table for each model.
+`TD_LIVE_UPSTREAM` and `TD_FIXTURE_DIR` redirect the proxy target and the fixture folder, so the test can run against a local stand-in.
+
+Facts from these tests (OpenCode 2.0.32):
+
+- The `fuelix` provider (Chat Completions) calls `<base>/chat/completions`, without `/v1`. The other two call `<base>/v1/responses` and `<base>/v1/messages`.
+- OpenCode adds the title-generation request to the session total. The title request has no tools.
+- `/api/provider` and `/api/model` list built-in providers too. The `opencode` provider exposes `settings.apiKey = "public"`, so key checks look at FueliX entries only.
