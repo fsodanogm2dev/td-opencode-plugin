@@ -174,6 +174,7 @@ export async function setupFuelix(
     }
   }
   log.info("FueliX models registered", {
+    location: ctx.location?.directory,
     "fuelix-openai": plan.byProvider["fuelix-openai"].length,
     "fuelix-anthropic": plan.byProvider["fuelix-anthropic"].length,
     fuelix: plan.byProvider.fuelix.length,
