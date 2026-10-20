@@ -37,6 +37,15 @@ Then remove the FueliX provider blocks from the same file: `provider.fuelix-open
 the file keep overriding the plugin. [`examples/opencode.jsonc`](examples/opencode.jsonc) shows a complete reduced
 configuration.
 
+A dry-run helper prepares the reduced file for you. It never changes your configuration:
+
+```bash
+bun scripts/migrate-config.ts --out /tmp/opencode.migrated.json   # summary on stderr
+diff ~/.config/opencode/opencode.json /tmp/opencode.migrated.json   # review, then copy it over yourself
+```
+
+The output keeps every other value of your file, including secrets that the file already holds, so keep it private.
+
 ## FueliX key
 
 The plugin looks for the key in this order and uses the first one it finds:
