@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-20T02:51:19.630Z",
+  "generatedAt": "2026-10-20T03:14:02.360Z",
   "sources": [
     "OpenCode configuration (routing seed)",
     "fuelix/LLM-Inventory (local copy)",
@@ -35,7 +35,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-haiku-4-5@20251001."
@@ -113,7 +113,7 @@
       "name": "Claude 3.7 Sonnet",
       "limit": {
         "context": 200000,
-        "output": 8192
+        "output": 128000
       },
       "input": [
         "text",
@@ -135,10 +135,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0."
+        "Inventory deployment: bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0.",
+        "Inventory limit 200000/8192 (context/output) differs from the configured 200000/128000; configured value kept."
       ]
     },
     "claude-3-7-sonnet-20250219": {
@@ -202,7 +203,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-sonnet-4-6@default."
@@ -213,8 +214,8 @@
       "kind": "chat",
       "name": "Claude Haiku (Latest)",
       "limit": {
-        "context": 1000000,
-        "output": 128000
+        "context": 200000,
+        "output": 8000
       },
       "input": [
         "text",
@@ -245,10 +246,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: vertex_ai/claude-haiku-5-5@default."
+        "Inventory deployment: vertex_ai/claude-haiku-5-5@default.",
+        "Inventory limit 1000000/128000 (context/output) differs from the configured 200000/8000; configured value kept."
       ]
     },
     "claude-haiku-4": {
@@ -279,7 +281,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-haiku-4-5@20251001."
@@ -313,10 +315,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-haiku-4-5 (highest input price). Limits are the minimum across: anthropic/claude-haiku-4-5, vertex_ai/claude-haiku-4-5@20251001."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-haiku-4-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-haiku-4-5, vertex_ai/claude-haiku-4-5@20251001."
       ]
     },
     "claude-haiku-4-5-20251001": {
@@ -347,7 +349,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-haiku-4-5@20251001."
@@ -427,7 +429,7 @@
         "metadata": "inventory"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-haiku-5-5 (highest input price). Limits are the minimum across: anthropic/claude-haiku-5-5, vertex_ai/claude-haiku-5-5@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-haiku-5-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-haiku-5-5, vertex_ai/claude-haiku-5-5@default."
       ]
     },
     "claude-opus": {
@@ -458,10 +460,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-opus-5-5 (highest input price). Limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-opus-5-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
       ]
     },
     "claude-opus-4-8": {
@@ -526,10 +528,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-opus-5-5 (highest input price). Limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-opus-5-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
       ]
     },
     "claude-opus-5-0": {
@@ -594,10 +596,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-opus-5-5 (highest input price). Limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-opus-5-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-opus-5-5, vertex_ai/claude-opus-5-5@default."
       ]
     },
     "claude-sonnet": {
@@ -628,10 +630,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-5-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-sonnet-5-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
       ]
     },
     "claude-sonnet-4": {
@@ -662,10 +664,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-4-6 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-4-6, vertex_ai/claude-sonnet-4-6@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-sonnet-4-6 (highest input price). Inventory limits are the minimum across: anthropic/claude-sonnet-4-6, vertex_ai/claude-sonnet-4-6@default."
       ]
     },
     "claude-sonnet-4-20250514": {
@@ -696,7 +698,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-sonnet-4-5@20250929."
@@ -707,7 +709,7 @@
       "kind": "chat",
       "name": "Claude Sonnet 4.5",
       "limit": {
-        "context": 200000,
+        "context": 1000000,
         "output": 64000
       },
       "input": [
@@ -730,10 +732,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-4-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-4-5, vertex_ai/claude-sonnet-4-5@20250929."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-sonnet-4-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-sonnet-4-5, vertex_ai/claude-sonnet-4-5@20250929.",
+        "Inventory limit 200000/64000 (context/output) differs from the configured 1000000/64000; configured value kept."
       ]
     },
     "claude-sonnet-4-5-20250929": {
@@ -764,7 +767,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-sonnet-4-5@20250929."
@@ -798,7 +801,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0."
@@ -832,10 +835,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-4-6 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-4-6, vertex_ai/claude-sonnet-4-6@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-sonnet-4-6 (highest input price). Inventory limits are the minimum across: anthropic/claude-sonnet-4-6, vertex_ai/claude-sonnet-4-6@default."
       ]
     },
     "claude-sonnet-4-legacy": {
@@ -875,7 +878,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-sonnet-4@20250514."
@@ -909,10 +912,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-5-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-sonnet-5-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
       ]
     },
     "claude-sonnet-5-0": {
@@ -977,10 +980,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-5-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-sonnet-5-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
       ]
     },
     "cursor-c-3-7-sonnet": {
@@ -1044,7 +1047,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-sonnet-4-6@default."
@@ -1078,7 +1081,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/claude-sonnet-4-6@default."
@@ -1112,10 +1115,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from anthropic/claude-sonnet-5-5 (highest input price). Limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
+        "Matched 2 inventory deployments. Price comes from anthropic/claude-sonnet-5-5 (highest input price). Inventory limits are the minimum across: anthropic/claude-sonnet-5-5, vertex_ai/claude-sonnet-5-5@default."
       ]
     },
     "dall-e-3": {
@@ -1154,8 +1157,8 @@
       "kind": "chat",
       "name": "DeepSeek V4.1 Flash",
       "limit": {
-        "context": 1000000,
-        "output": 384000
+        "context": 128000,
+        "output": 16384
       },
       "input": [
         "text"
@@ -1178,7 +1181,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/DeepSeek-V4.1-Flash."
+        "Inventory deployment: azure/DeepSeek-V4.1-Flash.",
+        "Inventory limit 1000000/384000 (context/output) differs from the configured 128000/16384; configured value kept."
       ]
     },
     "gemini-2.5-flash": {
@@ -1193,8 +1197,8 @@
         "text",
         "image",
         "audio",
-        "pdf",
-        "video"
+        "video",
+        "pdf"
       ],
       "output": [
         "text"
@@ -1211,10 +1215,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-2-5-flash (highest input price). Limits are the minimum across: openai/gemini-2-5-flash, vertex_ai/gemini-2.5-flash."
+        "Matched 2 inventory deployments. Price comes from openai/gemini-2-5-flash (highest input price). Inventory limits are the minimum across: openai/gemini-2-5-flash, vertex_ai/gemini-2.5-flash."
       ]
     },
     "gemini-2.5-flash-lite": {
@@ -1229,8 +1233,8 @@
         "text",
         "image",
         "audio",
-        "pdf",
-        "video"
+        "video",
+        "pdf"
       ],
       "output": [
         "text"
@@ -1247,7 +1251,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-2.5-flash-lite."
@@ -1258,15 +1262,15 @@
       "kind": "chat",
       "name": "Gemini 2.5 Pro",
       "limit": {
-        "context": 1000000,
-        "output": 64000
+        "context": 1048576,
+        "output": 65536
       },
       "input": [
         "text",
         "image",
         "audio",
-        "pdf",
-        "video"
+        "video",
+        "pdf"
       ],
       "output": [
         "text"
@@ -1292,10 +1296,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from gemini/gemini-2.5-pro (highest input price). Limits are the minimum across: gemini/gemini-2.5-pro, vertex_ai/gemini-2.5-pro."
+        "Matched 2 inventory deployments. Price comes from gemini/gemini-2.5-pro (highest input price). Inventory limits are the minimum across: gemini/gemini-2.5-pro, vertex_ai/gemini-2.5-pro.",
+        "Inventory limit 1000000/64000 (context/output) differs from the configured 1048576/65536; configured value kept."
       ]
     },
     "gemini-3-flash": {
@@ -1309,9 +1314,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1328,7 +1333,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3.8-flash."
@@ -1345,9 +1350,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1364,7 +1369,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3-flash-preview."
@@ -1381,9 +1386,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1409,7 +1414,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3.1-pro-preview."
@@ -1426,9 +1431,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1454,7 +1459,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3.1-pro-preview."
@@ -1466,7 +1471,7 @@
       "name": "Gemini 3.1 Flash Image",
       "limit": {
         "context": 65536,
-        "output": 1290
+        "output": 65536
       },
       "input": [
         "text",
@@ -1490,11 +1495,12 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "mixed"
+        "metadata": "config"
       },
       "notes": [
         "Inventory mode is image_generation. Kept as chat because the routing seed lists text and image output.",
-        "Inventory deployment: vertex_ai/gemini-3.1-flash-image."
+        "Inventory deployment: vertex_ai/gemini-3.1-flash-image.",
+        "Inventory limit ?/1290 (context/output) differs from the configured 65536/65536; configured value kept."
       ]
     },
     "gemini-3.1-flash-lite": {
@@ -1508,9 +1514,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1527,7 +1533,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3.1-flash-lite."
@@ -1544,9 +1550,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1563,7 +1569,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3.1-flash-lite."
@@ -1580,9 +1586,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1599,10 +1605,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-3-1-pro (highest input price). Limits are the minimum across: openai/gemini-3-1-pro, vertex_ai/gemini-3.1-pro-preview."
+        "Matched 2 inventory deployments. Price comes from openai/gemini-3-1-pro (highest input price). Inventory limits are the minimum across: openai/gemini-3-1-pro, vertex_ai/gemini-3.1-pro-preview."
       ]
     },
     "gemini-3.1-pro-preview": {
@@ -1616,9 +1622,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1644,7 +1650,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3.1-pro-preview."
@@ -1661,9 +1667,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1680,7 +1686,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3.5-flash."
@@ -1733,9 +1739,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1752,7 +1758,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-3.5-flash-lite."
@@ -1769,9 +1775,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1788,10 +1794,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-3.8-flash (highest input price). Limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
+        "Matched 2 inventory deployments. Price comes from openai/gemini-3.8-flash (highest input price). Inventory limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
       ]
     },
     "gemini-3.7-flash": {
@@ -1805,9 +1811,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1824,10 +1830,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-3.8-flash (highest input price). Limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
+        "Matched 2 inventory deployments. Price comes from openai/gemini-3.8-flash (highest input price). Inventory limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
       ]
     },
     "gemini-3.8-flash": {
@@ -1841,9 +1847,9 @@
       "input": [
         "text",
         "image",
+        "video",
         "audio",
-        "pdf",
-        "video"
+        "pdf"
       ],
       "output": [
         "text"
@@ -1860,10 +1866,10 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from openai/gemini-3.8-flash (highest input price). Limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
+        "Matched 2 inventory deployments. Price comes from openai/gemini-3.8-flash (highest input price). Inventory limits are the minimum across: openai/gemini-3.8-flash, vertex_ai/gemini-3.8-flash."
       ]
     },
     "gemini-4-argon": {
@@ -1895,7 +1901,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: vertex_ai/gemini-4-argon."
@@ -1910,7 +1916,8 @@
         "output": 32768
       },
       "input": [
-        "text"
+        "text",
+        "image"
       ],
       "output": [
         "text"
@@ -1927,10 +1934,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "mixed"
+        "metadata": "config"
       },
       "notes": [
-        "Inventory deployment: gemini/gemma-4-26b-a4b-it."
+        "Inventory deployment: gemini/gemma-4-26b-a4b-it.",
+        "Inventory input modalities text differ from the configured text,image; configured value kept."
       ]
     },
     "gemma-4-31b-it": {
@@ -1942,7 +1950,8 @@
         "output": 32768
       },
       "input": [
-        "text"
+        "text",
+        "image"
       ],
       "output": [
         "text"
@@ -1962,7 +1971,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from openai/google.gemma-4-31b (highest input price). Limits are the minimum across: openai/google.gemma-4-31b, gemini/gemma-4-31b-it."
+        "Matched 2 inventory deployments. Price comes from openai/google.gemma-4-31b (highest input price). Inventory limits are the minimum across: openai/google.gemma-4-31b, gemini/gemma-4-31b-it.",
+        "Inventory input modalities text differ from the configured text,image; configured value kept."
       ]
     },
     "gemma-4-saif-kidc": {
@@ -1970,7 +1980,7 @@
       "kind": "chat",
       "name": "Gemma 4 SAIF Kidc (Free, TELUS Sovereign, Canada)",
       "limit": {
-        "context": 128000,
+        "context": 256000,
         "output": 32768
       },
       "input": [
@@ -1991,10 +2001,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "mixed"
+        "metadata": "config"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from openai/gemma-4-31b-it-saif-kidc (highest input price). Limits are the minimum across: openai/gemma-4-31b-it-saif-kidc, openai/kpn01-gemma4-31b-it-fp8."
+        "Matched 2 inventory deployments. Price comes from openai/gemma-4-31b-it-saif-kidc (highest input price). Inventory limits are the minimum across: openai/gemma-4-31b-it-saif-kidc, openai/kpn01-gemma4-31b-it-fp8.",
+        "Inventory limit 128000/? (context/output) differs from the configured 256000/32768; configured value kept."
       ]
     },
     "gpt-4-0125-preview": {
@@ -2038,7 +2049,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2058,7 +2070,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt41_20250414-useast2."
+        "Inventory deployment: azure/gpt41_20250414-useast2.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-4.1-2025-04-14": {
@@ -2071,7 +2084,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2091,7 +2105,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt41_20250414-useast2."
+        "Inventory deployment: azure/gpt41_20250414-useast2.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-4.1-mini": {
@@ -2104,7 +2119,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2124,7 +2140,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from azure/gpt41_mini_20250414-ca-east (highest input price). Limits are the minimum across: azure/gpt41_mini_20250414-ca-east, azure/gpt41_mini_20250414-useast2."
+        "Matched 2 inventory deployments. Price comes from azure/gpt41_mini_20250414-ca-east (highest input price). Inventory limits are the minimum across: azure/gpt41_mini_20250414-ca-east, azure/gpt41_mini_20250414-useast2.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-4.1-mini-canada": {
@@ -2137,7 +2154,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2157,7 +2175,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt41_mini_20250414-ca-east."
+        "Inventory deployment: azure/gpt41_mini_20250414-ca-east.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-4o": {
@@ -2166,11 +2185,12 @@
       "name": "GPT-4o",
       "limit": {
         "context": 128000,
-        "output": 4096
+        "output": 16384
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2190,7 +2210,9 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 4 inventory deployments. Price and capabilities come from azure/gpt4o_20240513-useast (highest input price). Limits are the minimum across: azure/gpt4o_20240513-useast, azure/gpt4o_20241120-ca-east, azure/gpt4o_20241120-useast2, azure/gpt4o_20240513-useast2.",
+        "Matched 4 inventory deployments. Price comes from azure/gpt4o_20240513-useast (highest input price). Inventory limits are the minimum across: azure/gpt4o_20240513-useast, azure/gpt4o_20241120-ca-east, azure/gpt4o_20241120-useast2, azure/gpt4o_20240513-useast2.",
+        "Inventory limit 128000/4096 (context/output) differs from the configured 128000/16384; configured value kept.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept.",
         "Price spread above 1% across deployments (input/output per 1M tokens): azure/gpt4o_20240513-useast (5/15), azure/gpt4o_20241120-ca-east (2.5/10), azure/gpt4o_20241120-useast2 (2.5/10), azure/gpt4o_20240513-useast2 (2.5/10)."
       ]
     },
@@ -2200,7 +2222,7 @@
       "name": "GPT-4o (2024-05-13)",
       "limit": {
         "context": 128000,
-        "output": 4096
+        "output": 16384
       },
       "input": [
         "text",
@@ -2224,7 +2246,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 3 inventory deployments. Price and capabilities come from azure/gpt4o_20240513-useast (highest input price). Limits are the minimum across: azure/gpt4o_20240513-useast, openai/gpt-4o-2024-05-13, azure/gpt4o_20240513-useast2.",
+        "Matched 3 inventory deployments. Price comes from azure/gpt4o_20240513-useast (highest input price). Inventory limits are the minimum across: azure/gpt4o_20240513-useast, openai/gpt-4o-2024-05-13, azure/gpt4o_20240513-useast2.",
+        "Inventory limit 128000/4096 (context/output) differs from the configured 128000/16384; configured value kept.",
         "Price spread above 1% across deployments (input/output per 1M tokens): azure/gpt4o_20240513-useast (5/15), openai/gpt-4o-2024-05-13 (5/15), azure/gpt4o_20240513-useast2 (2.5/10)."
       ]
     },
@@ -2291,7 +2314,7 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from azure/gpt4o_20240806-useast2 (highest input price). Limits are the minimum across: azure/gpt4o_20240806-useast2, openai/gpt-4o-2024-08-06."
+        "Matched 2 inventory deployments. Price comes from azure/gpt4o_20240806-useast2 (highest input price). Inventory limits are the minimum across: azure/gpt4o_20240806-useast2, openai/gpt-4o-2024-08-06."
       ]
     },
     "gpt-4o-mini": {
@@ -2304,7 +2327,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2324,7 +2348,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt4o_mini_20240718-useast2."
+        "Inventory deployment: azure/gpt4o_mini_20240718-useast2.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-4o-mini-2024-07-18": {
@@ -2337,7 +2362,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2357,7 +2383,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt4o_mini_20240718-useast2."
+        "Inventory deployment: azure/gpt4o_mini_20240718-useast2.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-4o-mini-2024-07-18-ptu": {
@@ -2486,7 +2513,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt5_20250807-useast2."
@@ -2519,7 +2546,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt5_20250807-useast2."
@@ -2552,7 +2579,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt5_chat_20250807-useast2."
@@ -2585,7 +2612,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt5_chat_20250807-useast2."
@@ -2618,7 +2645,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt5_mini_20250807-useast2."
@@ -2651,7 +2678,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt5_mini_20250807-useast2."
@@ -2684,7 +2711,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt5_nano_20250807-useast2."
@@ -2717,7 +2744,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt5_nano_20250807-useast2."
@@ -2750,7 +2777,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt-5.2."
@@ -2783,7 +2810,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt-5.2-chat."
@@ -2816,7 +2843,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: azure/gpt-5.2-chat."
@@ -2831,7 +2858,9 @@
         "output": 128000
       },
       "input": [
-        "text"
+        "text",
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2851,7 +2880,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt54_20260305-useast2."
+        "Inventory deployment: azure/gpt54_20260305-useast2.",
+        "Inventory input modalities text differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-5.4-2026-03-05": {
@@ -2863,7 +2893,9 @@
         "output": 128000
       },
       "input": [
-        "text"
+        "text",
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2883,7 +2915,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt54_20260305-useast2."
+        "Inventory deployment: azure/gpt54_20260305-useast2.",
+        "Inventory input modalities text differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-5.4-mini": {
@@ -2895,7 +2928,8 @@
         "output": 128000
       },
       "input": [
-        "text"
+        "text",
+        "image"
       ],
       "output": [
         "text"
@@ -2915,7 +2949,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt54_mini_20260317-useast2."
+        "Inventory deployment: azure/gpt54_mini_20260317-useast2.",
+        "Inventory input modalities text differ from the configured text,image; configured value kept."
       ]
     },
     "gpt-5.4-nano": {
@@ -2927,7 +2962,8 @@
         "output": 128000
       },
       "input": [
-        "text"
+        "text",
+        "image"
       ],
       "output": [
         "text"
@@ -2947,7 +2983,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from azure/gpt54_nano_20260317-useast2 (highest input price). Limits are the minimum across: azure/gpt54_nano_20260317-useast2, openai/gpt-5.4-nano."
+        "Matched 2 inventory deployments. Price comes from azure/gpt54_nano_20260317-useast2 (highest input price). Inventory limits are the minimum across: azure/gpt54_nano_20260317-useast2, openai/gpt-5.4-nano.",
+        "Inventory input modalities text differ from the configured text,image; configured value kept."
       ]
     },
     "gpt-5.6-luna": {
@@ -2960,7 +2997,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -2980,7 +3018,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt-5-6-luna-useast2."
+        "Inventory deployment: azure/gpt-5-6-luna-useast2.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-5.6-terra": {
@@ -2993,7 +3032,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -3013,7 +3053,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: azure/gpt-5-6-terra-useast2."
+        "Inventory deployment: azure/gpt-5-6-terra-useast2.",
+        "Inventory input modalities text,image differ from the configured text,image,pdf; configured value kept."
       ]
     },
     "gpt-6-luna": {
@@ -3235,7 +3276,7 @@
       "name": "Imagen 4 ($0.04/image, not token-billed)",
       "limit": {
         "context": 480,
-        "output": 1290
+        "output": 0
       },
       "input": [
         "text"
@@ -3255,10 +3296,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "mixed"
+        "metadata": "config"
       },
       "notes": [
-        "Inventory deployment: vertex_ai/gemini-2.5-flash-image."
+        "Inventory deployment: vertex_ai/gemini-2.5-flash-image.",
+        "Inventory limit ?/1290 (context/output) differs from the configured 480/0; configured value kept."
       ]
     },
     "imagen-4-ultra": {
@@ -3267,7 +3309,7 @@
       "name": "Imagen 4 Ultra ($0.06/image, not token-billed)",
       "limit": {
         "context": 480,
-        "output": 1290
+        "output": 0
       },
       "input": [
         "text"
@@ -3287,10 +3329,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "mixed"
+        "metadata": "config"
       },
       "notes": [
-        "Inventory deployment: vertex_ai/gemini-2.5-flash-image."
+        "Inventory deployment: vertex_ai/gemini-2.5-flash-image.",
+        "Inventory limit ?/1290 (context/output) differs from the configured 480/0; configured value kept."
       ]
     },
     "llama-3.2-90b": {
@@ -3331,7 +3374,7 @@
       "name": "Llama 4 Maverick 17B-128E Instruct",
       "limit": {
         "context": 1000000,
-        "output": 1000000
+        "output": 16384
       },
       "input": [
         "text",
@@ -3355,7 +3398,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas."
+        "Inventory deployment: vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas.",
+        "Inventory output limit ignored, because it is not below the context limit: vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas (output 1000000, context 1000000)."
       ]
     },
     "llama-4-scout-17b-16e": {
@@ -3364,7 +3408,7 @@
       "name": "Llama 4 Scout 17B-16E Instruct",
       "limit": {
         "context": 10000000,
-        "output": 10000000
+        "output": 16384
       },
       "input": [
         "text",
@@ -3388,7 +3432,8 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Inventory deployment: vertex_ai/meta/llama-4-scout-17b-16e-instruct-maas."
+        "Inventory deployment: vertex_ai/meta/llama-4-scout-17b-16e-instruct-maas.",
+        "Inventory output limit ignored, because it is not below the context limit: vertex_ai/meta/llama-4-scout-17b-16e-instruct-maas (output 10000000, context 10000000)."
       ]
     },
     "mistral-large": {
@@ -3480,7 +3525,7 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
         "Inventory deployment: openai/o3-mini-2025-01-31."
@@ -3491,8 +3536,8 @@
       "kind": "chat",
       "name": "OpenAI o4 mini",
       "limit": {
-        "context": 128000,
-        "output": 8192
+        "context": 200000,
+        "output": 100000
       },
       "input": [
         "text",
@@ -3513,10 +3558,11 @@
       "listed": true,
       "sources": {
         "routing": "config",
-        "metadata": "inventory"
+        "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from azure/o4_mini_20250416-useast2 (highest input price). Limits are the minimum across: azure/o4_mini_20250416-useast2, openai/o4-mini-2025-04-16."
+        "Matched 2 inventory deployments. Price comes from azure/o4_mini_20250416-useast2 (highest input price). Inventory limits are the minimum across: azure/o4_mini_20250416-useast2, openai/o4-mini-2025-04-16.",
+        "Inventory limit 128000/8192 (context/output) differs from the configured 200000/100000; configured value kept."
       ]
     },
     "text-embedding-3-large": {
@@ -3525,7 +3571,7 @@
       "name": "Text Embedding 3 Large",
       "limit": {
         "context": 8191,
-        "output": 8191
+        "output": 0
       },
       "input": [
         "text"
@@ -3548,7 +3594,9 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 2 inventory deployments. Price and capabilities come from azure/text_embedding_3_large-ca-east (highest input price). Limits are the minimum across: azure/text_embedding_3_large-ca-east, azure/text_embedding_3_large-useast2."
+        "Matched 2 inventory deployments. Price comes from azure/text_embedding_3_large-ca-east (highest input price). Inventory limits are the minimum across: azure/text_embedding_3_large-ca-east, azure/text_embedding_3_large-useast2.",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text_embedding_3_large-ca-east (output 8191, context 8191).",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text_embedding_3_large-useast2 (output 8191, context 8191)."
       ]
     },
     "text-embedding-3-small": {
@@ -3557,7 +3605,7 @@
       "name": "Text Embedding 3 Small",
       "limit": {
         "context": 8191,
-        "output": 8191
+        "output": 0
       },
       "input": [
         "text"
@@ -3580,7 +3628,12 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 5 inventory deployments. Price and capabilities come from azure/text_embedding_3_small-useast (highest input price). Limits are the minimum across: azure/text_embedding_3_small-useast, azure/text_embedding_3_small-useast2, azure/text_embedding_3_small-uswest, azure/text_embedding_3_small_global-ca-east, azure/text_embedding_3_small_global-useast2."
+        "Matched 5 inventory deployments. Price comes from azure/text_embedding_3_small-useast (highest input price). Inventory limits are the minimum across: azure/text_embedding_3_small-useast, azure/text_embedding_3_small-useast2, azure/text_embedding_3_small-uswest, azure/text_embedding_3_small_global-ca-east, azure/text_embedding_3_small_global-useast2.",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text_embedding_3_small-useast (output 8191, context 8191).",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text_embedding_3_small-useast2 (output 8191, context 8191).",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text_embedding_3_small-uswest (output 8191, context 8191).",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text_embedding_3_small_global-ca-east (output 8191, context 8191).",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text_embedding_3_small_global-useast2 (output 8191, context 8191)."
       ]
     },
     "text-embedding-ada-002": {
@@ -3589,7 +3642,7 @@
       "name": "Text Embedding Ada 002 (legacy)",
       "limit": {
         "context": 8191,
-        "output": 8191
+        "output": 0
       },
       "input": [
         "text"
@@ -3612,7 +3665,10 @@
         "metadata": "mixed"
       },
       "notes": [
-        "Matched 3 inventory deployments. Price and capabilities come from azure/telus-text-embedding-ada-002 (highest input price). Limits are the minimum across: azure/telus-text-embedding-ada-002, azure/text-embedding-ada-002-ca-east, azure/text_embedding_ada-useast2."
+        "Matched 3 inventory deployments. Price comes from azure/telus-text-embedding-ada-002 (highest input price). Inventory limits are the minimum across: azure/telus-text-embedding-ada-002, azure/text-embedding-ada-002-ca-east, azure/text_embedding_ada-useast2.",
+        "Inventory output limit ignored, because it is not below the context limit: azure/telus-text-embedding-ada-002 (output 8191, context 8191).",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text-embedding-ada-002-ca-east (output 8191, context 8191).",
+        "Inventory output limit ignored, because it is not below the context limit: azure/text_embedding_ada-useast2 (output 8191, context 8191)."
       ]
     },
     "tts-1": {

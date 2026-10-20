@@ -31,6 +31,10 @@ export function assertNoSecrets(text: string): void {
   }
 }
 
+function sameSet(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && [...a].sort().join("\0") === [...b].sort().join("\0")
+}
+
 function sameCost(a: CatalogCost, b: CatalogCost): boolean {
   return a.input === b.input && a.output === b.output && a.cacheRead === b.cacheRead && a.cacheWrite === b.cacheWrite
 }
@@ -70,18 +74,30 @@ function buildEntry(id: string, input: BuildInput): Built {
   let fromSeed = 0
   const origin: Partial<Record<Field, Origin>> = {}
 
-  // Limit: per component, inventory first, then seed.
-  const context = selection?.context ?? seed?.context
-  const outputLimit = selection?.output ?? seed?.output
+  // Limit: the seed (known-working configuration) first, then the inventory. Each component on its own.
+  const inventoryContext = selection?.context
+  const inventoryOutput = selection?.output
+  const context = seed?.context ?? inventoryContext
+  let outputLimit = seed?.output ?? inventoryOutput
+  // An inventory output limit that is not below the final context limit is wrong. Drop it.
+  if (seed?.output === undefined && outputLimit !== undefined && context !== undefined && outputLimit >= context) {
+    outputLimit = undefined
+  }
   let limit: CatalogLimit | undefined
   if (context !== undefined && outputLimit !== undefined) {
     limit = { context, output: outputLimit }
-    origin.limit = selection?.context !== undefined && selection.output !== undefined ? "inventory" : "seed"
-    if (selection?.context !== undefined && selection.output !== undefined) fromInventory++
-    else if (selection?.context === undefined && selection?.output === undefined) fromSeed++
-    else {
-      fromInventory++
+    const contextFromSeed = seed?.context !== undefined
+    const outputFromSeed = seed?.output !== undefined
+    if (contextFromSeed && outputFromSeed) {
+      origin.limit = "seed"
       fromSeed++
+    } else if (!contextFromSeed && !outputFromSeed) {
+      origin.limit = "inventory"
+      fromInventory++
+    } else {
+      origin.limit = "seed"
+      fromSeed++
+      fromInventory++
     }
   }
 
@@ -127,24 +143,24 @@ function buildEntry(id: string, input: BuildInput): Built {
     origin.cost = "seed"
   }
 
-  // Input modalities, tools, reasoning: chosen deployment first, then seed.
-  const inputModalities = chosen?.modalities ?? seed?.inputModalities
+  // Input modalities, tools, reasoning: the seed first, then the chosen deployment.
+  const inputModalities = seed?.inputModalities ?? chosen?.modalities
   if (inputModalities) {
-    origin.input = chosen?.modalities ? "inventory" : "seed"
-    if (chosen?.modalities) fromInventory++
-    else fromSeed++
+    origin.input = seed?.inputModalities ? "seed" : "inventory"
+    if (seed?.inputModalities) fromSeed++
+    else fromInventory++
   }
-  const tools = chosen?.tools ?? seed?.tools
+  const tools = seed?.tools ?? chosen?.tools
   if (tools !== undefined) {
-    origin.tools = chosen?.tools !== undefined ? "inventory" : "seed"
-    if (chosen?.tools !== undefined) fromInventory++
-    else fromSeed++
+    origin.tools = seed?.tools !== undefined ? "seed" : "inventory"
+    if (seed?.tools !== undefined) fromSeed++
+    else fromInventory++
   }
-  const reasoning = chosen?.reasoning ?? seed?.reasoning
+  const reasoning = seed?.reasoning ?? chosen?.reasoning
   if (reasoning !== undefined) {
-    origin.reasoning = chosen?.reasoning !== undefined ? "inventory" : "seed"
-    if (chosen?.reasoning !== undefined) fromInventory++
-    else fromSeed++
+    origin.reasoning = seed?.reasoning !== undefined ? "seed" : "inventory"
+    if (seed?.reasoning !== undefined) fromSeed++
+    else fromInventory++
   }
 
   const outputModalities = seed?.outputModalities ?? (kind === "chat" ? ["text"] : undefined)
@@ -154,10 +170,28 @@ function buildEntry(id: string, input: BuildInput): Built {
   if (selection && chosen) {
     if (selection.deploymentNames.length > 1) {
       notes.push(
-        `Matched ${selection.deploymentNames.length} inventory deployments. Price and capabilities come from ${chosen.deployment} (highest input price). Limits are the minimum across: ${selection.deploymentNames.join(", ")}.`,
+        `Matched ${selection.deploymentNames.length} inventory deployments. Price comes from ${chosen.deployment} (highest input price). Inventory limits are the minimum across: ${selection.deploymentNames.join(", ")}.`,
       )
     } else {
       notes.push(`Inventory deployment: ${chosen.deployment}.`)
+    }
+    for (const detail of selection.ignoredOutput) {
+      notes.push(`Inventory output limit ignored, because it is not below the context limit: ${detail}.`)
+    }
+    if (seed?.context !== undefined || seed?.output !== undefined) {
+      const differs =
+        (seed.context !== undefined && inventoryContext !== undefined && seed.context !== inventoryContext) ||
+        (seed.output !== undefined && inventoryOutput !== undefined && seed.output !== inventoryOutput)
+      if (differs) {
+        notes.push(
+          `Inventory limit ${inventoryContext ?? "?"}/${inventoryOutput ?? "?"} (context/output) differs from the configured ${seed.context ?? "?"}/${seed.output ?? "?"}; configured value kept.`,
+        )
+      }
+    }
+    if (seed?.inputModalities && chosen.modalities && !sameSet(seed.inputModalities, chosen.modalities)) {
+      notes.push(
+        `Inventory input modalities ${chosen.modalities.join(",")} differ from the configured ${seed.inputModalities.join(",")}; configured value kept.`,
+      )
     }
     if (selection.priceSpread) {
       notes.push(`Price spread above 1% across deployments (input/output per 1M tokens): ${selection.spreadDetail}.`)

@@ -134,8 +134,10 @@ export interface Selection {
   readonly deploymentNames: readonly string[]
   /** Minimum context across candidates. */
   readonly context?: number
-  /** Minimum output across candidates. */
+  /** Minimum output across candidates that pass the sanity rule. */
   readonly output?: number
+  /** Inventory output limits ignored by the sanity rule (output not below context), one text per deployment. */
+  readonly ignoredOutput: readonly string[]
   /** `true` when the base input or output price differs by more than 1% across candidates. */
   readonly priceSpread: boolean
   readonly spreadDetail?: string
@@ -177,6 +179,10 @@ function rank(a: Deployment, b: Deployment): number {
  * - price from the candidate with the highest base input price (list rate, conservative);
  * - limits are the minimum context and output across candidates (safe for any route);
  * - modalities, tools, and reasoning come from the chosen candidate.
+ *
+ * Sanity rule: the registry defaults in the inventory hold wrong output limits (for example an output limit that
+ * equals the input size). A candidate whose output limit is not below its own context limit contributes its
+ * context limit only. The final output limit must also be below the final context limit.
  */
 export function selectDeployment(id: string, deployments: readonly Deployment[]): Selection | undefined {
   const candidates = candidatesFor(id, deployments).sort(rank)
@@ -186,12 +192,21 @@ export function selectDeployment(id: string, deployments: readonly Deployment[])
     candidates.length > 1 &&
     (spread(candidates.map((item) => item.prices.input)) || spread(candidates.map((item) => item.prices.output)))
   const unique = [...new Map(candidates.map((item) => [item.deployment, item])).values()]
+  const insane = (item: Deployment) =>
+    item.output !== undefined && item.context !== undefined && item.output >= item.context
+  const ignoredOutput = unique
+    .filter(insane)
+    .map((item) => `${item.deployment} (output ${item.output}, context ${item.context})`)
+  const context = minimum(candidates.map((item) => item.context))
+  const rawOutput = minimum(candidates.filter((item) => !insane(item)).map((item) => item.output))
+  const output = rawOutput !== undefined && context !== undefined && rawOutput >= context ? undefined : rawOutput
   return {
     chosen,
     candidates,
     deploymentNames: unique.map((item) => item.deployment),
-    context: minimum(candidates.map((item) => item.context)),
-    output: minimum(candidates.map((item) => item.output)),
+    context,
+    output,
+    ignoredOutput,
     priceSpread,
     ...(priceSpread
       ? {

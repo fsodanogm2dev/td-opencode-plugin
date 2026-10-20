@@ -11,16 +11,22 @@ import { parseIds } from "../../../scripts/lib/ids.ts"
 import { fixtureCatalog, fixtureDeployments, fixtureSeed } from "./helpers.ts"
 
 describe("catalog build", () => {
-  test("applies the pricing policy to a multi-deployment ID", async () => {
+  test("takes price from the inventory and limits and capabilities from the seed", async () => {
     const { models } = await fixtureCatalog()
     const alpha = models.alpha
     expect(alpha?.provider).toBe("fuelix-anthropic")
-    expect(alpha?.sources).toEqual({ routing: "config", metadata: "inventory" })
+    expect(alpha?.sources).toEqual({ routing: "config", metadata: "mixed" })
+    // Price: inventory (highest input price), not the seed price 4/20.
     expect(alpha?.cost).toEqual({ input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 })
-    expect(alpha?.limit).toEqual({ context: 200000, output: 64000 })
+    // Limit and capabilities: seed. The inventory minimum would be 200000/64000.
+    expect(alpha?.limit).toEqual({ context: 500000, output: 64000 })
     expect(alpha?.input).toEqual(["text", "image", "pdf"])
     expect(alpha?.tools).toBe(true)
+    // The seed has no reasoning flag, so the inventory value applies.
     expect(alpha?.reasoning).toBe(true)
+    expect(alpha?.notes).toContain(
+      "Inventory limit 200000/64000 (context/output) differs from the configured 500000/64000; configured value kept.",
+    )
     expect(alpha?.costTiers).toBeUndefined()
     expect(alpha?.notes?.[0]).toContain("vertex_ai/alpha@default")
     expect(alpha?.notes?.some((note) => note.startsWith("Price spread"))).toBe(true)
@@ -43,7 +49,7 @@ describe("catalog build", () => {
     expect(models["seed-only"]?.cost).toEqual({ input: 0.5, output: 1.5, cacheRead: 0.05, cacheWrite: 0.6 })
     expect(models["seed-only"]?.limit).toEqual({ context: 128000, output: 8000 })
     expect(models["seed-only"]?.notes?.[0]).toContain("No active inventory deployment")
-    expect(models.emb?.sources.metadata).toBe("inventory")
+    expect(models.emb?.sources.metadata).toBe("config")
     expect(models.emb?.cost).toBeUndefined()
   })
 
@@ -120,6 +126,133 @@ describe("catalog build", () => {
     const changed = { ...later, sources: ["other"] }
     expect(stabilizeTimestamp(existing, changed)).toBe(serializeCatalog(changed))
     expect(stabilizeTimestamp(undefined, later)).toBe(serializeCatalog(later))
+  })
+})
+
+describe("seed-first policy", () => {
+  test("keeps the configured limit and modalities and notes the differences", async () => {
+    const { models } = await fixtureCatalog()
+    expect(models.beta?.limit).toEqual({ context: 400000, output: 100000 })
+    expect(models.beta?.notes?.some((note) => note.includes("differs"))).toBe(false)
+    const alpha = models.alpha
+    expect(alpha?.notes?.some((note) => note.startsWith("Inventory limit"))).toBe(true)
+  })
+
+  test("notes a modality difference and keeps the configured modalities", () => {
+    const models = buildCatalog({
+      seed: new Map([["m", { provider: "fuelix", inputModalities: ["text", "image", "pdf"] }]]),
+      deployments: [
+        {
+          deployment: "azure/m",
+          provider: "azure",
+          modelName: "m",
+          aliases: ["m"],
+          active: true,
+          kind: "chat",
+          modalities: ["text"],
+          prices: { input: 1e-6, output: 2e-6 },
+        },
+      ],
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      sources: ["test"],
+    }).models
+    expect(models.m?.input).toEqual(["text", "image", "pdf"])
+    expect(models.m?.notes).toContain(
+      "Inventory input modalities text differ from the configured text,image,pdf; configured value kept.",
+    )
+  })
+
+  test("uses the inventory limit when the seed has none, and prefers the seed for capabilities", () => {
+    const models = buildCatalog({
+      seed: new Map([
+        ["m", { provider: "fuelix" as const, tools: false }],
+        ["n", { provider: "fuelix" as const, context: 10000 }],
+      ]),
+      deployments: [
+        {
+          deployment: "azure/m",
+          provider: "azure",
+          modelName: "m",
+          aliases: ["m"],
+          active: true,
+          kind: "chat",
+          tools: true,
+          reasoning: true,
+          context: 200000,
+          output: 100000,
+          prices: { input: 1e-6, output: 2e-6 },
+        },
+        {
+          deployment: "azure/n",
+          provider: "azure",
+          modelName: "n",
+          aliases: ["n"],
+          active: true,
+          kind: "chat",
+          context: 5000,
+          output: 2000,
+          prices: { input: 1e-6, output: 2e-6 },
+        },
+      ],
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      sources: ["test"],
+    }).models
+    expect(models.m?.limit).toEqual({ context: 200000, output: 100000 })
+    expect(models.m?.tools).toBe(false)
+    expect(models.m?.reasoning).toBe(true)
+    expect(models.m?.sources.metadata).toBe("mixed")
+    // Components are taken one by one: seed context, inventory output.
+    expect(models.n?.limit).toEqual({ context: 10000, output: 2000 })
+  })
+})
+
+describe("inventory limit sanity rule", () => {
+  const base = {
+    provider: "azure",
+    modelName: "m",
+    aliases: ["m"],
+    active: true,
+    kind: "chat" as const,
+    prices: { input: 1e-6, output: 2e-6 },
+  }
+
+  test("ignores an output limit that is not below the context limit", () => {
+    const models = buildCatalog({
+      seed: new Map([["m", { provider: "fuelix" as const }]]),
+      deployments: [{ ...base, deployment: "vertex_ai/m", context: 10_000_000, output: 10_000_000 }],
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      sources: ["test"],
+    }).models
+    expect(models.m?.limit).toBeUndefined()
+    expect(models.m?.notes).toContain(
+      "Inventory output limit ignored, because it is not below the context limit: vertex_ai/m (output 10000000, context 10000000).",
+    )
+  })
+
+  test("still uses the inventory context when the seed has the output", () => {
+    const models = buildCatalog({
+      seed: new Map([["m", { provider: "fuelix" as const, output: 8192 }]]),
+      deployments: [{ ...base, deployment: "vertex_ai/m", context: 1_000_000, output: 1_000_000 }],
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      sources: ["test"],
+    }).models
+    expect(models.m?.limit).toEqual({ context: 1_000_000, output: 8192 })
+  })
+
+  test("applies the minimum across candidates that pass the rule", () => {
+    const models = buildCatalog({
+      seed: new Map([["m", { provider: "fuelix" as const }]]),
+      deployments: [
+        { ...base, deployment: "a/m", context: 200_000, output: 100_000 },
+        { ...base, deployment: "b/m", context: 128_000, output: 8_192 },
+        { ...base, deployment: "c/m", context: 1_000_000, output: 1_000_000 },
+      ],
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      sources: ["test"],
+    }).models
+    // c/m fails the rule: it adds its context but not its output.
+    expect(models.m?.limit).toEqual({ context: 128_000, output: 8_192 })
+    expect(models.m?.notes?.some((note) => note.includes("c/m (output 1000000"))).toBe(true)
   })
 })
 
