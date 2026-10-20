@@ -100,11 +100,43 @@ export function nodeVersionSupported(output: string): boolean {
 }
 
 /** Runs `<node> --version` once. */
-export async function checkNode(run: RunProcess, node: string): Promise<{ ok: boolean; detail: string }> {
-  const result = await run(node, ["--version"], { timeoutMs: 5000 })
+export async function checkNode(
+  run: RunProcess,
+  node: string,
+  env?: Readonly<Record<string, string | undefined>>,
+): Promise<{ ok: boolean; detail: string }> {
+  const result = await run(node, ["--version"], { timeoutMs: 5000, ...(env ? { env } : {}) })
   if (result.code !== 0) return { ok: false, detail: result.error ?? "node --version failed" }
   const version = result.stdout.trim()
   return nodeVersionSupported(version)
     ? { ok: true, detail: version }
     : { ok: false, detail: `${version || "unknown version"} (need 22.5 or later)` }
+}
+
+export const NODE_FALLBACKS: readonly string[] = ["/opt/homebrew/bin/node", "/usr/local/bin/node"]
+
+export interface ResolvedNode {
+  readonly ok: boolean
+  /** The executable to use. Empty when none qualifies. */
+  readonly node: string
+  readonly detail: string
+}
+
+/**
+ * Finds a Node.js executable of version 22.5 or later. A configured path other than the default "node" is checked
+ * alone. For the default, `node` on PATH is tried first, then the common install locations of Homebrew.
+ */
+export async function resolveNode(
+  run: RunProcess,
+  configured: string,
+  env?: Readonly<Record<string, string | undefined>>,
+): Promise<ResolvedNode> {
+  const candidates = configured === "node" ? ["node", ...NODE_FALLBACKS] : [configured]
+  const failures: string[] = []
+  for (const candidate of candidates) {
+    const result = await checkNode(run, candidate, env)
+    if (result.ok) return { ok: true, node: candidate, detail: result.detail }
+    failures.push(`${candidate}: ${result.detail}`)
+  }
+  return { ok: false, node: "", detail: failures.join("; ") }
 }

@@ -1,3 +1,4 @@
+import { setBounded } from "./bounded.ts"
 import { isRecord, msToUnixNano, num, obj, str } from "./types.ts"
 import type { AttributeValue, OpenCodeEvent, TelemetryRecord } from "./types.ts"
 
@@ -55,16 +56,7 @@ interface ToolState {
   decided: boolean
 }
 
-const MAX_TRACKED = 5000
 const MAX_DEPTH = 16
-
-function setBounded<K, V>(map: Map<K, V>, key: K, value: V): void {
-  if (!map.has(key) && map.size >= MAX_TRACKED) {
-    const oldest = map.keys().next()
-    if (!oldest.done) map.delete(oldest.value)
-  }
-  map.set(key, value)
-}
 
 function freshState(info: SessionInfo = {}): SessionState {
   const state: SessionState = { sequence: 0, child: { tokens: 0, toolUses: 0 } }

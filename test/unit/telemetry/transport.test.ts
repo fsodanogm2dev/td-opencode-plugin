@@ -184,4 +184,37 @@ describe("transport", () => {
     await transport.close(100)
     expect(Date.now() - started).toBeLessThan(600)
   })
+
+  test("three consecutive connection failures call onUnreachable, and an HTTP response resets the count", async () => {
+    let calls = 0
+    const transport = new Transport({ ...base, receiverURL: "http://127.0.0.1:1", log: createMemoryLogger(), onUnreachable: () => (calls += 1) })
+    transport.enqueue([rec(1)])
+    await transport.flush()
+    expect(calls).toBe(1)
+
+    const { url } = serve(() => new Response("no", { status: 500 }))
+    let reset = 0
+    const mixed = new Transport({
+      ...base,
+      receiverURL: url,
+      log: createMemoryLogger(),
+      onUnreachable: () => (reset += 1),
+      fetch: (() => {
+        let attempt = 0
+        return async (target, init) => {
+          attempt += 1
+          // Two failures, then an HTTP 500 that resets the count, then two more failures.
+          if (attempt === 3) return { ok: false, status: 500 }
+          if (attempt <= 5) throw new Error("ECONNREFUSED")
+          return fetch(target, init)
+        }
+      })(),
+      retries: 2,
+    })
+    mixed.enqueue([rec(1)])
+    await mixed.flush()
+    mixed.enqueue([rec(2)])
+    await mixed.flush()
+    expect(reset).toBe(0)
+  })
 })

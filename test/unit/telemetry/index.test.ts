@@ -87,13 +87,18 @@ function channel() {
 function fakeContext(feed: ReturnType<typeof channel>, sessions: Record<string, unknown> = {}) {
   const hooks: Record<string, (input: any) => unknown> = {}
   const looked: string[] = []
+  const state = { disposed: 0 }
   const ctx = {
     location: { directory: "/work/proj" },
     event: { subscribe: (opts: { signal: AbortSignal }) => feed.iterable(opts.signal) },
     session: {
       hook: async (name: string, callback: (input: any) => unknown) => {
         hooks[name] = callback
-        return { dispose: async () => {} }
+        return {
+          dispose: async () => {
+            state.disposed += 1
+          },
+        }
       },
       get: async ({ sessionID }: { sessionID: string }) => {
         looked.push(sessionID)
@@ -102,7 +107,7 @@ function fakeContext(feed: ReturnType<typeof channel>, sessions: Record<string, 
       },
     },
   }
-  return { ctx: ctx as never, hooks, looked }
+  return { ctx: ctx as never, hooks, looked, state }
 }
 
 interface Spawned {
@@ -130,6 +135,7 @@ function fakes(nodeVersion = "v22.12.0") {
     transport: { backoffMs: [1, 1] },
     resubscribeDelayMs: 5,
     ownerRegistry: new Map<string, number>(),
+    processManagerState: { spawned: false, lastSpawnAt: undefined },
   }
   return { deps, hookCalls, stdinTexts, detached }
 }
@@ -143,13 +149,20 @@ const attr = (record: any, key: string) => {
   return value?.stringValue ?? value?.intValue ?? value?.doubleValue
 }
 
+/** Sets telemetry up and waits for the background activation. */
+async function boot(ctx: never, opts: TelemetryOptions, log: ReturnType<typeof createMemoryLogger>, deps: TelemetryDeps) {
+  const cleanup = await setupTelemetry(ctx, opts, log, deps)
+  await cleanup.ready
+  return cleanup
+}
+
 describe("setupTelemetry", () => {
   test("stays off with one info log when td-telemetry is missing", async () => {
     const log = createMemoryLogger()
     const { deps, detached } = fakes()
     const feed = channel()
     const { ctx } = fakeContext(feed)
-    const cleanup = await setupTelemetry(ctx, options({ root: undefined }), log, deps)
+    const cleanup = await boot(ctx, options({ root: undefined }), log, deps)
     expect(detached).toEqual([])
     expect(log.lines.filter((line) => line.includes(" info "))).toHaveLength(1)
     expect(feed.subscriptions).toBe(0)
@@ -159,7 +172,7 @@ describe("setupTelemetry", () => {
   test("stays off when disabled", async () => {
     const { deps, detached } = fakes()
     const { ctx } = fakeContext(channel())
-    await (await setupTelemetry(ctx, options({ enabled: false }), createMemoryLogger(), deps))()
+    await (await boot(ctx, options({ enabled: false }), createMemoryLogger(), deps))()
     expect(detached).toEqual([])
   })
 
@@ -168,7 +181,7 @@ describe("setupTelemetry", () => {
     const { deps, detached } = fakes("v20.1.0")
     const feed = channel()
     const { ctx } = fakeContext(feed)
-    await (await setupTelemetry(ctx, options(), log, deps))()
+    await (await boot(ctx, options(), log, deps))()
     expect(detached).toEqual([])
     expect(feed.subscriptions).toBe(0)
     expect(log.lines.some((line) => line.includes(" warn ") && line.includes("22.5"))).toBe(true)
@@ -178,7 +191,7 @@ describe("setupTelemetry", () => {
     const { deps, hookCalls, stdinTexts, detached } = fakes()
     const feed = channel()
     const { ctx, hooks } = fakeContext(feed, {})
-    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), deps)
     expect(detached).toEqual([{ command: "node22", args: [path.join(root, "lib", "process-manager.mjs")] }])
     expect(typeof hooks.prompt).toBe("function")
 
@@ -214,7 +227,7 @@ describe("setupTelemetry", () => {
       ses_old_root: { id: "ses_old_root", location: { directory: "/work/proj" }, title: "Old work" },
       ses_old_child: { id: "ses_old_child", parentID: "ses_old_root", location: { directory: "/work/proj" }, agent: "explorer" },
     })
-    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), deps)
     feed.push({
       id: "evt_1",
       type: "session.step.ended",
@@ -241,7 +254,7 @@ describe("setupTelemetry", () => {
     const { deps } = fakes()
     const feed = channel()
     const { ctx } = fakeContext(feed, {})
-    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), deps)
     feed.push({
       type: "session.step.ended",
       created: 5000,
@@ -257,7 +270,7 @@ describe("setupTelemetry", () => {
     const { deps, hookCalls } = fakes()
     const feed = channel()
     const { ctx } = fakeContext(feed)
-    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), deps)
     feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_d", location: { directory: "/work/proj" } } })
     feed.push({ type: "session.step.started", created: 2, data: { sessionID: "ses_d", assistantMessageID: "m", agent: "build", model: { id: "x", providerID: "p" }, started: 2 } })
     feed.push({ type: "session.deleted", created: 3, data: { sessionID: "ses_d" } })
@@ -287,7 +300,7 @@ describe("setupTelemetry", () => {
       }
       return feed.iterable(opts.signal)
     }
-    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), deps)
     await sleep(80)
     feed.push({ type: "session.skill.activated", created: 9, data: { sessionID: "ses_r", id: "s", name: "x", text: "t" } })
     await sleep(100)
@@ -299,7 +312,7 @@ describe("setupTelemetry", () => {
   test("setup never throws when the context is broken", async () => {
     const { deps } = fakes()
     const log = createMemoryLogger()
-    const cleanup = await setupTelemetry({} as never, options(), log, deps)
+    const cleanup = await boot({} as never, options(), log, deps)
     await cleanup()
   })
 })
@@ -321,7 +334,7 @@ describe("plugin instances and session ownership", () => {
     const feed = channel()
     const { ctx } = fakeContext(feed)
     ;(ctx as any).location = { directory: alias }
-    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), deps)
     feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_alias", location: { directory: real } } })
     feed.push(stepEnded("ses_alias"))
     await sleep(100)
@@ -341,7 +354,7 @@ describe("plugin instances and session ownership", () => {
     const feed = channel()
     const { ctx } = fakeContext(feed)
     ;(ctx as any).location = { directory: alias }
-    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), deps)
     feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_lone", location: { directory: real } } })
     feed.push(stepEnded("ses_lone"))
     await sleep(100)
@@ -356,7 +369,7 @@ describe("plugin instances and session ownership", () => {
     const feed = channel()
     const { ctx } = fakeContext(feed)
     ;(ctx as any).location = { directory: real }
-    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), deps)
     feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_same", location: { directory: real } } })
     feed.push(stepEnded("ses_same"))
     await sleep(100)
@@ -374,7 +387,7 @@ describe("plugin instances and session ownership", () => {
     const feed = channel()
     const { ctx } = fakeContext(feed)
     ;(ctx as any).location = { directory: mine }
-    const cleanup = await setupTelemetry(ctx, options(), log, deps)
+    const cleanup = await boot(ctx, options(), log, deps)
     feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_other", location: { directory: theirs } } })
     feed.push(stepEnded("ses_other"))
     feed.push(stepEnded("ses_other"))
@@ -390,12 +403,173 @@ describe("plugin instances and session ownership", () => {
     const registry = deps.ownerRegistry as Map<string, number>
     const first = fakeContext(channel())
     const second = fakeContext(channel())
-    const cleanupOne = await setupTelemetry(first.ctx, options(), createMemoryLogger(), deps)
-    const cleanupTwo = await setupTelemetry(second.ctx, options(), createMemoryLogger(), deps)
+    const cleanupOne = await boot(first.ctx, options(), createMemoryLogger(), deps)
+    const cleanupTwo = await boot(second.ctx, options(), createMemoryLogger(), deps)
     expect(registry.get("/work/proj")).toBe(2)
     await cleanupOne()
     expect(registry.get("/work/proj")).toBe(1)
     await cleanupTwo()
     expect(registry.size).toBe(0)
+  })
+})
+
+describe("background activation", () => {
+  /** A locate file system that waits until `release()` is called. */
+  function gatedLocateFs() {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    return {
+      release: () => release(),
+      fs: {
+        readdir: async () => [],
+        exists: async () => {
+          await gate
+          return true
+        },
+      },
+    }
+  }
+
+  const prompt = (hooks: Record<string, (input: any) => unknown>, id: number) =>
+    hooks.prompt?.({ sessionID: "ses_q", messageID: `msg_${id}`, prompt: { text: "SECRET-PROMPT-TEXT" } })
+
+  test("setup returns before locate finishes, and queued prompts are sent after activation", async () => {
+    const gate = gatedLocateFs()
+    const { deps, hookCalls } = fakes()
+    const feed = channel()
+    const { ctx, hooks } = fakeContext(feed)
+    const started = Date.now()
+    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), { ...deps, locateFs: gate.fs })
+    expect(Date.now() - started).toBeLessThan(200)
+    expect(typeof hooks.prompt).toBe("function")
+    expect(prompt(hooks, 1)).toBeUndefined()
+    expect(prompt(hooks, 2)).toBeUndefined()
+    await sleep(30)
+    expect(bodies).toEqual([])
+    gate.release()
+    await cleanup.ready
+    await sleep(100)
+    await cleanup()
+    const prompts = allRecords().filter((record) => attr(record, "event.name") === "user_prompt")
+    expect(prompts.map((record) => attr(record, "prompt.id"))).toEqual(["msg_1", "msg_2"])
+    expect(hookCalls.map((call) => call.input.hook_event_name)).toEqual(["SessionStart", "UserPromptSubmit", "UserPromptSubmit", "SessionEnd"])
+    expect(bodies.join("")).not.toContain("SECRET-PROMPT-TEXT")
+  })
+
+  test("the queue before activation holds 100 prompts", async () => {
+    const gate = gatedLocateFs()
+    const { deps } = fakes()
+    const { ctx, hooks } = fakeContext(channel())
+    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), { ...deps, locateFs: gate.fs })
+    for (let index = 0; index < 130; index++) prompt(hooks, index)
+    gate.release()
+    await cleanup.ready
+    await sleep(150)
+    await cleanup()
+    const ids = allRecords()
+      .filter((record) => attr(record, "event.name") === "user_prompt")
+      .map((record) => attr(record, "prompt.id"))
+    expect(ids).toHaveLength(100)
+    expect(ids[0]).toBe("msg_30")
+    expect(ids.at(-1)).toBe("msg_129")
+  })
+
+  test("an inactive result drops the queue and disposes the hook", async () => {
+    const { deps, detached, hookCalls } = fakes("v20.1.0")
+    const { ctx, hooks, state } = fakeContext(channel())
+    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    prompt(hooks, 1)
+    await cleanup.ready
+    expect(state.disposed).toBe(1)
+    prompt(hooks, 2)
+    await sleep(50)
+    await cleanup()
+    expect(detached).toEqual([])
+    expect(hookCalls).toEqual([])
+    expect(bodies).toEqual([])
+  })
+
+  test("cleanup before activation finishes starts nothing", async () => {
+    const gate = gatedLocateFs()
+    const { deps, detached } = fakes()
+    const feed = channel()
+    const { ctx } = fakeContext(feed)
+    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), { ...deps, locateFs: gate.fs })
+    await cleanup()
+    gate.release()
+    await cleanup.ready
+    await sleep(30)
+    expect(detached).toEqual([])
+    expect(feed.subscriptions).toBe(0)
+  })
+
+  test("the process manager starts once per process", async () => {
+    const { deps, detached } = fakes()
+    const shared = { spawned: false, lastSpawnAt: undefined as number | undefined }
+    const first = await boot(fakeContext(channel()).ctx, options(), createMemoryLogger(), { ...deps, processManagerState: shared })
+    const second = await boot(fakeContext(channel()).ctx, options(), createMemoryLogger(), { ...deps, processManagerState: shared })
+    expect(detached).toHaveLength(1)
+    await first()
+    await second()
+  })
+
+  test("three connection failures start the process manager again, at most once every 10 minutes", async () => {
+    const { deps, detached } = fakes()
+    let clock = 1_000_000
+    const failing = async () => {
+      throw new Error("ECONNREFUSED")
+    }
+    const feed = channel()
+    const { ctx } = fakeContext(feed)
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), { ...deps, now: () => clock, fetch: failing, transport: { backoffMs: [1, 1], flushIntervalMs: 20 } })
+    expect(detached).toHaveLength(1)
+    const step = (n: number) => ({
+      type: "session.skill.activated",
+      created: clock,
+      data: { sessionID: "ses_u", id: `s${n}`, name: "x", text: "t" },
+    })
+    // Within 10 minutes of the first start: no second start.
+    feed.push(step(1))
+    await sleep(150)
+    expect(detached).toHaveLength(1)
+    // After 10 minutes: one more start.
+    clock += 11 * 60_000
+    feed.push(step(2))
+    await sleep(150)
+    expect(detached).toHaveLength(2)
+    // The restart counts as a start: no third start at once.
+    feed.push(step(3))
+    await sleep(150)
+    expect(detached).toHaveLength(2)
+    await cleanup()
+  })
+
+  test("the session lookup timer is cleared", async () => {
+    const live = new Map<unknown, number>()
+    const timers = {
+      setTimeout(callback: () => void, ms: number) {
+        const handle = setTimeout(() => {
+          live.delete(handle)
+          callback()
+        }, ms)
+        live.set(handle, ms)
+        return handle
+      },
+      clearTimeout(handle: unknown) {
+        live.delete(handle)
+        clearTimeout(handle as ReturnType<typeof setTimeout>)
+      },
+    }
+    const { deps } = fakes()
+    const feed = channel()
+    const { ctx } = fakeContext(feed, { ses_known: { id: "ses_known", location: { directory: "/work/proj" } } })
+    const cleanup = await boot(ctx, options(), createMemoryLogger(), { ...deps, timers, transport: { backoffMs: [1, 1], flushIntervalMs: 20 } })
+    feed.push({ type: "session.skill.activated", created: 1, data: { sessionID: "ses_known", id: "s", name: "x", text: "t" } })
+    feed.push({ type: "session.skill.activated", created: 2, data: { sessionID: "ses_missing", id: "s", name: "x", text: "t" } })
+    await sleep(100)
+    expect([...live.values()].filter((ms) => ms === 2000)).toEqual([])
+    await cleanup()
   })
 })

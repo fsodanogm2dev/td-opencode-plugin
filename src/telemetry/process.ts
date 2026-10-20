@@ -1,9 +1,11 @@
-import { spawn } from "node:child_process"
+import { spawn, type ChildProcess } from "node:child_process"
 
 export interface RunOptions {
   /** Text written to stdin. */
   readonly input?: string
   readonly timeoutMs: number
+  /** Run the child in its own process group. On timeout the whole group is killed. */
+  readonly detached?: boolean
   readonly env?: Readonly<Record<string, string | undefined>>
 }
 
@@ -22,6 +24,23 @@ export type SpawnDetached = (command: string, args: readonly string[], env?: Rea
 
 const STDOUT_LIMIT = 4096
 
+/** Kills the child. A detached child leads its own process group, so the group is killed to reach its descendants. */
+function killTree(child: ChildProcess, group: boolean): void {
+  if (group && child.pid !== undefined) {
+    try {
+      process.kill(-child.pid, "SIGKILL")
+      return
+    } catch {
+      // Fall back to the child alone.
+    }
+  }
+  try {
+    child.kill("SIGKILL")
+  } catch {
+    // The process is already gone.
+  }
+}
+
 export const defaultRun: RunProcess = (command, args, options) =>
   new Promise<RunResult>((resolve) => {
     let settled = false
@@ -37,15 +56,12 @@ export const defaultRun: RunProcess = (command, args, options) =>
     try {
       const child = spawn(command, [...args], {
         stdio: ["pipe", "pipe", "ignore"],
+        detached: options.detached === true,
         env: (options.env ?? process.env) as NodeJS.ProcessEnv,
       })
       timer = setTimeout(() => {
         timedOut = true
-        try {
-          child.kill("SIGKILL")
-        } catch {
-          // The process is already gone.
-        }
+        killTree(child, options.detached === true)
         finish({ code: null, stdout, timedOut: true })
       }, options.timeoutMs)
       child.stdout?.on("data", (chunk: Buffer) => {

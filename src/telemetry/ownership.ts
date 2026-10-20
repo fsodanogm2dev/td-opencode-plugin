@@ -1,4 +1,5 @@
 import { realpathSync } from "node:fs"
+import { addBounded } from "./bounded.ts"
 
 /**
  * Decides which plugin instance reports a session.
@@ -96,7 +97,7 @@ export function createOwnership(options: OwnershipOptions): Ownership {
       if (smallest === undefined) {
         const key = sessionID ?? sessionDirectory
         if (!reported.has(key)) {
-          reported.add(key)
+          addBounded(reported, key)
           options.onNoOwner?.(sessionDirectory, sessionID)
         }
         return false

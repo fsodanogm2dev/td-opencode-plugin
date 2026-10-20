@@ -1,8 +1,9 @@
-import { chmod, mkdir, writeFile } from "node:fs/promises"
+import { chmod, mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises"
 import { homedir as osHomedir } from "node:os"
 import path from "node:path"
 import type { Logger } from "../log.ts"
 import type { RunProcess } from "./process.ts"
+import { setBounded } from "./bounded.ts"
 import { realTimers } from "./transport.ts"
 import type { Timers } from "./transport.ts"
 import { errorMessage } from "./types.ts"
@@ -19,6 +20,11 @@ import { errorMessage } from "./types.ts"
 export interface SegmentFs {
   mkdir(dir: string): Promise<void>
   writeFile(file: string, content: string): Promise<void>
+  /** File names in `dir`. An empty list when the directory does not exist. */
+  readdir(dir: string): Promise<string[]>
+  /** Modification time in epoch milliseconds. */
+  mtimeMs(file: string): Promise<number>
+  unlink(file: string): Promise<void>
 }
 
 export const defaultSegmentFs: SegmentFs = {
@@ -30,7 +36,22 @@ export const defaultSegmentFs: SegmentFs = {
     // `writeFile` keeps the mode of an existing file. Make sure it is private.
     await chmod(file, 0o600)
   },
+  async readdir(dir) {
+    try {
+      return await readdir(dir)
+    } catch {
+      return []
+    }
+  },
+  async mtimeMs(file) {
+    return (await stat(file)).mtimeMs
+  },
+  async unlink(file) {
+    await unlink(file)
+  },
 }
+
+export const TITLE_FILE_MAX_AGE_MS = 30 * 24 * 60 * 60_000
 
 export interface SegmentsOptions {
   readonly root: string
@@ -44,6 +65,7 @@ export interface SegmentsOptions {
   readonly homedir?: string
   readonly fs?: SegmentFs
   readonly timers?: Timers
+  readonly now?: () => number
 }
 
 export interface SegmentInfo {
@@ -95,7 +117,7 @@ export class Segments {
 
   /** Records activity of a root session. Starts a segment when none is active. */
   touch(rootID: string, info: SegmentInfo = {}): void {
-    if (info.title) this.titles.set(rootID, info.title)
+    if (info.title) setBounded(this.titles, rootID, info.title)
     const existing = this.active.get(rootID)
     if (existing) {
       this.resetIdle(rootID, existing)
@@ -122,7 +144,7 @@ export class Segments {
   /** Remembers a new title. Writes the title file now when a segment is active. */
   setTitle(rootID: string, title: string): void {
     if (!title || this.titles.get(rootID) === title) return
-    this.titles.set(rootID, title)
+    setBounded(this.titles, rootID, title)
     const entry = this.active.get(rootID)
     if (entry) entry.ready = entry.ready.then(() => this.writeTitle(rootID)).then(() => {})
   }
@@ -152,6 +174,29 @@ export class Segments {
     this.timers.clearTimeout(handle)
   }
 
+  /** Deletes title files that are older than 30 days. Never throws. */
+  async pruneTranscripts(maxAgeMs: number = TITLE_FILE_MAX_AGE_MS): Promise<number> {
+    let removed = 0
+    try {
+      const cutoff = (this.options.now ?? Date.now)() - maxAgeMs
+      for (const name of await this.fs.readdir(this.transcriptDir)) {
+        if (!name.endsWith(".jsonl")) continue
+        const file = path.join(this.transcriptDir, name)
+        try {
+          if ((await this.fs.mtimeMs(file)) < cutoff) {
+            await this.fs.unlink(file)
+            removed += 1
+          }
+        } catch {
+          // The file is gone or cannot be removed. Try again at the next start.
+        }
+      }
+    } catch (error) {
+      this.options.log.debug("telemetry title file cleanup failed", { error: errorMessage(error) })
+    }
+    return removed
+  }
+
   /** Stops idle timers without running hooks. */
   dispose(): void {
     for (const entry of this.active.values()) {
@@ -177,7 +222,7 @@ export class Segments {
     if (!title || !file) return null
     try {
       await this.fs.mkdir(path.dirname(file))
-      await this.fs.writeFile(file, `${JSON.stringify({ type: "custom-title", customTitle: title })}\n`)
+      await this.fs.writeFile(file, `${JSON.stringify({ type: "ai-title", aiTitle: title })}\n`)
       return file
     } catch (error) {
       this.options.log.debug("telemetry title file write failed", { error: errorMessage(error) })
@@ -198,6 +243,7 @@ export class Segments {
       const result = await this.options.run(this.options.node, [path.join(this.options.root, "scripts", script)], {
         input,
         timeoutMs,
+        detached: true,
         ...(this.options.env ? { env: this.options.env } : {}),
       })
       if (result.timedOut || (result.code !== 0 && result.code !== null) || result.error) {

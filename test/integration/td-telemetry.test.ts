@@ -74,6 +74,8 @@ async function startStack(input: { idleMinutes: number; mode: "text" | "tool"; f
     },
     env: {
       FUELIX_API_KEY: FAKE_KEY,
+      // The mock FueliX URL needs the opt-in. The harness will set it by default.
+      TD_OPENCODE_ALLOW_CUSTOM_FUELIX_URL: "1",
       TD_DATA_DIR: telemetry.env.TD_DATA_DIR as string,
       TD_RECEIVER_PORT: telemetry.env.TD_RECEIVER_PORT as string,
       TD_DASHBOARD_PORT: telemetry.env.TD_DASHBOARD_PORT as string,
@@ -222,6 +224,7 @@ describe.skipIf(!ref)("td-telemetry end to end", () => {
         { what: "catalog price (12000 in + 3 out)", usd: priced * stepCount },
         { what: "td-telemetry api_request costUsd", usd: storedCost },
         { what: "dashboard /api/projects costUsd", usd: listed.costUsd },
+        { what: "segment conversation_title (ai-title file)", usd: String(store.segments(sessionID)[0]?.conversation_title) },
       ])
     },
     300_000,

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { checkNode, compareSemver, locateRoot, nodeVersionSupported } from "../../../src/telemetry/locate.ts"
+import { checkNode, compareSemver, locateRoot, nodeVersionSupported, resolveNode } from "../../../src/telemetry/locate.ts"
 import type { RunProcess } from "../../../src/telemetry/process.ts"
 
 let home: string
@@ -86,5 +86,48 @@ describe("node version", () => {
     expect(calls).toEqual([["node", ["--version"]]])
     expect((await checkNode(async () => ({ code: null, stdout: "", timedOut: false, error: "ENOENT" }), "node")).ok).toBe(false)
     expect((await checkNode(async () => ({ code: 0, stdout: "v18.0.0", timedOut: false }), "node")).ok).toBe(false)
+  })
+})
+
+describe("resolveNode", () => {
+  /** A fake runner. `versions` maps an executable to the output of `--version` (missing means ENOENT). */
+  function runner(versions: Record<string, string>) {
+    const tried: string[] = []
+    const run: RunProcess = async (command) => {
+      tried.push(command)
+      const out = versions[command]
+      return out === undefined ? { code: null, stdout: "", timedOut: false, error: "ENOENT" } : { code: 0, stdout: `${out}\n`, timedOut: false }
+    }
+    return { run, tried }
+  }
+
+  test("uses node on PATH first", async () => {
+    const { run, tried } = runner({ node: "v22.12.0", "/opt/homebrew/bin/node": "v24.0.0" })
+    expect(await resolveNode(run, "node")).toMatchObject({ ok: true, node: "node" })
+    expect(tried).toEqual(["node"])
+  })
+
+  test("falls back to the Homebrew locations when PATH node is too old or missing", async () => {
+    const old = runner({ node: "v20.1.0", "/opt/homebrew/bin/node": "v22.6.0" })
+    expect(await resolveNode(old.run, "node")).toMatchObject({ ok: true, node: "/opt/homebrew/bin/node" })
+    expect(old.tried).toEqual(["node", "/opt/homebrew/bin/node"])
+    const missing = runner({ "/usr/local/bin/node": "v23.0.0" })
+    expect(await resolveNode(missing.run, "node")).toMatchObject({ ok: true, node: "/usr/local/bin/node" })
+    expect(missing.tried).toEqual(["node", "/opt/homebrew/bin/node", "/usr/local/bin/node"])
+  })
+
+  test("a configured path is checked alone", async () => {
+    const { run, tried } = runner({ "/custom/node": "v21.0.0", node: "v22.12.0" })
+    const result = await resolveNode(run, "/custom/node")
+    expect(result.ok).toBe(false)
+    expect(tried).toEqual(["/custom/node"])
+  })
+
+  test("reports every failure when none qualifies", async () => {
+    const { run } = runner({})
+    const result = await resolveNode(run, "node")
+    expect(result.ok).toBe(false)
+    expect(result.detail).toContain("/opt/homebrew/bin/node")
+    expect(result.detail).toContain("/usr/local/bin/node")
   })
 })

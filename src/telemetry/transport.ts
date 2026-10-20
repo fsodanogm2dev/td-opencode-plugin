@@ -38,6 +38,8 @@ export interface TransportOptions {
   readonly retries?: number
   readonly backoffMs?: readonly number[]
   readonly readyWaitMs?: number
+  /** Called after 3 consecutive connection failures (no HTTP response). The counter then restarts. */
+  readonly onUnreachable?: () => void
 }
 
 export class Transport {
@@ -47,6 +49,7 @@ export class Transport {
   private closing = false
   private inflight: AbortController | undefined
   private droppedTotal = 0
+  private connectionFailures = 0
   private sentTotal = 0
   private readonly fetchFn: FetchLike
   private readonly now: () => number
@@ -175,6 +178,7 @@ export class Transport {
           body,
           signal: controller.signal,
         })
+        this.connectionFailures = 0
         if (response.ok) {
           this.sentTotal += batch.length
           return
@@ -184,6 +188,7 @@ export class Transport {
         if (response.status >= 400 && response.status < 500) break
       } catch (error) {
         lastError = controller.signal.aborted ? "timeout" : errorMessage(error)
+        this.noteConnectionFailure()
       } finally {
         this.timers.clearTimeout(handle)
         if (this.inflight === controller) this.inflight = undefined
@@ -191,6 +196,17 @@ export class Transport {
     }
     this.droppedTotal += batch.length
     this.options.log.debug("telemetry batch dropped", { records: batch.length, error: lastError })
+  }
+
+  private noteConnectionFailure(): void {
+    this.connectionFailures += 1
+    if (this.connectionFailures < 3) return
+    this.connectionFailures = 0
+    try {
+      this.options.onUnreachable?.()
+    } catch {
+      // The callback must not break the transport.
+    }
   }
 
   private sleep(ms: number): Promise<void> {

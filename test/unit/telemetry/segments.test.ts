@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { createMemoryLogger } from "../../../src/log.ts"
@@ -12,6 +12,7 @@ interface Call {
   args: readonly string[]
   input: any
   timeoutMs: number
+  detached: boolean | undefined
 }
 
 let dir: string
@@ -25,7 +26,7 @@ function setup(runImpl?: RunProcess) {
   const run: RunProcess =
     runImpl ??
     (async (command, args, options) => {
-      calls.push({ command, args, input: JSON.parse(options.input ?? "null"), timeoutMs: options.timeoutMs })
+      calls.push({ command, args, input: JSON.parse(options.input ?? "null"), timeoutMs: options.timeoutMs, detached: options.detached })
       return { code: 0, stdout: "", timedOut: false }
     })
   const timers = createFakeTimers()
@@ -57,6 +58,7 @@ describe("segments", () => {
       args: ["/td/scripts/hook-record-feature.mjs"],
       input: { session_id: "ses_a", cwd: "/work/a", transcript_path: null, hook_event_name: "SessionStart" },
       timeoutMs: 15000,
+      detached: true,
     })
   })
 
@@ -149,7 +151,7 @@ describe("segments", () => {
     await segments.ready("ses_a")
     const file = path.join(dir, "td-opencode-plugin", "transcripts", "ses_a.jsonl")
     expect(calls[0]?.input.transcript_path).toBe(file)
-    expect(readFileSync(file, "utf8")).toBe(`${JSON.stringify({ type: "custom-title", customTitle: "Fix the parser" })}\n`)
+    expect(readFileSync(file, "utf8")).toBe(`${JSON.stringify({ type: "ai-title", aiTitle: "Fix the parser" })}\n`)
     expect(statSync(file).mode & 0o777).toBe(0o600)
   })
 
@@ -159,7 +161,7 @@ describe("segments", () => {
     segments.setTitle("ses_a", "Second")
     await segments.end("ses_a")
     const file = path.join(dir, "td-opencode-plugin", "transcripts", "ses_a.jsonl")
-    expect(JSON.parse(readFileSync(file, "utf8")).customTitle).toBe("Second")
+    expect(JSON.parse(readFileSync(file, "utf8")).aiTitle).toBe("Second")
     expect(calls.at(-1)?.input.transcript_path).toBe(file)
   })
 
@@ -175,5 +177,28 @@ describe("segments", () => {
     segments.touch("../evil", { title: "x" })
     await segments.ready("../evil")
     expect(calls[0]?.input.transcript_path).toBeNull()
+  })
+
+  test("deletes title files older than 30 days and keeps the rest", async () => {
+    const { segments } = setup()
+    const transcripts = path.join(dir, "td-opencode-plugin", "transcripts")
+    mkdirSync(transcripts, { recursive: true })
+    const old = path.join(transcripts, "ses_old.jsonl")
+    const fresh = path.join(transcripts, "ses_fresh.jsonl")
+    const other = path.join(transcripts, "notes.txt")
+    for (const file of [old, fresh, other]) writeFileSync(file, "x")
+    const days = (n: number) => new Date(Date.now() - n * 24 * 60 * 60_000)
+    utimesSync(old, days(31), days(31))
+    utimesSync(other, days(90), days(90))
+    utimesSync(fresh, days(29), days(29))
+    expect(await segments.pruneTranscripts()).toBe(1)
+    expect(existsSync(old)).toBe(false)
+    expect(existsSync(fresh)).toBe(true)
+    expect(existsSync(other)).toBe(true)
+  })
+
+  test("pruning a missing directory does nothing", async () => {
+    const { segments } = setup()
+    expect(await segments.pruneTranscripts()).toBe(0)
   })
 })

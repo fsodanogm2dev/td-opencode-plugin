@@ -3,8 +3,11 @@ import path from "node:path"
 import pkg from "../../package.json" with { type: "json" }
 import type { Logger } from "../log.ts"
 import type { TelemetryOptions } from "../options.ts"
-import { checkNode, defaultLocateFs, locateRoot } from "./locate.ts"
+import { childEnv } from "./env.ts"
+import { defaultLocateFs, locateRoot, resolveNode } from "./locate.ts"
 import type { LocateFs } from "./locate.ts"
+import { createManagerSpawner, globalProcessManagerState } from "./manager.ts"
+import type { ProcessManagerState } from "./manager.ts"
 import { Mapper } from "./mapper.ts"
 import { createOwnership } from "./ownership.ts"
 import type { OwnerRegistry } from "./ownership.ts"
@@ -35,6 +38,8 @@ export interface TelemetryDeps {
   /** Process-wide registry of active telemetry instances by directory. Tests pass their own. */
   readonly ownerRegistry?: OwnerRegistry
   readonly realpath?: (path: string) => string
+  /** Process-wide state of the process manager spawn. Tests pass their own. */
+  readonly processManagerState?: ProcessManagerState
   /** Delay before the event subscription restarts after an error, in milliseconds. */
   readonly resubscribeDelayMs?: number
 }
@@ -51,24 +56,36 @@ const ACTIVITY_TYPES: ReadonlySet<string> = new Set([
 
 const SESSION_LOOKUP_TIMEOUT_MS = 2000
 const MAX_RESUBSCRIBE_DELAY_MS = 30_000
+const MAX_PENDING_PROMPTS = 100
 const CLEANUP_FLUSH_MS = 2000
 const CLEANUP_END_MS = 3000
 
 function noop(): void {}
 
-function delay(ms: number, timers: Timers, signal?: AbortSignal): Promise<void> {
+/** Resolves after `ms`, or at once when `signal` aborts. Leaves no timer and no listener behind. */
+export function delay(ms: number, timers: Timers, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     if (signal?.aborted) return resolve()
-    const handle = timers.setTimeout(resolve, ms)
-    signal?.addEventListener("abort", () => {
+    const onAbort = () => {
       timers.clearTimeout(handle)
       resolve()
-    })
+    }
+    const handle = timers.setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort)
+      resolve()
+    }, ms)
+    signal?.addEventListener("abort", onAbort, { once: true })
   })
 }
 
+/** The cleanup function. `ready` resolves when background activation has finished (or failed). */
+export type TelemetryCleanup = Cleanup & { readonly ready: Promise<void> }
+
 /**
  * Emits td-telemetry events from OpenCode session activity.
+ *
+ * Setup returns fast. It registers the prompt hook, then locates td-telemetry and checks Node.js in the background.
+ * Prompts that arrive before activation wait in a bounded queue.
  *
  * Telemetry never breaks a session: every path catches its own errors. The emitter sends IDs, names, counts,
  * durations, and costs only. It never sends prompt text, tool input or output, skill text, or file contents.
@@ -78,22 +95,120 @@ export async function setupTelemetry(
   options: TelemetryOptions,
   log: Logger,
   deps: TelemetryDeps = {},
-): Promise<Cleanup> {
+): Promise<TelemetryCleanup> {
   try {
     return await start(ctx, options, log, deps)
   } catch (error) {
     log.warn("telemetry setup failed; telemetry is off", { error: errorMessage(error) })
-    return noop
+    return Object.assign(noop, { ready: Promise.resolve() })
   }
 }
 
-async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger, deps: TelemetryDeps): Promise<Cleanup> {
+interface PendingPrompt {
+  readonly sessionID: string
+  readonly messageID: string
+}
+
+interface Runtime {
+  readonly serial: (task: () => Promise<void>) => Promise<void>
+  readonly handlePrompt: (sessionID: string, messageID: string) => Promise<void>
+  readonly stop: () => Promise<void>
+}
+
+async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger, deps: TelemetryDeps): Promise<TelemetryCleanup> {
   if (!options.enabled) {
     log.debug("telemetry is disabled")
-    return noop
+    return Object.assign(noop, { ready: Promise.resolve() })
   }
+
+  let phase: "pending" | "active" | "inactive" = "pending"
+  let stopped = false
+  let runtime: Runtime | undefined
+  const pending: PendingPrompt[] = []
+
+  // The prompt hook blocks prompt admission. Do only synchronous bookkeeping: queue the work and return.
+  let registration: { dispose?: () => Promise<void> } | undefined
+  try {
+    registration = (await ctx.session.hook("prompt", (input) => {
+      try {
+        const sessionID = str(input, "sessionID")
+        const messageID = str(input, "messageID")
+        if (!sessionID || !messageID) return
+        if (phase === "active" && runtime) {
+          const active = runtime
+          void active.serial(() => active.handlePrompt(sessionID, messageID))
+        } else if (phase === "pending") {
+          if (pending.length >= MAX_PENDING_PROMPTS) pending.shift()
+          pending.push({ sessionID, messageID })
+        }
+      } catch (error) {
+        log.debug("telemetry prompt hook failed", { error: errorMessage(error) })
+      }
+    })) as typeof registration
+  } catch (error) {
+    log.warn("telemetry could not register the prompt hook", { error: errorMessage(error) })
+  }
+
+  const deactivate = (): void => {
+    phase = "inactive"
+    pending.length = 0
+    void Promise.resolve(registration?.dispose?.()).catch(() => {})
+  }
+
+  const ready = (async () => {
+    try {
+      const started = await activate(ctx, options, log, deps, () => stopped)
+      if (!started) {
+        deactivate()
+        return
+      }
+      runtime = started
+      if (stopped) {
+        // Cleanup ran while activation was in progress.
+        phase = "inactive"
+        await started.stop()
+        return
+      }
+      phase = "active"
+      const queued = pending.splice(0)
+      for (const prompt of queued) void started.serial(() => started.handlePrompt(prompt.sessionID, prompt.messageID))
+    } catch (error) {
+      log.warn("telemetry setup failed; telemetry is off", { error: errorMessage(error) })
+      deactivate()
+    }
+  })()
+
+  let cleaned = false
+  const cleanup = async () => {
+    if (cleaned) return
+    cleaned = true
+    stopped = true
+    pending.length = 0
+    const timers = deps.timers ?? realTimers
+    try {
+      await Promise.race([ready, delay(500, timers)])
+      phase = "inactive"
+      void Promise.resolve(registration?.dispose?.()).catch(() => {})
+      await runtime?.stop()
+    } catch (error) {
+      log.debug("telemetry cleanup failed", { error: errorMessage(error) })
+    }
+  }
+  return Object.assign(cleanup, { ready })
+}
+
+/** Locates td-telemetry and starts the mapper, transport, and event subscription. Returns `undefined` when inactive. */
+async function activate(
+  ctx: Plugin.Context,
+  options: TelemetryOptions,
+  log: Logger,
+  deps: TelemetryDeps,
+  isStopped: () => boolean,
+): Promise<Runtime | undefined> {
   const run = deps.run ?? defaultRun
-  const env = deps.env ?? process.env
+  const sourceEnv = deps.env ?? process.env
+  const hookEnv = childEnv(sourceEnv, "hook")
+  const managerEnv = childEnv(sourceEnv, "manager")
   const now = deps.now ?? Date.now
   const timers = deps.timers ?? realTimers
 
@@ -104,32 +219,46 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
   })
   if (located.root === undefined) {
     log.info(`telemetry is off: ${located.reason}`)
-    return noop
+    return undefined
   }
   const root = located.root
-  const node = await checkNode(run, options.node)
-  if (!node.ok) {
-    log.warn("telemetry is off: Node.js 22.5 or later is required to run td-telemetry", { node: options.node, detail: node.detail })
-    return noop
+  const resolved = await resolveNode(run, options.node, managerEnv)
+  if (!resolved.ok) {
+    log.warn("telemetry is off: Node.js 22.5 or later is required to run td-telemetry", { node: options.node, detail: resolved.detail })
+    return undefined
   }
+  const node = resolved.node
+  log.debug("telemetry uses Node.js", { node, version: resolved.detail })
+  if (isStopped()) return undefined
 
-  // Start the receiver and dashboard pair. The script always exits 0 and runs detached.
-  ;(deps.spawnDetached ?? defaultSpawnDetached)(options.node, [path.join(root, "lib", "process-manager.mjs")], env)
+  const manager = createManagerSpawner({
+    root,
+    node,
+    env: managerEnv,
+    spawn: deps.spawnDetached ?? defaultSpawnDetached,
+    now,
+    log,
+    state: deps.processManagerState ?? globalProcessManagerState(),
+  })
+  // Start the receiver and dashboard pair once per process. The script always exits 0 and runs detached.
+  manager.ensure()
   log.info("telemetry is on", { root, directory: ctx.location?.directory })
 
   const mapper = new Mapper({ subagentToolNames: options.subagentToolNames, now })
   const segments = new Segments({
     root,
-    node: options.node,
+    node,
     idleMinutes: options.idleMinutes,
     log,
     run,
     defaultDirectory: ctx.location?.directory ?? process.cwd(),
-    env,
+    env: hookEnv,
+    now,
     ...(deps.homedir !== undefined ? { homedir: deps.homedir } : {}),
     ...(deps.segmentFs ? { fs: deps.segmentFs } : {}),
     timers,
   })
+  void segments.pruneTranscripts()
   const transport = new Transport({
     receiverURL: options.receiverURL,
     log,
@@ -137,6 +266,9 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     now,
     timers,
     ready: (sessionID) => segments.ready(sessionID),
+    onUnreachable: () => {
+      if (!isStopped()) manager.restart()
+    },
     ...(deps.fetch ? { fetch: deps.fetch } : {}),
     ...(deps.transport?.backoffMs ? { backoffMs: deps.transport.backoffMs } : {}),
     ...(deps.transport?.flushIntervalMs !== undefined ? { flushIntervalMs: deps.transport.flushIntervalMs } : {}),
@@ -156,17 +288,18 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
   const ensureKnown = async (sessionID: string, depth = 0): Promise<void> => {
     if (mapper.knows(sessionID) || depth > 8) return
     let info: Record<string, unknown> | undefined
+    let timeout: unknown
     try {
-      let timeout: unknown
       const limit = new Promise<undefined>((resolve) => {
         timeout = timers.setTimeout(() => resolve(undefined), SESSION_LOOKUP_TIMEOUT_MS)
       })
       const result = await Promise.race([ctx.session.get({ sessionID } as never) as Promise<unknown>, limit])
-      timers.clearTimeout(timeout)
       // The client returns the session info. Accept a `{ data }` wrapper too.
       info = isRecord(result) ? (isRecord(result.data) && result.id === undefined ? result.data : result) : undefined
     } catch (error) {
       log.debug("telemetry session lookup failed", { error: errorMessage(error) })
+    } finally {
+      if (timeout !== undefined) timers.clearTimeout(timeout)
     }
     const parentID = str(info, "parentID")
     mapper.registerSession(sessionID, {
@@ -202,7 +335,6 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     }
     const records = mapper.event(event)
     const rootID = mapper.rootOf(sessionID)
-    // Another plugin instance owns a session whose location is an alias of this instance's location.
     if (!ownsSession(mapper.directoryOf(rootID), rootID)) return
     const isRoot = rootID === sessionID
     if (event.type === "session.renamed" && isRoot) {
@@ -227,21 +359,6 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     if (!ownsSession(mapper.directoryOf(rootID), rootID)) return
     segments.prompt(rootID, segmentInfo(rootID))
     transport.enqueue(mapper.promptHook(sessionID, messageID, now()))
-  }
-
-  // The prompt hook blocks prompt admission. Do only synchronous bookkeeping: queue the work and return.
-  try {
-    await ctx.session.hook("prompt", (input) => {
-      try {
-        const sessionID = str(input, "sessionID")
-        const messageID = str(input, "messageID")
-        if (sessionID && messageID) void serial(() => handlePrompt(sessionID, messageID))
-      } catch (error) {
-        log.debug("telemetry prompt hook failed", { error: errorMessage(error) })
-      }
-    })
-  } catch (error) {
-    log.warn("telemetry could not register the prompt hook", { error: errorMessage(error) })
   }
 
   const controller = new AbortController()
@@ -272,21 +389,22 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     }
   })().catch(() => {})
 
-  let cleaned = false
-  return async () => {
-    if (cleaned) return
-    cleaned = true
-    ownership.unregister()
-    controller.abort()
-    try {
-      await Promise.race([loop, delay(500, timers)])
-      await Promise.race([chain, delay(500, timers)])
-      // Send events before the segment ends, so that the receiver stores them while the segment is open.
-      await transport.close(CLEANUP_FLUSH_MS)
-      await segments.endAll(CLEANUP_END_MS)
-      segments.dispose()
-    } catch (error) {
-      log.debug("telemetry cleanup failed", { error: errorMessage(error) })
-    }
+  return {
+    serial,
+    handlePrompt,
+    stop: async () => {
+      ownership.unregister()
+      controller.abort()
+      try {
+        await Promise.race([loop, delay(500, timers)])
+        await Promise.race([chain, delay(500, timers)])
+        // Send events before the segment ends, so that the receiver stores them while the segment is open.
+        await transport.close(CLEANUP_FLUSH_MS)
+        await segments.endAll(CLEANUP_END_MS)
+        segments.dispose()
+      } catch (error) {
+        log.debug("telemetry cleanup failed", { error: errorMessage(error) })
+      }
+    },
   }
 }
