@@ -7,6 +7,7 @@ import { checkNode, defaultLocateFs, locateRoot } from "./locate.ts"
 import type { LocateFs } from "./locate.ts"
 import { Mapper } from "./mapper.ts"
 import { createOwnership } from "./ownership.ts"
+import type { OwnerRegistry } from "./ownership.ts"
 import { defaultRun, defaultSpawnDetached } from "./process.ts"
 import type { RunProcess, SpawnDetached } from "./process.ts"
 import { Segments } from "./segments.ts"
@@ -31,6 +32,9 @@ export interface TelemetryDeps {
   readonly segmentFs?: SegmentFs
   /** Transport tuning for tests. */
   readonly transport?: { readonly backoffMs?: readonly number[]; readonly flushIntervalMs?: number }
+  /** Process-wide registry of active telemetry instances by directory. Tests pass their own. */
+  readonly ownerRegistry?: OwnerRegistry
+  readonly realpath?: (path: string) => string
   /** Delay before the event subscription restarts after an error, in milliseconds. */
   readonly resubscribeDelayMs?: number
 }
@@ -174,7 +178,15 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     if (parentID) await ensureKnown(parentID, depth + 1)
   }
 
-  const ownsSession = createOwnership(ctx.location?.directory)
+  const ownership = createOwnership({
+    ownDirectory: ctx.location?.directory,
+    ...(deps.ownerRegistry ? { registry: deps.ownerRegistry } : {}),
+    ...(deps.realpath ? { realpath: deps.realpath } : {}),
+    onNoOwner: (directory, sessionID) =>
+      log.debug("telemetry skips a session from a location without a plugin instance", { directory, sessionID }),
+  })
+  ownership.register()
+  const ownsSession = (directory: string | undefined, sessionID: string) => ownership.owns(directory, sessionID)
 
   const segmentInfo = (rootID: string) => ({ directory: mapper.directoryOf(rootID), title: mapper.titleOf(rootID) })
 
@@ -191,7 +203,7 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     const records = mapper.event(event)
     const rootID = mapper.rootOf(sessionID)
     // Another plugin instance owns a session whose location is an alias of this instance's location.
-    if (!ownsSession(mapper.directoryOf(rootID))) return
+    if (!ownsSession(mapper.directoryOf(rootID), rootID)) return
     const isRoot = rootID === sessionID
     if (event.type === "session.renamed" && isRoot) {
       const title = mapper.titleOf(sessionID)
@@ -212,7 +224,7 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
     await ensureKnown(sessionID)
     const rootID = mapper.rootOf(sessionID)
     if (rootID !== sessionID) return
-    if (!ownsSession(mapper.directoryOf(rootID))) return
+    if (!ownsSession(mapper.directoryOf(rootID), rootID)) return
     segments.prompt(rootID, segmentInfo(rootID))
     transport.enqueue(mapper.promptHook(sessionID, messageID, now()))
   }
@@ -264,6 +276,7 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
   return async () => {
     if (cleaned) return
     cleaned = true
+    ownership.unregister()
     controller.abort()
     try {
       await Promise.race([loop, delay(500, timers)])

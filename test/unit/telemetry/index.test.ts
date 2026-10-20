@@ -129,6 +129,7 @@ function fakes(nodeVersion = "v22.12.0") {
     env: { XDG_DATA_HOME: path.join(dir, "data") },
     transport: { backoffMs: [1, 1] },
     resubscribeDelayMs: 5,
+    ownerRegistry: new Map<string, number>(),
   }
   return { deps, hookCalls, stdinTexts, detached }
 }
@@ -210,8 +211,8 @@ describe("setupTelemetry", () => {
     const { deps, hookCalls } = fakes()
     const feed = channel()
     const { ctx, looked } = fakeContext(feed, {
-      ses_old_root: { id: "ses_old_root", location: { directory: "/old/root" }, title: "Old work" },
-      ses_old_child: { id: "ses_old_child", parentID: "ses_old_root", location: { directory: "/old/root" }, agent: "explorer" },
+      ses_old_root: { id: "ses_old_root", location: { directory: "/work/proj" }, title: "Old work" },
+      ses_old_child: { id: "ses_old_child", parentID: "ses_old_root", location: { directory: "/work/proj" }, agent: "explorer" },
     })
     const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
     feed.push({
@@ -233,7 +234,7 @@ describe("setupTelemetry", () => {
     expect(records).toHaveLength(1)
     expect(attr(records[0], "session.id")).toBe("ses_old_root")
     expect(attr(records[0], "query_source")).toBe("agent:builtin:explorer")
-    expect(hookCalls[0]?.input).toMatchObject({ session_id: "ses_old_root", cwd: "/old/root", hook_event_name: "SessionStart" })
+    expect(hookCalls[0]?.input).toMatchObject({ session_id: "ses_old_root", cwd: "/work/proj", hook_event_name: "SessionStart" })
   })
 
   test("a failed lookup treats the session as a root", async () => {
@@ -257,7 +258,7 @@ describe("setupTelemetry", () => {
     const feed = channel()
     const { ctx } = fakeContext(feed)
     const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
-    feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_d", location: { directory: "/d" } } })
+    feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_d", location: { directory: "/work/proj" } } })
     feed.push({ type: "session.step.started", created: 2, data: { sessionID: "ses_d", assistantMessageID: "m", agent: "build", model: { id: "x", providerID: "p" }, started: 2 } })
     feed.push({ type: "session.deleted", created: 3, data: { sessionID: "ses_d" } })
     await sleep(100)
@@ -303,30 +304,52 @@ describe("setupTelemetry", () => {
   })
 })
 
-describe("plugin instances for aliased directories", () => {
-  test("an instance whose location is an alias of the session location emits nothing", async () => {
+describe("plugin instances and session ownership", () => {
+  const stepEnded = (sessionID: string) => ({
+    type: "session.step.ended",
+    created: 2,
+    data: { sessionID, assistantMessageID: "m", cost: 0.1, tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } } },
+  })
+
+  test("an instance skips a session whose alias location has an exact owner", async () => {
     const real = path.join(dir, "real")
     const alias = path.join(dir, "alias")
     mkdirSync(real)
     symlinkSync(real, alias)
     const { deps, hookCalls } = fakes()
+    ;(deps.ownerRegistry as Map<string, number>).set(real, 1)
     const feed = channel()
     const { ctx } = fakeContext(feed)
     ;(ctx as any).location = { directory: alias }
     const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
     feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_alias", location: { directory: real } } })
-    feed.push({
-      type: "session.step.ended",
-      created: 2,
-      data: { sessionID: "ses_alias", assistantMessageID: "m", cost: 0.1, tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } } },
-    })
+    feed.push(stepEnded("ses_alias"))
     await sleep(100)
     await cleanup()
     expect(bodies).toEqual([])
     expect(hookCalls).toEqual([])
+    // The other instance's entry is untouched and this instance's entry is gone.
+    expect([...(deps.ownerRegistry as Map<string, number>)]).toEqual([[real, 1]])
   })
 
-  test("an instance whose location equals the session location emits", async () => {
+  test("a lone instance reports a session at an alias of its location", async () => {
+    const real = path.join(dir, "real")
+    const alias = path.join(dir, "alias")
+    mkdirSync(real)
+    symlinkSync(real, alias)
+    const { deps } = fakes()
+    const feed = channel()
+    const { ctx } = fakeContext(feed)
+    ;(ctx as any).location = { directory: alias }
+    const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
+    feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_lone", location: { directory: real } } })
+    feed.push(stepEnded("ses_lone"))
+    await sleep(100)
+    await cleanup()
+    expect(allRecords()).toHaveLength(1)
+  })
+
+  test("an instance whose location equals the session location reports", async () => {
     const real = path.join(dir, "real")
     mkdirSync(real)
     const { deps } = fakes()
@@ -335,13 +358,44 @@ describe("plugin instances for aliased directories", () => {
     ;(ctx as any).location = { directory: real }
     const cleanup = await setupTelemetry(ctx, options(), createMemoryLogger(), deps)
     feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_same", location: { directory: real } } })
-    feed.push({
-      type: "session.step.ended",
-      created: 2,
-      data: { sessionID: "ses_same", assistantMessageID: "m", cost: 0.1, tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } } },
-    })
+    feed.push(stepEnded("ses_same"))
     await sleep(100)
     await cleanup()
     expect(allRecords()).toHaveLength(1)
+  })
+
+  test("a session from another project is skipped, with one debug line", async () => {
+    const mine = path.join(dir, "mine")
+    const theirs = path.join(dir, "theirs")
+    mkdirSync(mine)
+    mkdirSync(theirs)
+    const log = createMemoryLogger()
+    const { deps, hookCalls } = fakes()
+    const feed = channel()
+    const { ctx } = fakeContext(feed)
+    ;(ctx as any).location = { directory: mine }
+    const cleanup = await setupTelemetry(ctx, options(), log, deps)
+    feed.push({ type: "session.created", created: 1, data: { sessionID: "ses_other", location: { directory: theirs } } })
+    feed.push(stepEnded("ses_other"))
+    feed.push(stepEnded("ses_other"))
+    await sleep(100)
+    await cleanup()
+    expect(bodies).toEqual([])
+    expect(hookCalls).toEqual([])
+    expect(log.lines.filter((line) => line.includes(" debug ") && line.includes("without a plugin instance"))).toHaveLength(1)
+  })
+
+  test("two instances for the same directory share the registry entry until both stop", async () => {
+    const { deps } = fakes()
+    const registry = deps.ownerRegistry as Map<string, number>
+    const first = fakeContext(channel())
+    const second = fakeContext(channel())
+    const cleanupOne = await setupTelemetry(first.ctx, options(), createMemoryLogger(), deps)
+    const cleanupTwo = await setupTelemetry(second.ctx, options(), createMemoryLogger(), deps)
+    expect(registry.get("/work/proj")).toBe(2)
+    await cleanupOne()
+    expect(registry.get("/work/proj")).toBe(1)
+    await cleanupTwo()
+    expect(registry.size).toBe(0)
   })
 })
