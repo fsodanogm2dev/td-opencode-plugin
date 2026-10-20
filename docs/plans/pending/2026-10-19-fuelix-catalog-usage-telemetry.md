@@ -4,7 +4,7 @@ Owner: Fabricio Sodano · Created: 2026-10-19 · Target: OpenCode `v2.0.32`, `@o
 
 ## Steps
 
-- [ ] Phase 0: Bootstrap the repository (package, type check, tests, agent rules)
+- [x] Phase 0: Bootstrap the repository (package, type check, tests, agent rules)
 - [ ] Phase 1: Load the FueliX catalog from `/v1/models` and resolve one API key securely
 - [ ] Phase 2: Verify that the TUI and OpenChamber report accurate tokens, cost, and context
 - [ ] Phase 3: Emit td-telemetry events from OpenCode sessions
@@ -196,3 +196,8 @@ with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays 
 - **D9**: In td-telemetry, report subagent activity under the root session ID with `query_source = agent:builtin:<agent>`,
   because td-telemetry attributes subagent spend inside the parent session. Report the tools named in
   `subagentToolNames` as `Task`, so td-telemetry builds subagent run windows.
+- **D10**: Keep one telemetry emitter per plugin instance. OpenCode loads one plugin instance per location, and its bus
+  delivers each session's events only to the instance of that session's location (`packages/core/src/bus.ts`,
+  `local()` filter). Prompt hooks also run per session location. So each session is reported once.
+- **D11**: Ship a root `index.ts` that re-exports `src/index.ts`. OpenCode loads a local plugin directory through
+  `<dir>/index.*` or `<dir>/server.*` and ignores `package.json` `exports`.
