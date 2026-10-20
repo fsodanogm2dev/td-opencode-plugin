@@ -1,0 +1,16 @@
+[
+  { "type": "session.created", "created": 1000, "data": { "sessionID": "ses_root", "location": { "directory": "/work/proj" }, "agent": "build" } },
+  { "hook": "prompt", "at": 2000, "sessionID": "ses_root", "messageID": "msg_user1" },
+  { "type": "session.step.started", "created": 2100, "data": { "sessionID": "ses_root", "assistantMessageID": "msg_r1", "agent": "build", "model": { "id": "gpt-6-luna", "providerID": "fuelix-openai" }, "started": 2100 } },
+  { "type": "session.tool.called", "created": 2300, "data": { "sessionID": "ses_root", "assistantMessageID": "msg_r1", "id": "call_task", "name": "task", "input": { "prompt": "explore" }, "executed": false } },
+  { "type": "session.created", "created": 2310, "data": { "sessionID": "ses_child", "parentID": "ses_root", "location": { "directory": "/work/proj" }, "agent": "explorer" } },
+  { "hook": "prompt", "at": 2320, "sessionID": "ses_child", "messageID": "msg_child_user" },
+  { "type": "session.execution.started", "created": 2330, "data": { "sessionID": "ses_child" } },
+  { "type": "session.step.started", "created": 2400, "data": { "sessionID": "ses_child", "assistantMessageID": "msg_c1", "agent": "explorer", "model": { "id": "claude-haiku-5", "providerID": "fuelix-anthropic" }, "started": 2400 } },
+  { "type": "session.tool.called", "created": 2450, "data": { "sessionID": "ses_child", "assistantMessageID": "msg_c1", "id": "call_grep", "name": "grep", "input": {}, "executed": false } },
+  { "type": "session.tool.success", "created": 2500, "data": { "sessionID": "ses_child", "assistantMessageID": "msg_c1", "id": "call_grep", "content": [{ "type": "text", "text": "x" }], "executed": true } },
+  { "type": "session.step.ended", "created": 2900, "data": { "sessionID": "ses_child", "assistantMessageID": "msg_c1", "finish": "stop", "cost": 0.002, "tokens": { "input": 400, "output": 60, "reasoning": 10, "cache": { "read": 100, "write": 20 } } } },
+  { "type": "session.execution.succeeded", "created": 3000, "data": { "sessionID": "ses_child" } },
+  { "type": "session.tool.success", "created": 3100, "data": { "sessionID": "ses_root", "assistantMessageID": "msg_r1", "id": "call_task", "content": [{ "type": "text", "text": "done" }], "executed": true } },
+  { "type": "session.step.ended", "created": 3200, "data": { "sessionID": "ses_root", "assistantMessageID": "msg_r1", "finish": "stop", "cost": 0.01, "tokens": { "input": 2000, "output": 150, "reasoning": 0, "cache": { "read": 0, "write": 0 } } } }
+]

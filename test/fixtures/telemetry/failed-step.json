@@ -1,0 +1,8 @@
+[
+  { "type": "session.created", "created": 1000, "data": { "sessionID": "ses_root", "location": { "directory": "/work/proj" } } },
+  { "hook": "prompt", "at": 2000, "sessionID": "ses_root", "messageID": "msg_user1" },
+  { "type": "session.step.started", "created": 2100, "data": { "sessionID": "ses_root", "assistantMessageID": "msg_f1", "agent": "build", "model": { "id": "claude-sonnet-5-5", "providerID": "fuelix-anthropic" }, "started": 2100 } },
+  { "type": "session.step.failed", "created": 2600, "data": { "sessionID": "ses_root", "assistantMessageID": "msg_f1", "error": { "type": "unknown", "message": "boom" }, "cost": 0.004, "tokens": { "input": 800, "output": 30, "reasoning": 0, "cache": { "read": 0, "write": 0 } } } },
+  { "type": "session.step.started", "created": 2700, "data": { "sessionID": "ses_root", "assistantMessageID": "msg_f2", "agent": "build", "model": { "id": "claude-sonnet-5-5", "providerID": "fuelix-anthropic" }, "started": 2700 } },
+  { "type": "session.step.failed", "created": 2800, "data": { "sessionID": "ses_root", "assistantMessageID": "msg_f2", "error": { "type": "unknown", "message": "no usage" } } }
+]
