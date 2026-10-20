@@ -35,7 +35,18 @@ function sameCost(a: CatalogCost, b: CatalogCost): boolean {
   return a.input === b.input && a.output === b.output && a.cacheRead === b.cacheRead && a.cacheWrite === b.cacheWrite
 }
 
-function buildEntry(id: string, input: BuildInput): CatalogEntry {
+type Field = "limit" | "cost" | "input" | "output" | "tools" | "reasoning"
+type Origin = "inventory" | "seed"
+
+interface Built {
+  readonly entry: CatalogEntry
+  /** Name of the chosen inventory deployment. */
+  readonly deployment?: string
+  /** Where each present field came from. */
+  readonly origin: Partial<Record<Field, Origin>>
+}
+
+function buildEntry(id: string, input: BuildInput): Built {
   const seed = input.seed.get(id)
   const live = input.liveIds?.includes(id) ?? false
   const selection = selectDeployment(id, input.deployments)
@@ -55,6 +66,7 @@ function buildEntry(id: string, input: BuildInput): CatalogEntry {
 
   let fromInventory = 0
   let fromSeed = 0
+  const origin: Partial<Record<Field, Origin>> = {}
 
   // Limit: per component, inventory first, then seed.
   const context = selection?.context ?? seed?.context
@@ -62,6 +74,7 @@ function buildEntry(id: string, input: BuildInput): CatalogEntry {
   let limit: CatalogLimit | undefined
   if (context !== undefined && outputLimit !== undefined) {
     limit = { context, output: outputLimit }
+    origin.limit = selection?.context !== undefined && selection.output !== undefined ? "inventory" : "seed"
     if (selection?.context !== undefined && selection.output !== undefined) fromInventory++
     else if (selection?.context === undefined && selection?.output === undefined) fromSeed++
     else {
@@ -89,6 +102,7 @@ function buildEntry(id: string, input: BuildInput): CatalogEntry {
       cacheWrite: cacheWrite ?? 0,
     }
     fromInventory++
+    origin.cost = "inventory"
     if (usedSeed) fromSeed++
     if (prices.input200k !== undefined || prices.output200k !== undefined) {
       const tier: CatalogCostTier = {
@@ -108,26 +122,31 @@ function buildEntry(id: string, input: BuildInput): CatalogEntry {
       cacheWrite: seed.cost.cacheWrite ?? 0,
     }
     fromSeed++
+    origin.cost = "seed"
   }
 
   // Input modalities, tools, reasoning: chosen deployment first, then seed.
   const inputModalities = chosen?.modalities ?? seed?.inputModalities
   if (inputModalities) {
+    origin.input = chosen?.modalities ? "inventory" : "seed"
     if (chosen?.modalities) fromInventory++
     else fromSeed++
   }
   const tools = chosen?.tools ?? seed?.tools
   if (tools !== undefined) {
+    origin.tools = chosen?.tools !== undefined ? "inventory" : "seed"
     if (chosen?.tools !== undefined) fromInventory++
     else fromSeed++
   }
   const reasoning = chosen?.reasoning ?? seed?.reasoning
   if (reasoning !== undefined) {
+    origin.reasoning = chosen?.reasoning !== undefined ? "inventory" : "seed"
     if (chosen?.reasoning !== undefined) fromInventory++
     else fromSeed++
   }
 
   const outputModalities = seed?.outputModalities ?? (kind === "chat" ? ["text"] : undefined)
+  if (outputModalities) origin.output = seed?.outputModalities ? "seed" : undefined
 
   if (imageChat) notes.push("Inventory mode is image_generation. Kept as chat because the routing seed lists text and image output.")
   if (selection && chosen) {
@@ -150,7 +169,7 @@ function buildEntry(id: string, input: BuildInput): CatalogEntry {
 
   const status = chosen?.deprecation === "deprecated" || chosen?.deprecation === "sunset" ? "deprecated" : chosen ? "active" : undefined
 
-  return {
+  const entry: CatalogEntry = {
     provider,
     kind,
     name: seed?.name ?? id,
@@ -166,12 +185,94 @@ function buildEntry(id: string, input: BuildInput): CatalogEntry {
     sources: { routing, metadata },
     notes,
   }
+  return { entry, ...(chosen ? { deployment: chosen.deployment } : {}), origin }
+}
+
+const FIELD_LABEL: Readonly<Record<Field, string>> = {
+  limit: "limit",
+  cost: "cost",
+  input: "input modalities",
+  output: "output modalities",
+  tools: "tool support",
+  reasoning: "reasoning support",
+}
+
+function hasField(entry: CatalogEntry, field: Field): boolean {
+  switch (field) {
+    case "limit":
+      return entry.limit !== undefined
+    case "cost":
+      return entry.cost !== undefined
+    case "input":
+      return entry.input !== undefined
+    case "output":
+      return entry.output !== undefined
+    case "tools":
+      return entry.tools !== undefined
+    case "reasoning":
+      return entry.reasoning !== undefined
+  }
+}
+
+/**
+ * Fill fields that an ID still lacks from another ID with the same chosen inventory deployment.
+ * Donor order: field from the inventory first, then from the seed; ties go to the first ID in sort order.
+ * Never borrows across deployments.
+ */
+function borrowFields(built: ReadonlyMap<string, Built>): Map<string, CatalogEntry> {
+  const byDeployment = new Map<string, string[]>()
+  for (const [id, item] of built) {
+    if (!item.deployment) continue
+    byDeployment.set(item.deployment, [...(byDeployment.get(item.deployment) ?? []), id])
+  }
+  const fields: readonly Field[] = ["limit", "cost", "input", "output", "tools", "reasoning"]
+  const result = new Map<string, CatalogEntry>()
+  for (const [id, item] of built) {
+    let entry = item.entry
+    const peers = item.deployment ? (byDeployment.get(item.deployment) ?? []).filter((peer) => peer !== id) : []
+    const extra: string[] = []
+    for (const field of fields) {
+      if (hasField(item.entry, field)) continue
+      const donors = peers
+        .map((peer) => ({ peer, built: built.get(peer) as Built }))
+        .filter((donor) => hasField(donor.built.entry, field))
+        .sort((a, b) => {
+          const rankOf = (donor: { built: Built }) => (donor.built.origin[field] === "inventory" ? 0 : 1)
+          return rankOf(a) - rankOf(b) || (a.peer < b.peer ? -1 : a.peer > b.peer ? 1 : 0)
+        })
+      const donor = donors[0]
+      if (!donor) continue
+      const source = donor.built.entry
+      entry = {
+        ...entry,
+        ...(field === "limit" ? { limit: source.limit } : {}),
+        ...(field === "cost" ? { cost: source.cost, ...(source.costTiers ? { costTiers: source.costTiers } : {}) } : {}),
+        ...(field === "input" ? { input: source.input } : {}),
+        ...(field === "output" ? { output: source.output } : {}),
+        ...(field === "tools" ? { tools: source.tools } : {}),
+        ...(field === "reasoning" ? { reasoning: source.reasoning } : {}),
+      }
+      extra.push(`${FIELD_LABEL[field]} borrowed from ${donor.peer} (same deployment ${item.deployment}).`)
+    }
+    if (extra.length > 0) {
+      entry = {
+        ...entry,
+        sources: { ...entry.sources, metadata: "mixed" },
+        notes: [...(entry.notes ?? []), ...extra],
+      }
+    }
+    result.set(id, entry)
+  }
+  return result
 }
 
 export function buildCatalog(input: BuildInput): Catalog {
   const ids = new Set<string>([...input.seed.keys(), ...(input.liveIds ?? [])])
+  const sorted = [...ids].sort()
+  const built = new Map(sorted.map((id) => [id, buildEntry(id, input)] as const))
+  const borrowed = borrowFields(built)
   const models: Record<string, CatalogEntry> = {}
-  for (const id of [...ids].sort()) models[id] = buildEntry(id, input)
+  for (const id of sorted) models[id] = borrowed.get(id) as CatalogEntry
   return { version: 1, generatedAt: input.generatedAt, sources: [...input.sources], models }
 }
 
