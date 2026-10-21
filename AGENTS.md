@@ -12,7 +12,8 @@ Guidance for AI coding agents that work in this repository.
    request. The key never goes into provider `settings` or `headers`.
 3. Emits td-telemetry events (OTLP/HTTP JSON) from OpenCode sessions.
 
-The active plan is in `docs/plans/pending/`. Tick its steps as they finish.
+Active plans go in `docs/plans/pending/`; tick their steps as they finish. Finished plans move to `docs/plans/done/`.
+Release notes are in `CHANGELOG.md`.
 
 ## Commands
 

@@ -2,7 +2,7 @@
 
 OpenCode V2 plugin for TELUS Digital engineers who use FueliX with OpenCode and OpenChamber.
 
-It does three things:
+It does four things:
 
 1. **FueliX catalog**: registers the `fuelix-openai`, `fuelix-anthropic`, and `fuelix` providers and loads their
    models from `https://api.fuelix.ai/v1/models`. Prices, limits, and modalities come from a curated catalog
@@ -10,10 +10,13 @@ It does three things:
    provider blocks.
 2. **One key, kept out of API responses**: one FueliX key serves all three providers. The plugin never puts the key in
    provider `settings` or `headers`, which `GET /api/model` and `GET /api/provider` return to every local client.
-3. **td-telemetry events**: sends OpenCode and OpenChamber session activity (cost, tokens, models, agents, tools) to the
+3. **Low-cost session titles**: OpenCode writes session titles with one low-cost model per provider instead of the
+   session model.
+4. **td-telemetry events**: sends OpenCode and OpenChamber session activity (cost, tokens, models, agents, tools) to the
    local [td-telemetry](https://github.com/willowtreeapps/td-telemetry) receiver, so the sessions appear in its dashboard.
 
-The work plan and its status are in [`docs/plans/pending/`](docs/plans/pending/).
+Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decisions, and its evidence are in
+[`docs/plans/done/2026-10-19-fuelix-catalog-usage-telemetry.md`](docs/plans/done/2026-10-19-fuelix-catalog-usage-telemetry.md).
 
 ## Requirements
 
@@ -24,13 +27,31 @@ The work plan and its status are in [`docs/plans/pending/`](docs/plans/pending/)
 
 ## Install
 
-Add the plugin to `~/.config/opencode/opencode.json`:
+The repository is private. You need read access to `fsodanogm2dev/td-opencode-plugin` on GitHub.
+
+Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.1.0", "options": {} }]
 }
+```
+
+OpenCode installs the plugin with git when it starts, so git on your machine must be able to read the repository, for
+example with an SSH key or `gh auth setup-git`. OpenCode keeps the install in its cache. To update, change the tag and
+restart OpenCode.
+
+To install from a clone instead, check out the tag and give OpenCode the absolute path of the folder. OpenCode does not
+expand `~` in this path, and it reloads the plugin when files in the folder change. The plugin has no runtime
+dependencies, so the clone needs no `bun install`:
+
+```bash
+git clone --branch v0.1.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+```
+
+```jsonc
+{ "plugins": [{ "package": "/Users/<you>/td-opencode-plugin", "options": {} }] }
 ```
 
 Then remove the FueliX provider blocks from the same file: `provider.fuelix-openai`, `provider.fuelix`, and
@@ -94,6 +115,25 @@ A non-default `fuelix.baseURL` takes effect only when the environment of the Ope
 `::1`). Plugin options can come from a project configuration, and the key follows the base URL, so a cloned repository
 must not be able to redirect it.
 
+## Session titles
+
+OpenCode writes a title for each session with one extra model request. The plugin marks one low-cost model per
+provider, and OpenCode sends the title request to the marked model of the session's provider:
+
+| Session provider | Title model |
+| --- | --- |
+| `fuelix-openai` | `gpt-6-luna` |
+| `fuelix-anthropic` | `claude-haiku-5-5` |
+| `fuelix` | `gemini-3.1-flash-lite` |
+
+If the title model fails, OpenCode retries with the session model. The cost of the title request is part of the session
+total. To choose another title model, set it in your configuration. An optional `"variant"` field selects a reasoning
+variant of that model:
+
+```jsonc
+{ "agents": { "title": { "model": { "providerID": "fuelix-anthropic", "model": "claude-haiku-4-5" } } } }
+```
+
 ## Options
 
 ```jsonc
@@ -144,7 +184,15 @@ bun test                  # unit tests
 bun run typecheck
 bun run test:integration  # starts isolated OpenCode servers; see test/integration/README.md
 bun run doctor            # compares live /v1/models with data/fuelix-models.json (needs a FueliX key)
+bun run catalog --config <opencode.json>  # rebuilds data/fuelix-models.json
 ```
+
+`bun run catalog` reads the FueliX provider blocks of the given configuration as the routing seed, and
+`fuelix/LLM-Inventory` with the `gh` CLI (or a local copy with `--inventory <dir>`). The header of
+`scripts/build-catalog.ts` lists every option.
+
+The integration test servers load the plugin from this folder, and OpenCode reloads the plugin when a file in it
+changes. Do not edit files while the integration tests run.
 
 Read [`AGENTS.md`](AGENTS.md) before you change code. Important: never create `opencode.json`, `opencode.jsonc`, or
 `.opencode/` at the repository root. The live OpenCode service loads them for every session in this directory.

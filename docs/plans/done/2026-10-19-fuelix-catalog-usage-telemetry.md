@@ -16,7 +16,7 @@ Owner: Fabricio Sodano · Created: 2026-10-19 · Target: OpenCode `v2.0.32`, `@o
 | 0 | A fresh clone passes `bun run typecheck` and `bun test test/unit`. `.github/workflows/ci.yml` runs both. |
 | 1 | `test/integration/fuelix-plugin.test.ts`: the three providers, every chat model with a price and limits, discovery reload, Bearer auth, no key in `GET /api/model` or `GET /api/provider`. `test/integration/live-usage.test.ts`: one live prompt per provider, HTTP 200 with Bearer auth. `scripts/migrate-config.ts`: the author's configuration goes from 2,659 to 80 lines. |
 | 2 | [`docs/reports/2026-10-19-usage-accuracy.md`](../../reports/2026-10-19-usage-accuracy.md) (live token and cost parity, all fields equal), [`docs/reports/2026-10-20-registry-comparison.md`](../../reports/2026-10-20-registry-comparison.md) (every change between the current configuration and the plugin). `test/integration/wire-replay.test.ts` replays the live streams offline. |
-| 3 | `test/unit/telemetry/normalizer-compat.test.ts` decodes the emitted payloads with td-telemetry's own normalizer. `test/integration/td-telemetry.test.ts` runs a real td-telemetry receiver: plain prompt, tool call, idle `SessionEnd`, branch recorded as the feature key, stored `cost_usd` equal to OpenCode's step cost. |
+| 3 | `test/unit/telemetry/normalizer-compat.test.ts` decodes the emitted payloads with td-telemetry's own normalizer. `test/integration/td-telemetry.test.ts` runs a real td-telemetry receiver: plain prompt, tool call, idle `SessionEnd`, branch recorded as the feature key, stored `cost_usd` equal to OpenCode's step cost. Both tests run when `TD_TELEMETRY_REF` points at a td-telemetry checkout of version 0.26.0 or later (D20). |
 
 The integration tests need the `opencode` CLI and run on a developer machine (`test/integration/README.md`). CI runs
 the type check and the unit tests.
@@ -149,9 +149,9 @@ with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays 
 
 ### Design
 
-- **Locate td-telemetry**: option `tdTelemetry.root` → environment variable `TD_TELEMETRY_ROOT` → newest installed
-  copy under `~/.claude/plugins/cache/*/td-telemetry/<version>/`. When none is found, telemetry stays off and the plugin
-  logs one line.
+- **Locate td-telemetry**: option `telemetry.root` → environment variable `TD_TELEMETRY_ROOT` → newest installed
+  copy under `~/.claude/plugins/cache/*/td-telemetry/<version>/`. When none is found, or when its `package.json` shows
+  a version below 0.26.0 (D20), telemetry stays off and the plugin logs one line.
 - **Runtime pair**: at setup, run `node <root>/lib/process-manager.mjs` once, detached, as the Claude Code
   `SessionStart` hook does.
 - **Segments**: run `node <root>/scripts/hook-record-feature.mjs` with the same stdin JSON that Claude Code sends, at
@@ -176,7 +176,9 @@ with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays 
 
 ## Review decisions
 
-An independent review of the final code (2 high, 4 medium, 10 low findings; no blocker) led to these decisions:
+An independent review of the code found 2 high, 4 medium, and 10 low findings, and no blocker.
+[`docs/reports/2026-10-20-code-review.md`](../../reports/2026-10-20-code-review.md) maps every finding to its
+resolution. The review led to these decisions:
 
 - **D13**: Remove `FUELIX_API_KEY` from agent shell environments with `shell.hook("create.before")`. OpenCode builds
   every agent shell environment from the server environment (`packages/core/src/shell.ts`, lines 259–273).
@@ -189,17 +191,18 @@ An independent review of the final code (2 high, 4 medium, 10 low findings; no b
   apply after plugin providers, so the blocks undo decision D2 without notice.
 - **D17**: Document, do not work around, the `/api/generate` limitation: OpenCode runs no plugin request hooks on that
   path, and the Anthropic packages send a stored key only as `x-api-key`.
+- **D18**: Accept that OpenCode copies every FueliX request body in memory (review finding L9). OpenCode clones the body
+  when any `http.request` hook is registered (`packages/core/src/session/model-request.ts`, lines 348–353). The key
+  injection needs the hook, and the built-in `azure` provider has the same cost.
 
-## Follow-ups found during the work
+## Follow-ups
 
-- **Upstream request to OpenCode**: run session HTTP hooks for `Generate` requests, or let a provider send a stored key
-  credential as `Authorization: Bearer` on the Anthropic packages. Either removes the `/api/generate` limitation (D17).
-
-- **Anthropic prompt cache across user turns**: in the Phase 2 probe, a new user turn rewrote the cache instead of
-  reading it, although FueliX keeps the cache for identical requests. Compare two consecutive OpenCode request bodies
-  to find the block that changes. Evidence: `docs/reports/2026-10-19-usage-accuracy.md`, "Other findings".
-- **Title generation cost**: OpenCode generates titles with the session model. Check whether OpenCode V2 lets a user
-  choose a cheaper title model, and document it.
+- **Anthropic prompt cache across user turns**: closed. OpenCode keeps the cached prefix the same between turns.
+  FueliX serves `claude-haiku-4-5` from the Vertex AI global endpoint, where only an identical repeat of a request reads
+  the cache. No cache marker or header change in the plugin restores the reads, so a fix needs FueliX. Evidence:
+  [`docs/reports/2026-10-19-usage-accuracy.md`](../../reports/2026-10-19-usage-accuracy.md), "Other findings".
+- **Title generation cost**: closed by D21. A user can choose another title model with `agents.title.model` (README,
+  "Session titles").
 
 ## Out of scope
 
@@ -216,6 +219,8 @@ An independent review of the final code (2 high, 4 medium, 10 low findings; no b
 | FueliX has no metadata API, so the curated table can drift. | `bun run doctor`, startup warnings for models that use defaults. |
 | td-telemetry semantics assume Claude Code (agent names, MCP tool names, session lifecycle). | Document each mapping. Validate records with td-telemetry's normalizer. |
 | A plugin bug can break model selection in the live service. | Never load the plugin from this repository's root. Test only on isolated servers. |
+| An older td-telemetry drops record types. | The plugin requires td-telemetry 0.26.0 or later (D20). |
+| A title model leaves FueliX. | OpenCode then uses the session model for titles. `bun run doctor` lists each title model and flags a missing one. |
 
 ## Decision log
 
@@ -249,3 +254,14 @@ An independent review of the final code (2 high, 4 medium, 10 low findings; no b
   inventory output limit at or above its context limit is ignored. Reason: inventory limits and capabilities come from
   generic registry defaults and contain errors (for example, `llama-4-scout` lists 10,000,000 output tokens), and
   OpenCode sends `max_tokens = min(limit.output, 256000)`, so a wrong output limit can break a working model.
+- **D19**: Make no requests to OpenCode upstream. Limits that come from OpenCode stay documented in the README (D17).
+- **D20**: Require td-telemetry 0.26.0 or later. It is the first version whose receiver keeps all six record types that
+  the plugin sends. Older receivers drop `tool_decision` (before 0.26.0), `user_prompt` (before 0.24.1), and
+  `subagent_completed` (before 0.22.6). The plugin reads `version` from `package.json` in the td-telemetry root. An
+  older or unknown version keeps telemetry off with one warning.
+- **D21**: Mark one title model per provider with the OpenCode model `family`: `gpt-6-luna` (`gpt-luna`),
+  `claude-haiku-5-5` (`claude-haiku`), and `gemini-3.1-flash-lite` (`gemini-flash-lite`). OpenCode picks the title model
+  with `model.small()`, which matches only a few families (`packages/core/src/model.ts`, lines 271–283). Without a
+  family, titles run on the session model. No other model gets a family, because the OpenCode models tool hides older
+  models of the same family. `test/integration/title-model.test.ts` checks the choice and the `agents.title.model`
+  override. In `test/integration/live-usage.test.ts`, each title request went to the title model and returned HTTP 200.

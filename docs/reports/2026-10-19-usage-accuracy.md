@@ -2,7 +2,7 @@
 
 Scope: OpenCode `v2.0.32`, FueliX gateway, measured on 2026-10-19. This report states which figures in the OpenCode
 TUI and the OpenChamber session panel are accurate, which were wrong before this plugin, and how the plugin changes
-them. Plan: [`docs/plans/pending/2026-10-19-fuelix-catalog-usage-telemetry.md`](../plans/pending/2026-10-19-fuelix-catalog-usage-telemetry.md),
+them. Plan: [`docs/plans/done/2026-10-19-fuelix-catalog-usage-telemetry.md`](../plans/done/2026-10-19-fuelix-catalog-usage-telemetry.md),
 Phase 2.
 
 ## How OpenCode computes cost
@@ -86,9 +86,11 @@ and asserts the same values, so a regression shows without a FueliX key.
 
 ## Other findings
 
-- **Session totals include title generation.** OpenCode also asks the session model for a title. The title call has no
-  `session.step.ended` event, but its cost is in the session total. With `gpt-5-nano`, the title call used 944 output
-  tokens (reasoning), more than both agent calls together.
+- **Session totals include title generation.** OpenCode also sends one title request per session. The title call has
+  no `session.step.ended` event, but its cost is in the session total. It runs on the title model of the session's
+  provider (README, "Session titles"). In the live test, the title calls went to `gpt-6-luna` (521 input, 8 output
+  tokens), `claude-haiku-5-5` (4 input, 11 output, 792 cache write), and `gemini-3.1-flash-lite` (534 input, 102
+  output), each with HTTP 200 and `Authorization: Bearer`.
 - **Anthropic prompt cache across user turns.** With `fuelix-anthropic/claude-haiku-4-5`, a new user turn writes a new
   cache entry instead of reading the entry of the previous turn (table above, call 2). OpenCode and the plugin do not
   cause this, and the plugin has no safe fix. FueliX serves this model from the Vertex AI global endpoint:
