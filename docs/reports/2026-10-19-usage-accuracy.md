@@ -89,13 +89,35 @@ and asserts the same values, so a regression shows without a FueliX key.
 - **Session totals include title generation.** OpenCode also asks the session model for a title. The title call has no
   `session.step.ended` event, but its cost is in the session total. With `gpt-5-nano`, the title call used 944 output
   tokens (reasoning), more than both agent calls together.
-- **Anthropic prompt cache across user turns.** In the probe, the second user turn wrote a new 6,129-token cache entry
-  instead of reading the 6,115-token entry that the first turn wrote. FueliX itself keeps the cache: three identical
-  direct requests to `/v1/messages` with a 9,902-token cached system block returned cache write 9,902, then cache read
-  9,902 twice. So the prefix that OpenCode sent changed between the two turns. Real sessions from the last 14 days still
-  read the cache 14 to 23 times per write (`claude-opus`, `claude-sonnet-5-5` in `session_v2`), which suggests that the
-  cache works inside a turn's tool loop and is rewritten when a new user turn starts. This is a cost-efficiency issue in
-  OpenCode's request assembly, not a reporting error. It is listed as a follow-up in the plan.
+- **Anthropic prompt cache across user turns.** With `fuelix-anthropic/claude-haiku-4-5`, a new user turn writes a new
+  cache entry instead of reading the entry of the previous turn (table above, call 2). OpenCode and the plugin do not
+  cause this, and the plugin has no safe fix. FueliX serves this model from the Vertex AI global endpoint:
+  `fuelix/LLM-Inventory` `data/deployments.yaml` lists `vertex_ai/claude-haiku-4-5@20251001` with
+  `vertex_ai_location: global`, and all 24 test responses had a Vertex AI message ID (`msg_vrtx_…`). In the tests, only
+  an identical repeat of a request read the cache. Google states that on the global endpoint, "subsequent identical
+  requests will be routed to the region holding the cache"
+  ([Google Cloud blog](https://cloud.google.com/blog/products/ai-machine-learning/global-endpoint-for-claude-models-generally-available-on-vertex-ai)).
+  A regional endpoint for this deployment, or a session ID that FueliX sends to Vertex AI, should restore the reads.
+  OpenCode already sends a session ID in `x-session-affinity`. This is a cost-efficiency issue, not a reporting error.
+  - The two agent requests of a two-turn session are identical up to the end of the first user message (12 tools,
+    4 system blocks, and that message). In that prefix, only the conversation-tail marker changes: it moves to the new
+    last user message (`packages/ai/src/cache-policy.ts`, lines 17–21 and 137–158;
+    `packages/ai/src/protocols/anthropic-messages.ts`, line 906). Anthropic documents this placement: a read looks back
+    up to 20 blocks from each marker for an entry that an earlier request wrote
+    ([prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)).
+  - Sent directly to FueliX `/v1/messages`, the captured turn-1 request wrote 6,116 tokens. The turn-2 request then read
+    0 and wrote 6,130. The turn-1 request, sent again, read 6,116. In total, 10 requests (1 from OpenCode, 9 direct)
+    kept a prefix that an earlier request wrote but were not identical to it. All 10 read 0. Both identical repeats read
+    the full prefix.
+  - A safe plugin change is limited to cache markers and request fields that do not change the model input. These
+    changes also read 0: the tail marker on the earlier user message, so that the request matched the turn-1 request
+    byte for byte up to its last marker; markers on both user messages; the turn-1 request without its tail marker; no
+    markers on the tools and the first system block; the Vertex AI session-affinity header `X-Vertex-Ai-Session-Id`, as
+    an HTTP header and as `extra_headers` in the body (a LiteLLM request field). A 60-second wait between the two
+    requests also read 0.
+  - The effect was measured only for `claude-haiku-4-5`. Real `claude-opus` steps read the cache in 2,600 of 2,873
+    cases, including first steps of new user turns, for example in `ses_ea41e6373ffe…` (`session_message` table,
+    `type = 'assistant'`, 2026-09-21 to 2026-10-21, read-only query).
 - **Chat Completions path.** The `fuelix` provider sends requests to `https://api.fuelix.ai/chat/completions` (no
   `/v1`). FueliX accepts that path.
 
