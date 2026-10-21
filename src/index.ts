@@ -9,7 +9,6 @@ import type { Plugin } from "@opencode/plugin"
 import { setupFuelix } from "./fuelix/index.ts"
 import { createLogger } from "./log.ts"
 import { parseOptions } from "./options.ts"
-import { setupTelemetry } from "./telemetry/index.ts"
 
 export const PLUGIN_ID = "td-opencode-plugin"
 
@@ -26,19 +25,12 @@ const plugin: Plugin.Plugin = {
     const log = createLogger({ debug: options.debug })
     for (const warning of options.warnings) log.warn(warning)
 
-    // Each feature is isolated: a failure in one must not stop the other.
+    // A setup failure is logged and does not stop OpenCode.
     const cleanups: Cleanup[] = []
     try {
       cleanups.push(await setupFuelix(ctx, options.fuelix, log))
     } catch (error) {
       log.error("FueliX setup failed", { error: errorMessage(error) })
-    }
-    if (options.telemetry.enabled) {
-      try {
-        cleanups.push(await setupTelemetry(ctx, options.telemetry, log))
-      } catch (error) {
-        log.error("telemetry setup failed", { error: errorMessage(error) })
-      }
     }
 
     return async () => {

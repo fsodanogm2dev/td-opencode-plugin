@@ -14,14 +14,6 @@ describe("parseOptions", () => {
       discoveryTimeoutMs: 5000,
       scrubShellEnv: true,
     })
-    expect(parsed.telemetry).toEqual({
-      enabled: true,
-      root: undefined,
-      receiverURL: "http://127.0.0.1:4418",
-      node: "node",
-      idleMinutes: 30,
-      subagentToolNames: ["task", "subagent"],
-    })
   })
 
   test("normalizes the FueliX base URL", () => {
@@ -42,7 +34,6 @@ describe("parseOptions", () => {
     const parsed = parseOptions(
       {
         fuelix: { refreshMinutes: -5, includeNonChatModels: "yes", baseURL: "" },
-        telemetry: { idleMinutes: "ten", subagentToolNames: [1, 2] },
         debug: "true",
       },
       {},
@@ -50,10 +41,8 @@ describe("parseOptions", () => {
     expect(parsed.fuelix.refreshMinutes).toBe(60)
     expect(parsed.fuelix.includeNonChatModels).toBe(false)
     expect(parsed.fuelix.baseURL).toBe(DEFAULT_FUELIX_BASE_URL)
-    expect(parsed.telemetry.idleMinutes).toBe(30)
-    expect(parsed.telemetry.subagentToolNames).toEqual(["task", "subagent"])
     expect(parsed.debug).toBe(false)
-    expect(parsed.warnings.length).toBe(6)
+    expect(parsed.warnings.length).toBe(4)
   })
 
   test("scrubShellEnv defaults to true, accepts false, and rejects other values", () => {
@@ -65,32 +54,18 @@ describe("parseOptions", () => {
   })
 
   test("warns when a section is not an object", () => {
-    const parsed = parseOptions({ fuelix: "nope", telemetry: [] }, {})
+    const parsed = parseOptions({ fuelix: "nope" }, {})
     expect(parsed.warnings).toContain("options.fuelix must be an object; using defaults")
-    expect(parsed.warnings).toContain("options.telemetry must be an object; using defaults")
   })
 
-  test("reads the receiver port, telemetry root, and debug flag from the environment", () => {
-    const parsed = parseOptions(undefined, {
-      TD_RECEIVER_PORT: "14418",
-      TD_TELEMETRY_ROOT: "/opt/td-telemetry",
-      TD_OPENCODE_PLUGIN_DEBUG: "1",
-    })
-    expect(parsed.telemetry.receiverURL).toBe("http://127.0.0.1:14418")
-    expect(parsed.telemetry.root).toBe("/opt/td-telemetry")
-    expect(parsed.debug).toBe(true)
+  test("reads the debug flag from the environment", () => {
+    expect(parseOptions(undefined, { TD_OPENCODE_PLUGIN_DEBUG: "1" }).debug).toBe(true)
   })
 
-  test("explicit options win over the environment", () => {
-    const parsed = parseOptions(
-      { telemetry: { root: "/explicit", receiverURL: "http://127.0.0.1:9999/" } },
-      { TD_RECEIVER_PORT: "14418", TD_TELEMETRY_ROOT: "/from-env" },
-    )
-    expect(parsed.telemetry.root).toBe("/explicit")
-    expect(parsed.telemetry.receiverURL).toBe("http://127.0.0.1:9999")
-  })
-
-  test("ignores a non-numeric receiver port in the environment", () => {
-    expect(parseOptions(undefined, { TD_RECEIVER_PORT: "abc" }).telemetry.receiverURL).toBe("http://127.0.0.1:4418")
+  test("ignores unknown option keys without a warning", () => {
+    const parsed = parseOptions({ removedFeature: { enabled: true }, unknownKey: 1, fuelix: {} }, {})
+    expect(parsed.warnings).toEqual([])
+    expect(parsed.fuelix.baseURL).toBe(DEFAULT_FUELIX_BASE_URL)
+    expect(parsed.debug).toBe(false)
   })
 })

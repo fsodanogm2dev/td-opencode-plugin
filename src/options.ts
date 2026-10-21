@@ -2,7 +2,7 @@
  * Parses the plugin options that users set in `opencode.json(c)`:
  *
  * ```jsonc
- * { "package": "github:fsodanogm2dev/td-opencode-plugin", "options": { "fuelix": {}, "telemetry": {}, "debug": false } }
+ * { "package": "github:fsodanogm2dev/td-opencode-plugin", "options": { "fuelix": {}, "debug": false } }
  * ```
  *
  * Invalid values fall back to defaults and add a warning. Parsing never throws.
@@ -23,24 +23,8 @@ export interface FuelixOptions {
   readonly scrubShellEnv: boolean
 }
 
-export interface TelemetryOptions {
-  /** Emit td-telemetry events. Telemetry stays off when no td-telemetry installation is found. */
-  readonly enabled: boolean
-  /** td-telemetry installation directory (contains `lib/` and `scripts/`). Found automatically when unset. */
-  readonly root: string | undefined
-  /** OTLP/HTTP receiver origin. Defaults to `http://127.0.0.1:${TD_RECEIVER_PORT ?? 4418}`. */
-  readonly receiverURL: string
-  /** Node.js executable used to run td-telemetry scripts (Node 22.5 or later). */
-  readonly node: string
-  /** Minutes without activity before a session segment is closed (`SessionEnd`). */
-  readonly idleMinutes: number
-  /** OpenCode tool names that start a subagent. They are reported to td-telemetry as `Task`. */
-  readonly subagentToolNames: readonly string[]
-}
-
 export interface ParsedOptions {
   readonly fuelix: FuelixOptions
-  readonly telemetry: TelemetryOptions
   readonly debug: boolean
   readonly warnings: readonly string[]
 }
@@ -73,14 +57,6 @@ export function parseOptions(raw: unknown, env: Env = process.env): ParsedOption
     if (typeof value === "string" && value.trim() !== "") return value.trim()
     warnings.push(`options.${path}.${key} must be a non-empty string; using ${JSON.stringify(fallback)}`)
     return fallback
-  }
-
-  const readOptionalString = (source: Record<string, unknown>, path: string, key: string): string | undefined => {
-    const value = source[key]
-    if (value === undefined) return undefined
-    if (typeof value === "string" && value.trim() !== "") return value.trim()
-    warnings.push(`options.${path}.${key} must be a non-empty string; ignoring it`)
-    return undefined
   }
 
   const readNumber = (
@@ -123,28 +99,7 @@ export function parseOptions(raw: unknown, env: Env = process.env): ParsedOption
     scrubShellEnv: readBoolean(fuelixRaw, "fuelix", "scrubShellEnv", true),
   }
 
-  const telemetryRaw = section("telemetry")
-  const port = env.TD_RECEIVER_PORT && /^\d+$/.test(env.TD_RECEIVER_PORT) ? env.TD_RECEIVER_PORT : "4418"
-  const subagentRaw = telemetryRaw.subagentToolNames
-  let subagentToolNames: readonly string[] = ["task", "subagent"]
-  if (subagentRaw !== undefined) {
-    if (Array.isArray(subagentRaw) && subagentRaw.every((item) => typeof item === "string" && item !== "")) {
-      subagentToolNames = subagentRaw as string[]
-    } else {
-      warnings.push("options.telemetry.subagentToolNames must be an array of strings; using defaults")
-    }
-  }
-
-  const telemetry: TelemetryOptions = {
-    enabled: readBoolean(telemetryRaw, "telemetry", "enabled", true),
-    root: readOptionalString(telemetryRaw, "telemetry", "root") ?? (env.TD_TELEMETRY_ROOT?.trim() || undefined),
-    receiverURL: readString(telemetryRaw, "telemetry", "receiverURL", `http://127.0.0.1:${port}`).replace(/\/+$/, ""),
-    node: readString(telemetryRaw, "telemetry", "node", "node"),
-    idleMinutes: readNumber(telemetryRaw, "telemetry", "idleMinutes", 30, 1, 24 * 60),
-    subagentToolNames,
-  }
-
   const debug = readBoolean(root, "options", "debug", false) || env.TD_OPENCODE_PLUGIN_DEBUG === "1"
 
-  return { fuelix, telemetry, debug, warnings }
+  return { fuelix, debug, warnings }
 }

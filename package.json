@@ -2,7 +2,7 @@
   "name": "td-opencode-plugin",
   "version": "0.1.0",
   "private": true,
-  "description": "OpenCode V2 plugin for TELUS Digital: FueliX model catalog, secure key handling, accurate usage, and td-telemetry events.",
+  "description": "OpenCode V2 plugin for TELUS Digital: FueliX model catalog, secure key handling, and accurate usage.",
   "type": "module",
   "license": "UNLICENSED",
   "exports": {
