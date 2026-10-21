@@ -2,7 +2,7 @@
 
 OpenCode V2 plugin for TELUS Digital engineers who use FueliX with OpenCode and OpenChamber.
 
-It does four things:
+It does three things:
 
 1. **FueliX catalog**: registers the `fuelix-openai`, `fuelix-anthropic`, and `fuelix` providers and loads their
    models from `https://api.fuelix.ai/v1/models`. Prices, limits, and modalities come from a curated catalog
@@ -12,18 +12,14 @@ It does four things:
    provider `settings` or `headers`, which `GET /api/model` and `GET /api/provider` return to every local client.
 3. **Low-cost session titles**: OpenCode writes session titles with one low-cost model per provider instead of the
    session model.
-4. **td-telemetry events**: sends OpenCode and OpenChamber session activity (cost, tokens, models, agents, tools) to the
-   local [td-telemetry](https://github.com/willowtreeapps/td-telemetry) receiver, so the sessions appear in its dashboard.
 
 Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decisions, and its evidence are in
-[`docs/plans/done/2026-10-19-fuelix-catalog-usage-telemetry.md`](docs/plans/done/2026-10-19-fuelix-catalog-usage-telemetry.md).
+[`docs/plans/done/2026-10-19-fuelix-catalog-usage.md`](docs/plans/done/2026-10-19-fuelix-catalog-usage.md).
 
 ## Requirements
 
 - OpenCode `v2.0.32` or later (`opencode --version`).
 - A FueliX API key.
-- For telemetry only: a git clone of td-telemetry 0.26.0 or later, and Node.js 22.5 or later. You do not need Claude
-  Code. The "Telemetry" section shows the setup.
 
 ## Install
 
@@ -148,52 +144,10 @@ variant of that model:
       "discoveryTimeoutMs": 5000,
       "scrubShellEnv": true                 // remove FUELIX_API_KEY from agent shell environments
     },
-    "telemetry": {
-      "enabled": true,                      // telemetry stays off when td-telemetry is not installed
-      "root": "/path/to/td-telemetry",      // if unset: TD_TELEMETRY_ROOT, then found under ~/.claude/plugins/cache
-      "receiverURL": "http://127.0.0.1:4418",
-      "node": "node",
-      "idleMinutes": 30,                    // close the td-telemetry segment after this much inactivity
-      "subagentToolNames": ["task", "subagent"]
-    },
     "debug": false
   }
 }
 ```
-
-## Telemetry
-
-Telemetry works with OpenCode alone. You do not need Claude Code. To set it up, clone td-telemetry once:
-
-```bash
-git clone https://github.com/willowtreeapps/td-telemetry.git ~/.local/share/td-telemetry
-```
-
-Then set `telemetry.root` in the plugin options to the absolute path of the clone, and restart OpenCode:
-
-```jsonc
-{
-  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.1.0",
-  "options": { "telemetry": { "root": "/Users/<you>/.local/share/td-telemetry" } }
-}
-```
-
-The dashboard is at <http://127.0.0.1:4419>. To update td-telemetry, run `git -C ~/.local/share/td-telemetry pull`,
-then restart OpenCode. Instead of `telemetry.root`, you can set `TD_TELEMETRY_ROOT` in the environment of the OpenCode
-service. Without either, the plugin looks for a copy that Claude Code installed under `~/.claude/plugins/cache`.
-
-When td-telemetry is installed, the plugin:
-
-- starts the td-telemetry receiver and dashboard if they are not running;
-- records a segment (project, branch, pull request, conversation title) through the td-telemetry hook scripts;
-- sends OTLP/HTTP JSON log records to the receiver: `user_prompt`, `api_request` (one per model call, with the cost that
-  OpenCode recorded), `tool_result`, `tool_decision`, `skill_activated`, and `subagent_completed`.
-
-The plugin never sends prompt text, tool input or output, or file contents. Set `"telemetry": { "enabled": false }` to
-turn telemetry off.
-
-If `package.json` in the td-telemetry root does not show version 0.26.0 or later, telemetry stays off and the server log
-shows one warning.
 
 ## Development
 

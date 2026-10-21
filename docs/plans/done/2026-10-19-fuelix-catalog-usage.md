@@ -1,4 +1,4 @@
-# TD OpenCode plugin: FueliX catalog, accurate usage, td-telemetry
+# TD OpenCode plugin: FueliX catalog and accurate usage
 
 Owner: Fabricio Sodano · Created: 2026-10-19 · Target: OpenCode `v2.0.32`, `@opencode/plugin@2.0.32`
 
@@ -7,7 +7,6 @@ Owner: Fabricio Sodano · Created: 2026-10-19 · Target: OpenCode `v2.0.32`, `@o
 - [x] Phase 0: Bootstrap the repository (package, type check, tests, agent rules)
 - [x] Phase 1: Load the FueliX catalog from `/v1/models` and resolve one API key securely
 - [x] Phase 2: Verify that the TUI and OpenChamber report accurate tokens, cost, and context
-- [x] Phase 3: Emit td-telemetry events from OpenCode sessions
 
 ## Gate evidence
 
@@ -16,15 +15,14 @@ Owner: Fabricio Sodano · Created: 2026-10-19 · Target: OpenCode `v2.0.32`, `@o
 | 0 | A fresh clone passes `bun run typecheck` and `bun test test/unit`. `.github/workflows/ci.yml` runs both. |
 | 1 | `test/integration/fuelix-plugin.test.ts`: the three providers, every chat model with a price and limits, discovery reload, Bearer auth, no key in `GET /api/model` or `GET /api/provider`. `test/integration/live-usage.test.ts`: one live prompt per provider, HTTP 200 with Bearer auth. `scripts/migrate-config.ts`: the author's configuration goes from 2,659 to 80 lines. |
 | 2 | [`docs/reports/2026-10-19-usage-accuracy.md`](../../reports/2026-10-19-usage-accuracy.md) (live token and cost parity, all fields equal), [`docs/reports/2026-10-20-registry-comparison.md`](../../reports/2026-10-20-registry-comparison.md) (every change between the current configuration and the plugin). `test/integration/wire-replay.test.ts` replays the live streams offline. |
-| 3 | `test/unit/telemetry/normalizer-compat.test.ts` decodes the emitted payloads with td-telemetry's own normalizer. `test/integration/td-telemetry.test.ts` runs a real td-telemetry receiver: plain prompt, tool call, idle `SessionEnd`, branch recorded as the feature key, stored `cost_usd` equal to OpenCode's step cost. Both tests run when `TD_TELEMETRY_REF` points at a td-telemetry checkout of version 0.26.0 or later (D20). |
+
 
 The integration tests need the `opencode` CLI and run on a developer machine (`test/integration/README.md`). CI runs
 the type check and the unit tests.
 
 ## Context
 
-This plugin replaces the hand-written FueliX provider blocks in the global OpenCode configuration and feeds
-TELUS Digital telemetry from OpenCode and OpenChamber sessions.
+This plugin replaces the hand-written FueliX provider blocks in the global OpenCode configuration.
 
 Facts measured on 2026-10-19 on the author's machine:
 
@@ -38,18 +36,15 @@ Facts measured on 2026-10-19 on the author's machine:
 | The FueliX Anthropic endpoint rejects `x-api-key` (HTTP 401) and accepts `Authorization: Bearer` (HTTP 200). | `POST https://api.fuelix.ai/v1/messages`, request IDs `38d3215f-…` and `2141043f-…` |
 | FueliX returns standard `usage` objects for Anthropic Messages, OpenAI Responses, and Chat Completions (streaming with `include_usage` too). It sends `x-quota-allowed`, `x-quota-available`, `x-quota-reset`, and no cost header. | Probe requests on 2026-10-19 |
 | The OpenCode credential store keeps `/connect` keys as clear-text JSON in `~/.local/share/opencode/opencode.db` (table `credential`, file mode `0600`). | `sqlite3 … .schema credential` |
-| td-telemetry accepts only Claude Code today. Its receiver takes OTLP/HTTP JSON on `127.0.0.1:4418`; its hook scripts take `{session_id, cwd, transcript_path}` on stdin. | `willowtreeapps/td-telemetry` `README.md`, `AGENTS.md`, `lib/otel-normalize.mjs` |
+
 
 ## Constraints
 
-- Change only this repository. `willowtreeapps/td-telemetry`, `anomalyco/opencode`, and the user's OpenCode
-  configuration and data are read-only.
+- Change only this repository. `anomalyco/opencode` and the user's OpenCode configuration and data are read-only.
 - Do not create `opencode.json`, `opencode.jsonc`, or `.opencode/` at the repository root. The live OpenCode service
   loads them for every session in this directory. Examples go in `examples/`.
 - Run every OpenCode test against an isolated server with temporary config and data directories.
 - Never write a secret to a file, a log line, a test fixture, provider `settings`, or provider `headers`.
-- td-telemetry rule: dollars come only from the `api_request` event's `cost_usd`. The plugin takes that value from the
-  cost that OpenCode records on the assistant message. It never estimates cost from tokens on its own.
 
 ## Phase 0: Bootstrap
 
@@ -140,40 +135,6 @@ The token, cost, cache, and context figures in the TUI and in the OpenChamber se
 A table of model × field (FueliX value, OpenCode value, match) for one model per provider, committed under
 `docs/reports/`.
 
-## Phase 3: td-telemetry emitter
-
-### Goal
-
-OpenCode and OpenChamber sessions appear in the td-telemetry local dashboard (and in the optional ai-adoption push)
-with project, branch, PR, model, agent, tool, and cost data. td-telemetry stays unchanged (decision D4).
-
-### Design
-
-- **Locate td-telemetry**: option `telemetry.root` → environment variable `TD_TELEMETRY_ROOT` → newest installed
-  copy under `~/.claude/plugins/cache/*/td-telemetry/<version>/`. When none is found, or when its `package.json` shows
-  a version below 0.26.0 (D20), telemetry stays off and the plugin logs one line.
-- **Runtime pair**: at setup, run `node <root>/lib/process-manager.mjs` once, detached, as the Claude Code
-  `SessionStart` hook does.
-- **Segments**: run `node <root>/scripts/hook-record-feature.mjs` with the same stdin JSON that Claude Code sends, at
-  session start and on each user prompt. Run `scripts/hook-session-end.mjs` when the session ends. Research item: map
-  OpenCode session lifecycle (sessions persist; there is no process exit per session) to `SessionStart` and
-  `SessionEnd`, and supply the conversation title without a Claude transcript file.
-- **Events**: map OpenCode events to td-telemetry OTLP log records: `user_prompt`, `api_request` (one per model call,
-  `cost_usd` from OpenCode), `tool_result`, `tool_decision`, `skill_activated`, `subagent_completed`. Root sessions use
-  `query_source = repl_main_thread`; child sessions use the agent query source.
-- **Transport**: bounded in-memory queue, batch POST of OTLP/HTTP JSON to `http://127.0.0.1:4418/v1/logs`, short
-  timeout, limited retries, drop on failure. Telemetry never blocks or fails a session.
-- **Privacy**: send IDs, names, counts, durations, and costs only. Never send prompt text, tool input or output, or
-  file contents.
-
-### Gate
-
-1. Unit tests validate every emitted record against td-telemetry's own normalizer (`lib/otel-normalize.mjs`, imported
-   from a read-only clone in an optional test).
-2. Integration test: an isolated td-telemetry pair (scratch `TD_DATA_DIR`, `HOME`, and ports) and an isolated OpenCode
-   server with the plugin. After one prompt, the `events` table has an `api_request` row with a non-zero `cost_usd`, the
-   `segments` table has a row with project and branch, and the dashboard API shows the session cost.
-
 ## Review decisions
 
 An independent review of the code found 2 high, 4 medium, and 10 low findings, and no blocker.
@@ -185,8 +146,6 @@ resolution. The review led to these decisions:
 - **D14**: Honor a non-default `fuelix.baseURL` only with `TD_OPENCODE_ALLOW_CUSTOM_FUELIX_URL=1` in the service
   environment and an `https` URL (plain `http` for loopback only). Plugin options can come from a project
   configuration, and the key follows the base URL.
-- **D15**: Give td-telemetry child processes an allowlisted environment. td-telemetry's process manager passes its
-  environment to long-lived daemons.
 - **D16**: Warn once when the configuration still exposes a FueliX key through old provider blocks. Configured providers
   apply after plugin providers, so the blocks undo decision D2 without notice.
 - **D17**: Document, do not work around, the `/api/generate` limitation: OpenCode runs no plugin request hooks on that
@@ -208,8 +167,6 @@ resolution. The review led to these decisions:
 
 - Cortex MCP wiring.
 - Migration of `jev-plugin.js` hooks to the V2 API.
-- Any change to `willowtreeapps/td-telemetry`. An upstream contribution is possible later; this plan does not depend on
-  it.
 
 ## Risks
 
@@ -217,9 +174,7 @@ resolution. The review led to these decisions:
 | --- | --- |
 | The OpenCode V2 plugin API is new and can change between releases. | Pin `@opencode/plugin@2.0.32`. Test against the installed OpenCode version. |
 | FueliX has no metadata API, so the curated table can drift. | `bun run doctor`, startup warnings for models that use defaults. |
-| td-telemetry semantics assume Claude Code (agent names, MCP tool names, session lifecycle). | Document each mapping. Validate records with td-telemetry's normalizer. |
 | A plugin bug can break model selection in the live service. | Never load the plugin from this repository's root. Test only on isolated servers. |
-| An older td-telemetry drops record types. | The plugin requires td-telemetry 0.26.0 or later (D20). |
 | A title model leaves FueliX. | OpenCode then uses the session model for titles. `bun run doctor` lists each title model and flags a missing one. |
 
 ## Decision log
@@ -227,7 +182,6 @@ resolution. The review led to these decisions:
 - **D1**: Keep the provider IDs `fuelix`, `fuelix-openai`, `fuelix-anthropic`.
 - **D2**: Keep secrets out of provider `settings` and `headers`. Inject the key per request.
 - **D3**: Do not register non-chat models by default.
-- **D4**: Feed td-telemetry only through its public interfaces (OTLP receiver and hook scripts).
 - **D5**: Use `integrationID: "fuelix"` on all three providers, so one credential serves them.
 - **D6**: Authenticate with an `http.request` hook that sets `Authorization: Bearer`. Do not use provider headers or a
   `command` integration method.
@@ -237,16 +191,6 @@ resolution. The review led to these decisions:
   deployments, use the highest base input price (list rate) and the smallest limits. Contracted Anthropic rates are
   lower and private, so the cost shown can be higher than the metered cost for requests that FueliX routes to the
   `anthropic/*` deployment.
-- **D9**: In td-telemetry, report subagent activity under the root session ID with `query_source = agent:builtin:<agent>`,
-  because td-telemetry attributes subagent spend inside the parent session. Report the tools named in
-  `subagentToolNames` as `Task`, so td-telemetry builds subagent run windows.
-- **D10**: Report each session from exactly one plugin instance. OpenCode loads one plugin instance per location, and
-  sometimes two for one directory with two spellings (`/var/...` and `/private/var/...` on macOS). The bus filters
-  routed events by location, but it delivers events without a route or location to every instance
-  (`packages/core/src/bus.ts`, `local()`), so several instances can see one session; the real-receiver test stored two
-  segments for one session in about 1 run in 10 before this rule. Instances register their location in a process-wide
-  registry (`src/telemetry/ownership.ts`). An instance reports a session only when the session directory is its exact
-  location or, without an exact owner, when it is the smallest registered directory with the same real path.
 - **D11**: Ship a root `index.ts` that re-exports `src/index.ts`. OpenCode loads a local plugin directory through
   `<dir>/index.*` or `<dir>/server.*` and ignores `package.json` `exports`.
 - **D12**: Per-field source priority in the catalog. Prices: LLM-Inventory first, because FueliX meters with those rows.
@@ -255,10 +199,6 @@ resolution. The review led to these decisions:
   generic registry defaults and contain errors (for example, `llama-4-scout` lists 10,000,000 output tokens), and
   OpenCode sends `max_tokens = min(limit.output, 256000)`, so a wrong output limit can break a working model.
 - **D19**: Make no requests to OpenCode upstream. Limits that come from OpenCode stay documented in the README (D17).
-- **D20**: Require td-telemetry 0.26.0 or later. It is the first version whose receiver keeps all six record types that
-  the plugin sends. Older receivers drop `tool_decision` (before 0.26.0), `user_prompt` (before 0.24.1), and
-  `subagent_completed` (before 0.22.6). The plugin reads `version` from `package.json` in the td-telemetry root. An
-  older or unknown version keeps telemetry off with one warning.
 - **D21**: Mark one title model per provider with the OpenCode model `family`: `gpt-6-luna` (`gpt-luna`),
   `claude-haiku-5-5` (`claude-haiku`), and `gemini-3.1-flash-lite` (`gemini-flash-lite`). OpenCode picks the title model
   with `model.small()`, which matches only a few families (`packages/core/src/model.ts`, lines 271–283). Without a

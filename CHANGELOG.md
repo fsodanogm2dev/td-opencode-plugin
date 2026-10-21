@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- td-telemetry events. td-telemetry is deprecated. The plugin ignores a `telemetry` section in its options.
+
 ## 0.1.0 (beta), 2026-10-21
 
 First beta release. It needs OpenCode 2.0.32 or later. Install steps are in the [README](README.md#install).

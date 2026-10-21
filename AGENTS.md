@@ -10,7 +10,7 @@ Guidance for AI coding agents that work in this repository.
    `https://api.fuelix.ai/v1/models`, with curated metadata from `data/fuelix-models.json`.
 2. Resolves one FueliX API key (macOS Keychain, OpenCode credential store, or `FUELIX_API_KEY`) and injects it per
    request. The key never goes into provider `settings` or `headers`.
-3. Emits td-telemetry events (OTLP/HTTP JSON) from OpenCode sessions.
+3. Marks one low-cost title model per provider, so OpenCode writes session titles with it.
 
 Active plans go in `docs/plans/pending/`; tick their steps as they finish. Finished plans move to `docs/plans/done/`.
 Release notes are in `CHANGELOG.md`.
@@ -26,8 +26,8 @@ bun run doctor           # compare live /v1/models with data/fuelix-models.json 
 
 ## Non-negotiable rules
 
-- **Change only this repository.** `willowtreeapps/td-telemetry`, `anomalyco/opencode`, and the user's OpenCode
-  configuration (`~/.config/opencode/`) and data (`~/.local/share/opencode/`) are read-only.
+- **Change only this repository.** `anomalyco/opencode` and the user's OpenCode configuration (`~/.config/opencode/`)
+  and data (`~/.local/share/opencode/`) are read-only.
 - **No `opencode.json`, `opencode.jsonc`, or `.opencode/` at the repository root.** The live OpenCode service loads them
   for every session whose directory is this repository, and a broken provider transform would break the session that
   edits the code. Put examples in `examples/`.
@@ -35,11 +35,6 @@ bun run doctor           # compare live /v1/models with data/fuelix-models.json 
   `XDG_CACHE_HOME`, and a location directory outside `$HOME`).
 - **Never write a secret** to a file, log line, test fixture, snapshot, provider `settings`, or provider `headers`.
   Tests use fake keys such as `sk-test-not-a-real-key`.
-- **td-telemetry cost rule**: `cost_usd` comes from the cost OpenCode records on the assistant message. Do not compute
-  cost from tokens in the emitter.
-- **Telemetry never breaks a session.** Every emitter path catches its own errors, uses short timeouts, and drops data
-  rather than block.
-- **No prompt text, tool input or output, or file contents in telemetry.** IDs, names, counts, durations, and costs only.
 
 ## Code style
 

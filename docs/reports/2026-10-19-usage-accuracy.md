@@ -2,7 +2,7 @@
 
 Scope: OpenCode `v2.0.32`, FueliX gateway, measured on 2026-10-19. This report states which figures in the OpenCode
 TUI and the OpenChamber session panel are accurate, which were wrong before this plugin, and how the plugin changes
-them. Plan: [`docs/plans/done/2026-10-19-fuelix-catalog-usage-telemetry.md`](../plans/done/2026-10-19-fuelix-catalog-usage-telemetry.md),
+them. Plan: [`docs/plans/done/2026-10-19-fuelix-catalog-usage.md`](../plans/done/2026-10-19-fuelix-catalog-usage.md),
 Phase 2.
 
 ## How OpenCode computes cost
