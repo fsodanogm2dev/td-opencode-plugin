@@ -19,7 +19,7 @@
     "test:integration": "bun test test/integration --timeout 180000",
     "typecheck": "tsc --noEmit",
     "doctor": "bun scripts/doctor.ts",
-    "seed": "bun scripts/seed-metadata.ts"
+    "catalog": "bun scripts/build-catalog.ts"
   },
   "devDependencies": {
     "@opencode/plugin": "2.0.32",
