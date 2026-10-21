@@ -40,8 +40,29 @@ describe("doctor report", () => {
   test("formats every section", async () => {
     const catalog = await fixtureCatalog(["alpha", "no-cost"])
     const text = formatReport(buildReport(catalog, ["alpha", "no-cost", "new-one"]))
-    for (const label of ["(a)", "(b)", "(c)", "(d)", "(e)"]) expect(text).toContain(label)
+    for (const label of ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)"]) expect(text).toContain(label)
     expect(text).toContain("new-one")
     expect(text).toContain("no-cost (missing cost, limit)")
+  })
+
+  test("flags a title model that is not live, not in the catalog, or not active", async () => {
+    const base = await fixtureCatalog(["alpha"])
+    const catalog = {
+      ...base,
+      models: {
+        ...base.models,
+        "gpt-6-luna": { ...base.models.alpha!, provider: "fuelix-openai" as const, status: "active" as const },
+        "claude-haiku-5-5": { ...base.models.alpha!, provider: "fuelix-anthropic" as const, status: "deprecated" as const },
+      },
+    }
+    const report = buildReport(catalog, ["alpha", "gpt-6-luna", "claude-haiku-5-5"])
+    expect(report.titleModels).toEqual([
+      { provider: "fuelix-openai", id: "gpt-6-luna", problem: undefined },
+      { provider: "fuelix-anthropic", id: "claude-haiku-5-5", problem: "status deprecated" },
+      { provider: "fuelix", id: "gemini-3.1-flash-lite", problem: "not live" },
+    ])
+    expect(formatReport(report)).toContain("fuelix/gemini-3.1-flash-lite: not live")
+    const notInCatalog = buildReport(base, ["alpha", "gemini-3.1-flash-lite"])
+    expect(notInCatalog.titleModels.find((item) => item.id === "gemini-3.1-flash-lite")?.problem).toBe("not in the catalog")
   })
 })

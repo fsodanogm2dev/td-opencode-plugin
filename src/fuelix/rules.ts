@@ -29,3 +29,25 @@ export function routeModel(id: string): FuelixProviderID {
   if (/^(gpt-|o\d)/.test(value)) return "fuelix-openai"
   return "fuelix"
 }
+
+/**
+ * One title model per provider. The plugin sets `family` on exactly these models, because OpenCode picks the
+ * title model with `model.small(providerID)` (`packages/core/src/model.ts:271-283`). That function returns the first
+ * active text model whose family is "gpt-luna", "gemini-flash-lite", "gemini-flash", or "claude-haiku", in that order.
+ * Without a family, titles run on the session model. A user can still override the choice with `agents.title.model`.
+ * The values are the family names that models.dev uses. Keep this map small: OpenCode also hides older models of
+ * the same family in its models tool.
+ */
+export const TITLE_MODELS: Readonly<Record<FuelixProviderID, { readonly modelID: string; readonly family: string }>> = {
+  "fuelix-openai": { modelID: "gpt-6-luna", family: "gpt-luna" },
+  "fuelix-anthropic": { modelID: "claude-haiku-5-5", family: "claude-haiku" },
+  // gemini-2.5-flash-lite costs less, but its catalog status is "deprecated" and `model.small` takes active models only.
+  fuelix: { modelID: "gemini-3.1-flash-lite", family: "gemini-flash-lite" },
+}
+
+/** The family to set on a model, or `undefined` when the model is not the title model of its provider or is not active. */
+export function titleFamily(providerID: FuelixProviderID, modelID: string, status: string | undefined): string | undefined {
+  const title = TITLE_MODELS[providerID]
+  if (title.modelID !== modelID || (status ?? "active") !== "active") return undefined
+  return title.family
+}

@@ -1,6 +1,7 @@
 /** Pure doctor report: compare live IDs with the catalog. No I/O. */
 
 import type { Catalog } from "../../src/fuelix/catalog-types.ts"
+import { TITLE_MODELS } from "../../src/fuelix/rules.ts"
 
 export interface DoctorReport {
   /** (a) Live IDs that the catalog does not contain. */
@@ -13,6 +14,8 @@ export interface DoctorReport {
   readonly ruleRouted: readonly { readonly id: string; readonly provider: string }[]
   /** (e) Entries with a price-spread note. */
   readonly priceSpread: readonly string[]
+  /** (f) Title models (`TITLE_MODELS`) that are missing from the live list or the catalog, or not active. */
+  readonly titleModels: readonly { readonly provider: string; readonly id: string; readonly problem: string | undefined }[]
 }
 
 export function buildReport(catalog: Catalog, liveIds: readonly string[]): DoctorReport {
@@ -33,6 +36,17 @@ export function buildReport(catalog: Catalog, liveIds: readonly string[]): Docto
     priceSpread: entries
       .filter(([, entry]) => entry.notes?.some((note) => note.startsWith("Price spread")))
       .map(([id]) => id),
+    titleModels: Object.entries(TITLE_MODELS).map(([provider, { modelID }]) => {
+      const status = catalog.models[modelID]?.status ?? (modelID in catalog.models ? "active" : undefined)
+      const problem = !live.has(modelID)
+        ? "not live"
+        : status === undefined
+          ? "not in the catalog"
+          : status !== "active"
+            ? `status ${status}`
+            : undefined
+      return { provider, id: modelID, problem }
+    }),
   }
 }
 
@@ -56,5 +70,9 @@ export function formatReport(report: DoctorReport): string {
       report.ruleRouted.map((item) => `${item.id} -> ${item.provider}`),
     ),
     section("(e) Entries with price-spread notes", report.priceSpread),
+    section(
+      "(f) Title models",
+      report.titleModels.map((item) => `${item.provider}/${item.id}: ${item.problem ?? "ok"}`),
+    ),
   ].join("\n")
 }

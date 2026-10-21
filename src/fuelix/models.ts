@@ -1,5 +1,6 @@
 import type { Model, Plugin, Provider } from "@opencode/plugin"
 import type { CatalogEntry, FuelixProviderID } from "./catalog-types.ts"
+import { titleFamily } from "./rules.ts"
 import { FUELIX_PACKAGES, resolveVariants } from "./variants.ts"
 
 type ProviderEditor = Parameters<Parameters<Plugin.Context["provider"]["transform"]>[0]>[0]
@@ -28,6 +29,8 @@ interface PlainModelInfo {
   cost: { tier?: { type: "context"; size: number }; input: number; output: number; cache: { read: number; write: number } }[]
   status: "alpha" | "beta" | "deprecated" | "active"
   enabled: boolean
+  /** Set only on the title model of a provider. See `TITLE_MODELS`. */
+  family?: string
   limit: { context: number; input?: number; output: number }
 }
 
@@ -103,6 +106,9 @@ export function buildModelInfo(providerID: FuelixProviderID, modelID: string, en
 
   if (!entry) incomplete.push("capabilities")
 
+  const status = entry?.status ?? "active"
+  const family = titleFamily(providerID, modelID, status)
+
   return {
     info: toModelInfo({
       id: modelID,
@@ -117,8 +123,9 @@ export function buildModelInfo(providerID: FuelixProviderID, modelID: string, en
       variants: resolveVariants({ providerID, modelID, outputLimit: limit.output, reasoning: entry?.reasoning }),
       time: { released: 0 },
       cost,
-      status: entry?.status ?? "active",
+      status,
       enabled: true,
+      ...(family ? { family } : {}),
       limit,
     }),
     incomplete,

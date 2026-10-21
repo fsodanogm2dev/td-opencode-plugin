@@ -77,6 +77,14 @@ describe("setupFuelix", () => {
     }
   })
 
+  test("only the listed title model gets a family", async () => {
+    const { fake } = await setup()
+    const families = [...fake.providers.entries()].flatMap(([providerID, record]) =>
+      [...record.models.values()].map((model) => `${providerID}/${model.id}=${(model as unknown as { family?: string }).family ?? ""}`),
+    )
+    expect(families.sort()).toEqual(["fuelix-anthropic/claude-opus=", "fuelix-openai/gpt-6-luna=gpt-luna", "fuelix/gemini-3.5-flash="])
+  })
+
   test("includeNonChatModels registers the embedding model", async () => {
     const { fake } = await setup({}, {}, { includeNonChatModels: true })
     expect(modelIDs(fake, "fuelix")).toEqual(["gemini-3.5-flash", "text-embedding-4"])

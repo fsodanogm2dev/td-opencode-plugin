@@ -139,3 +139,44 @@ describe("enrichFromUpstream", () => {
     expect(upstreamProviderID("fuelix", "qwen")).toBeUndefined()
   })
 })
+
+describe("title model family", () => {
+  const entry = (extra: Partial<CatalogEntry> = {}) =>
+    ({ provider: "fuelix", kind: "chat", name: "Test", limit: { context: 1000, output: 100 }, input: ["text"], output: ["text"], tools: true, cost: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0 }, ...extra }) as CatalogEntry
+  const familyOf = (providerID: Parameters<typeof buildModelInfo>[0], modelID: string, extra: Partial<CatalogEntry> = {}) =>
+    (buildModelInfo(providerID, modelID, entry(extra)).info as unknown as { family?: string }).family
+
+  test("the three title models get the family that OpenCode uses to pick a title model", () => {
+    expect(familyOf("fuelix-openai", "gpt-6-luna")).toBe("gpt-luna")
+    expect(familyOf("fuelix-anthropic", "claude-haiku-5-5")).toBe("claude-haiku")
+    expect(familyOf("fuelix", "gemini-3.1-flash-lite")).toBe("gemini-flash-lite")
+  })
+
+  test("other models get no family, including other luna, haiku, and flash-lite models", () => {
+    for (const [providerID, modelID] of [
+      ["fuelix-openai", "gpt-6-luna-mini"],
+      ["fuelix-openai", "gpt-5-nano"],
+      ["fuelix-anthropic", "claude-haiku-4-5"],
+      ["fuelix-anthropic", "claude-opus"],
+      ["fuelix", "gemini-2.5-flash-lite"],
+      ["fuelix", "gemini-3.5-flash"],
+    ] as const) {
+      expect(familyOf(providerID, modelID)).toBeUndefined()
+      expect("family" in buildModelInfo(providerID, modelID, entry()).info).toBe(false)
+    }
+  })
+
+  test("a title model ID under another provider gets no family", () => {
+    expect(familyOf("fuelix", "gpt-6-luna")).toBeUndefined()
+    expect(familyOf("fuelix-openai", "claude-haiku-5-5")).toBeUndefined()
+  })
+
+  test("a deprecated title model gets no family", () => {
+    expect(familyOf("fuelix-anthropic", "claude-haiku-5-5", { status: "deprecated" })).toBeUndefined()
+  })
+
+  test("a title model without a catalog entry is active and gets the family", () => {
+    const info = buildModelInfo("fuelix-anthropic", "claude-haiku-5-5", undefined).info as unknown as { family?: string }
+    expect(info.family).toBe("claude-haiku")
+  })
+})

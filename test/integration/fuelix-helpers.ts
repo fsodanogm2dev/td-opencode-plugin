@@ -181,11 +181,14 @@ export interface FuelixServerInput {
   /** The key goes only into the server environment. */
   key: string
   extraOptions?: Record<string, unknown>
+  /** Extra OpenCode configuration keys, for example `agent`. `plugins` stays under the helper's control. */
+  config?: Record<string, unknown>
 }
 
 export function startFuelixServer(input: FuelixServerInput): Promise<IsolatedServer> {
   return startIsolatedServer({
     config: {
+      ...input.config,
       plugins: [
         pluginEntry({
           fuelix: { baseURL: input.baseURL, keychainService: false, refreshMinutes: 0 },

@@ -268,7 +268,8 @@ describe.skipIf(!LIVE)("live FueliX usage parity", () => {
           }
 
           // Session totals. OpenCode adds the title-generation request to the session total, so the FueliX side
-          // is the sum over every request of the run (agent and non-agent).
+          // is the sum over every request of the run (agent and non-agent). The title request goes to the title model
+          // of the provider (see `TITLE_MODELS`), so each request is priced with the catalog entry of its own model.
           const sum = { input: 0, output: 0, read: 0, write: 0, cost: 0 }
           for (const record of mine) {
             if (!record.usage || !record.kind) continue
@@ -277,7 +278,12 @@ describe.skipIf(!LIVE)("live FueliX usage parity", () => {
             sum.output += u.outputTotal
             sum.read += u.cacheRead
             sum.write += u.cacheWrite
-            sum.cost += expectedCost(entry, {
+            const priced = entryFor(catalog, record.requestModel ?? model.id)
+            if (!priced?.cost) {
+              mismatches.push(`${label}: catalog has no price for ${record.requestModel}`)
+              continue
+            }
+            sum.cost += expectedCost(priced, {
               input: u.input,
               output: u.outputTotal - (u.reasoning ?? 0),
               reasoning: u.reasoning ?? 0,
@@ -313,7 +319,8 @@ describe.skipIf(!LIVE)("live FueliX usage parity", () => {
               )
             }
           }
-          if (RECORD) saveFixtures(model.providerID, model.id, agent, aux)
+          // Replay serves aux fixtures by session model, so keep only the aux requests that used the session model.
+          if (RECORD) saveFixtures(model.providerID, model.id, agent, aux.filter((r) => r.requestModel === model.id))
         }
       } finally {
         feed?.close()
