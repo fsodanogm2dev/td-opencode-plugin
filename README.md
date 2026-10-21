@@ -22,9 +22,8 @@ Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decision
 
 - OpenCode `v2.0.32` or later (`opencode --version`).
 - A FueliX API key.
-- For telemetry only: td-telemetry 0.26.0 or later, installed as a Claude Code plugin with steps 1 and 2 of its
-  [INSTALL.md](https://github.com/willowtreeapps/td-telemetry/blob/main/INSTALL.md), and Node.js 22.5 or later on
-  `PATH`. Restart OpenCode after you install or update td-telemetry.
+- For telemetry only: a git clone of td-telemetry 0.26.0 or later, and Node.js 22.5 or later. You do not need Claude
+  Code. The "Telemetry" section shows the setup.
 
 ## Install
 
@@ -164,10 +163,24 @@ variant of that model:
 
 ## Telemetry
 
-The plugin finds td-telemetry where its INSTALL.md installs it,
-`~/.claude/plugins/cache/<marketplace>/td-telemetry/<version>/`, and it looks there when OpenCode starts. OpenCode
-needs only INSTALL.md steps 1 and 2. Step 4 (`/td-telemetry:telemetry-setup`) configures the telemetry export of
-Claude Code itself.
+Telemetry works with OpenCode alone. You do not need Claude Code. To set it up, clone td-telemetry once:
+
+```bash
+git clone https://github.com/willowtreeapps/td-telemetry.git ~/.local/share/td-telemetry
+```
+
+Then set `telemetry.root` in the plugin options to the absolute path of the clone, and restart OpenCode:
+
+```jsonc
+{
+  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.1.0",
+  "options": { "telemetry": { "root": "/Users/<you>/.local/share/td-telemetry" } }
+}
+```
+
+The dashboard is at <http://127.0.0.1:4419>. To update td-telemetry, run `git -C ~/.local/share/td-telemetry pull`,
+then restart OpenCode. Instead of `telemetry.root`, you can set `TD_TELEMETRY_ROOT` in the environment of the OpenCode
+service. Without either, the plugin looks for a copy that Claude Code installed under `~/.claude/plugins/cache`.
 
 When td-telemetry is installed, the plugin:
 

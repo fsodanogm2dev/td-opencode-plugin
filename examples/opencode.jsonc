@@ -13,7 +13,9 @@
           "refreshMinutes": 60
         },
         "telemetry": {
-          "enabled": true
+          "enabled": true,
+          // Absolute path of your td-telemetry clone (README, "Telemetry"). Claude Code is not needed.
+          "root": "/Users/<you>/.local/share/td-telemetry"
         }
       }
     }
