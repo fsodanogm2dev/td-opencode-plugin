@@ -22,8 +22,9 @@ Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decision
 
 - OpenCode `v2.0.32` or later (`opencode --version`).
 - A FueliX API key.
-- For telemetry only: td-telemetry 0.26.0 or later installed as a Claude Code plugin, and Node.js 22.5 or later
-  on `PATH`.
+- For telemetry only: td-telemetry 0.26.0 or later, installed as a Claude Code plugin with steps 1 and 2 of its
+  [INSTALL.md](https://github.com/willowtreeapps/td-telemetry/blob/main/INSTALL.md), and Node.js 22.5 or later on
+  `PATH`. Restart OpenCode after you install or update td-telemetry.
 
 ## Install
 
@@ -162,6 +163,11 @@ variant of that model:
 ```
 
 ## Telemetry
+
+The plugin finds td-telemetry where its INSTALL.md installs it,
+`~/.claude/plugins/cache/<marketplace>/td-telemetry/<version>/`, and it looks there when OpenCode starts. OpenCode
+needs only INSTALL.md steps 1 and 2. Step 4 (`/td-telemetry:telemetry-setup`) configures the telemetry export of
+Claude Code itself.
 
 When td-telemetry is installed, the plugin:
 
