@@ -2,7 +2,7 @@
  * Phase 3 gate: a real, isolated OpenCode with the plugin feeds a real, isolated td-telemetry (receiver, dashboard,
  * hook scripts, SQLite store). The FueliX gateway is a local mock.
  *
- * Skipped unless `TD_TELEMETRY_REF` points at a td-telemetry checkout:
+ * Skipped unless `TD_TELEMETRY_REF` points at a td-telemetry checkout (0.26.0 or later, see `MIN_TD_TELEMETRY`):
  *
  *   TD_TELEMETRY_REF=/path/to/td-telemetry bun test test/integration/td-telemetry.test.ts --timeout 400000
  *
@@ -12,6 +12,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { realpathSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { MIN_TD_TELEMETRY, readTdTelemetryVersion, tdTelemetryVersionSupported } from "../../src/telemetry/locate.ts"
 import { entryFor, expectedCost, FAKE_KEY, loadCatalog, startMockFuelix, type MockFuelix, type RecordedRequest } from "./fuelix-helpers.ts"
 import { type EventFeed, type IsolatedServer, pluginEntry, startIsolatedServer, waitFor } from "./harness.ts"
 import { runPromptFlow, type FlowResult } from "./session-flow.ts"
@@ -30,6 +31,7 @@ import {
 } from "./td-telemetry-helpers.ts"
 
 const ref = process.env.TD_TELEMETRY_REF
+const refVersion = ref ? await readTdTelemetryVersion(ref) : undefined
 const MODEL = "gemini-2.5-flash-lite"
 const PROMPT = "Reply with OK."
 const FILE_SECRET = "FILE-CONTENT-SECRET-7731"
@@ -56,6 +58,10 @@ afterAll(async () => {
 
 /** Scratch td-telemetry, mock FueliX, and an isolated OpenCode with the plugin. All are stopped in `afterAll`. */
 async function startStack(input: { idleMinutes: number; mode: "text" | "tool"; filePath?: () => string }): Promise<Stack> {
+  // The plugin keeps telemetry off for an older td-telemetry, so the scenarios would only time out.
+  if (!tdTelemetryVersionSupported(refVersion)) {
+    throw new Error(`td-telemetry at TD_TELEMETRY_REF is ${refVersion ?? "unknown"}; need >= ${MIN_TD_TELEMETRY}`)
+  }
   const telemetry = await startScratchTelemetry(ref as string)
   const chatRequests: RecordedRequest[] = []
   const mock = startMockFuelix({

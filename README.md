@@ -19,7 +19,8 @@ The work plan and its status are in [`docs/plans/pending/`](docs/plans/pending/)
 
 - OpenCode `v2.0.32` or later (`opencode --version`).
 - A FueliX API key.
-- For telemetry only: td-telemetry installed as a Claude Code plugin, and Node.js 22.5 or later on `PATH`.
+- For telemetry only: td-telemetry 0.26.0 or later installed as a Claude Code plugin, and Node.js 22.5 or later
+  on `PATH`.
 
 ## Install
 
@@ -109,7 +110,7 @@ must not be able to redirect it.
     },
     "telemetry": {
       "enabled": true,                      // telemetry stays off when td-telemetry is not installed
-      "root": "/path/to/td-telemetry",      // found automatically under ~/.claude/plugins/cache when unset
+      "root": "/path/to/td-telemetry",      // if unset: TD_TELEMETRY_ROOT, then found under ~/.claude/plugins/cache
       "receiverURL": "http://127.0.0.1:4418",
       "node": "node",
       "idleMinutes": 30,                    // close the td-telemetry segment after this much inactivity
@@ -131,6 +132,9 @@ When td-telemetry is installed, the plugin:
 
 The plugin never sends prompt text, tool input or output, or file contents. Set `"telemetry": { "enabled": false }` to
 turn telemetry off.
+
+If `package.json` in the td-telemetry root does not show version 0.26.0 or later, telemetry stays off and the server log
+shows one warning.
 
 ## Development
 

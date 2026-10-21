@@ -1,13 +1,15 @@
 import { describe, expect, test } from "bun:test"
+import { MIN_TD_TELEMETRY, readTdTelemetryVersion, tdTelemetryVersionSupported } from "../../../src/telemetry/locate.ts"
 import { buildOtlpPayload } from "../../../src/telemetry/otlp.ts"
 import type { TelemetryRecord } from "../../../src/telemetry/types.ts"
 import { runFixture } from "./helpers.ts"
 
 /**
  * Runs td-telemetry's own normalizer on the emitted payloads. Set `TD_TELEMETRY_REF` to a read-only clone of
- * `willowtreeapps/td-telemetry`. The test is skipped when the variable is unset.
+ * `willowtreeapps/td-telemetry` at version `MIN_TD_TELEMETRY` or later. The test is skipped when the variable is unset.
  */
 const ref = process.env.TD_TELEMETRY_REF
+const refVersion = ref ? await readTdTelemetryVersion(ref) : undefined
 
 interface Decoded {
   type: string
@@ -19,6 +21,9 @@ interface Decoded {
 
 describe.skipIf(!ref)("td-telemetry normalizer compatibility", () => {
   async function decode(records: readonly TelemetryRecord[]): Promise<{ records: Decoded[]; malformed: boolean }> {
+    if (!tdTelemetryVersionSupported(refVersion)) {
+      throw new Error(`td-telemetry at TD_TELEMETRY_REF is ${refVersion ?? "unknown"}; need >= ${MIN_TD_TELEMETRY}`)
+    }
     const mod = (await import(`${ref}/lib/otel-normalize.mjs`)) as {
       decodeOtlpLogs(payload: unknown): { records: Decoded[]; malformed: boolean }
     }

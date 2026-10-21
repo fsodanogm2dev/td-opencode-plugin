@@ -3,9 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { createMemoryLogger } from "../../../src/log.ts"
+import { parseOptions } from "../../../src/options.ts"
 import type { TelemetryOptions } from "../../../src/options.ts"
 import { setupTelemetry } from "../../../src/telemetry/index.ts"
 import type { TelemetryDeps } from "../../../src/telemetry/index.ts"
+import { MIN_TD_TELEMETRY } from "../../../src/telemetry/locate.ts"
 import type { RunProcess } from "../../../src/telemetry/process.ts"
 import { isPrompt, loadFixture, sleep } from "./helpers.ts"
 
@@ -14,13 +16,19 @@ let root: string
 let server: ReturnType<typeof Bun.serve> | undefined
 const bodies: string[] = []
 
+/** Creates a td-telemetry installation with the required files and a `package.json` of `version`. */
+function installAt(target: string, version: string): string {
+  mkdirSync(path.join(target, "scripts"), { recursive: true })
+  mkdirSync(path.join(target, "lib"), { recursive: true })
+  writeFileSync(path.join(target, "scripts", "hook-record-feature.mjs"), "")
+  writeFileSync(path.join(target, "lib", "process-manager.mjs"), "")
+  writeFileSync(path.join(target, "package.json"), JSON.stringify({ name: "td-telemetry", version }))
+  return target
+}
+
 beforeEach(() => {
   dir = mkdtempSync(path.join(tmpdir(), "td-index-"))
-  root = path.join(dir, "td")
-  mkdirSync(path.join(root, "scripts"), { recursive: true })
-  mkdirSync(path.join(root, "lib"), { recursive: true })
-  writeFileSync(path.join(root, "scripts", "hook-record-feature.mjs"), "")
-  writeFileSync(path.join(root, "lib", "process-manager.mjs"), "")
+  root = installAt(path.join(dir, "td"), MIN_TD_TELEMETRY)
   bodies.length = 0
   server = Bun.serve({
     port: 0,
@@ -428,6 +436,7 @@ describe("background activation", () => {
           await gate
           return true
         },
+        readFile: async () => JSON.stringify({ version: MIN_TD_TELEMETRY }),
       },
     }
   }
@@ -570,6 +579,145 @@ describe("background activation", () => {
     feed.push({ type: "session.skill.activated", created: 2, data: { sessionID: "ses_missing", id: "s", name: "x", text: "t" } })
     await sleep(100)
     expect([...live.values()].filter((ms) => ms === 2000)).toEqual([])
+    await cleanup()
+  })
+})
+
+describe("td-telemetry version gate", () => {
+  const versionWarnings = (log: ReturnType<typeof createMemoryLogger>) =>
+    log.lines.filter((line) => line.includes(" warn ") && line.includes(`td-telemetry ${MIN_TD_TELEMETRY} or later is required`))
+
+  /** Call after `ready` and before cleanup: nothing started, and the prompt hook was disposed. */
+  function expectOff(fake: ReturnType<typeof fakes>, feed: ReturnType<typeof channel>, state: { disposed: number }) {
+    expect(fake.detached).toEqual([])
+    expect(fake.hookCalls).toEqual([])
+    expect(feed.subscriptions).toBe(0)
+    expect(state.disposed).toBe(1)
+    expect(bodies).toEqual([])
+  }
+
+  test("a configured root older than the minimum keeps telemetry off with one warning", async () => {
+    installAt(root, "0.25.2")
+    const log = createMemoryLogger()
+    const fake = fakes()
+    const feed = channel()
+    const { ctx, state } = fakeContext(feed)
+    const cleanup = await boot(ctx, options(), log, fake.deps)
+    expectOff(fake, feed, state)
+    const lines = versionWarnings(log)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain('version="0.25.2"')
+    expect(lines[0]).toContain(`root=${JSON.stringify(root)}`)
+    await cleanup()
+  })
+
+  test("a root without a readable package.json keeps telemetry off with version unknown", async () => {
+    rmSync(path.join(root, "package.json"))
+    const log = createMemoryLogger()
+    const fake = fakes()
+    const feed = channel()
+    const { ctx, state } = fakeContext(feed)
+    const cleanup = await boot(ctx, options(), log, fake.deps)
+    expectOff(fake, feed, state)
+    const lines = versionWarnings(log)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain('version="unknown"')
+    expect(lines[0]).toContain(`root=${JSON.stringify(root)}`)
+    await cleanup()
+  })
+
+  test("a file system error during the check keeps telemetry off with version unknown", async () => {
+    const locateFs = {
+      readdir: async () => [],
+      exists: async () => true,
+      readFile: async (): Promise<string> => {
+        throw new Error("EIO")
+      },
+    }
+    const log = createMemoryLogger()
+    const fake = fakes()
+    const feed = channel()
+    const { ctx, state } = fakeContext(feed)
+    const cleanup = await boot(ctx, options(), log, { ...fake.deps, locateFs })
+    expectOff(fake, feed, state)
+    expect(versionWarnings(log)).toHaveLength(1)
+    expect(versionWarnings(log)[0]).toContain('version="unknown"')
+    expect(log.lines.some((line) => line.includes("setup failed"))).toBe(false)
+    await cleanup()
+  })
+
+  test("TD_TELEMETRY_ROOT gets the same check", async () => {
+    installAt(root, "0.22.5")
+    const parsed = parseOptions({ telemetry: { receiverURL: `http://127.0.0.1:${server?.port}`, node: "node22" } }, { TD_TELEMETRY_ROOT: root })
+    expect(parsed.telemetry.root).toBe(root)
+    const log = createMemoryLogger()
+    const fake = fakes()
+    const feed = channel()
+    const { ctx, state } = fakeContext(feed)
+    const cleanup = await boot(ctx, parsed.telemetry, log, fake.deps)
+    expectOff(fake, feed, state)
+    expect(versionWarnings(log)).toHaveLength(1)
+    expect(versionWarnings(log)[0]).toContain('version="0.22.5"')
+    expect(versionWarnings(log)[0]).toContain(`root=${JSON.stringify(root)}`)
+    await cleanup()
+  })
+
+  test("the newest copy in the Claude Code plugin cache gets the same check", async () => {
+    const fake = fakes()
+    const cache = path.join(fake.deps.homedir as string, ".claude", "plugins", "cache", "mk", "td-telemetry")
+    installAt(path.join(cache, "0.24.1"), "0.24.1")
+    const newest = installAt(path.join(cache, "0.25.2"), "0.25.2")
+    const log = createMemoryLogger()
+    const feed = channel()
+    const { ctx, state } = fakeContext(feed)
+    const cleanup = await boot(ctx, options({ root: undefined }), log, fake.deps)
+    expectOff(fake, feed, state)
+    expect(versionWarnings(log)).toHaveLength(1)
+    expect(versionWarnings(log)[0]).toContain('version="0.25.2"')
+    expect(versionWarnings(log)[0]).toContain(`root=${JSON.stringify(newest)}`)
+    await cleanup()
+  })
+
+  test("a cache copy at or above the minimum turns telemetry on", async () => {
+    const fake = fakes()
+    const cache = path.join(fake.deps.homedir as string, ".claude", "plugins", "cache", "mk", "td-telemetry")
+    installAt(path.join(cache, "0.25.2"), "0.25.2")
+    const newest = installAt(path.join(cache, "0.27.13"), "0.27.13")
+    const log = createMemoryLogger()
+    const { ctx } = fakeContext(channel())
+    const cleanup = await boot(ctx, options({ root: undefined }), log, fake.deps)
+    expect(fake.detached).toEqual([{ command: "node22", args: [path.join(newest, "lib", "process-manager.mjs")] }])
+    expect(versionWarnings(log)).toEqual([])
+    expect(log.lines.some((line) => line.includes("telemetry is on") && line.includes('version="0.27.13"'))).toBe(true)
+    await cleanup()
+  })
+
+  test("setup returns before the version check finishes", async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const locateFs = {
+      readdir: async () => [],
+      exists: async () => true,
+      readFile: async () => {
+        await gate
+        return JSON.stringify({ version: "0.25.2" })
+      },
+    }
+    const log = createMemoryLogger()
+    const fake = fakes()
+    const feed = channel()
+    const { ctx, state } = fakeContext(feed)
+    const started = Date.now()
+    const cleanup = await setupTelemetry(ctx, options(), log, { ...fake.deps, locateFs })
+    expect(Date.now() - started).toBeLessThan(200)
+    await sleep(30)
+    expect(versionWarnings(log)).toEqual([])
+    release()
+    await cleanup.ready
+    expectOff(fake, feed, state)
+    expect(versionWarnings(log)).toHaveLength(1)
     await cleanup()
   })
 })

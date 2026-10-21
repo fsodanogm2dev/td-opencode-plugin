@@ -1,11 +1,14 @@
-import { readdir, stat } from "node:fs/promises"
+import { readdir, readFile, stat } from "node:fs/promises"
 import { homedir as osHomedir } from "node:os"
 import path from "node:path"
 import type { RunProcess } from "./process.ts"
+import { str } from "./types.ts"
 
 export interface LocateFs {
   readdir(dir: string): Promise<string[]>
   exists(file: string): Promise<boolean>
+  /** The content of a UTF-8 text file. `undefined` when the file cannot be read. */
+  readFile(file: string): Promise<string | undefined>
 }
 
 export const defaultLocateFs: LocateFs = {
@@ -22,6 +25,13 @@ export const defaultLocateFs: LocateFs = {
       return true
     } catch {
       return false
+    }
+  },
+  async readFile(file) {
+    try {
+      return await readFile(file, "utf8")
+    } catch {
+      return undefined
     }
   },
 }
@@ -84,6 +94,29 @@ export async function locateRoot(options: LocateOptions): Promise<LocateResult> 
     if (await hasRequiredFiles(candidate.dir, fs)) return { root: candidate.dir }
   }
   return { root: undefined, reason: "no td-telemetry installation found" }
+}
+
+/**
+ * The first td-telemetry version whose receiver stores every record type that the plugin sends. Older receivers drop
+ * `tool_decision` (before 0.26.0), `user_prompt` (before 0.24.1), and `subagent_completed` (before 0.22.6).
+ */
+export const MIN_TD_TELEMETRY = "0.26.0"
+
+/** Reads `version` from `<root>/package.json`. Returns `undefined` when the file or the field cannot be read. */
+export async function readTdTelemetryVersion(root: string, fs: LocateFs = defaultLocateFs): Promise<string | undefined> {
+  try {
+    const text = await fs.readFile(path.join(root, "package.json"))
+    if (text === undefined) return undefined
+    return str(JSON.parse(text), "version")?.trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** True for a semver version at or above `MIN_TD_TELEMETRY`. A prerelease of the minimum is older than the minimum. */
+export function tdTelemetryVersionSupported(version: string | undefined): boolean {
+  if (version === undefined || !parseSemver(version)) return false
+  return compareSemver(version, MIN_TD_TELEMETRY) >= 0
 }
 
 export const MIN_NODE: Semver = [22, 5, 0]

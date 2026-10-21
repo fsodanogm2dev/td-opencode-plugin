@@ -4,7 +4,7 @@ import pkg from "../../package.json" with { type: "json" }
 import type { Logger } from "../log.ts"
 import type { TelemetryOptions } from "../options.ts"
 import { childEnv } from "./env.ts"
-import { defaultLocateFs, locateRoot, resolveNode } from "./locate.ts"
+import { defaultLocateFs, locateRoot, MIN_TD_TELEMETRY, readTdTelemetryVersion, resolveNode, tdTelemetryVersionSupported } from "./locate.ts"
 import type { LocateFs } from "./locate.ts"
 import { createManagerSpawner, globalProcessManagerState } from "./manager.ts"
 import type { ProcessManagerState } from "./manager.ts"
@@ -84,8 +84,8 @@ export type TelemetryCleanup = Cleanup & { readonly ready: Promise<void> }
 /**
  * Emits td-telemetry events from OpenCode session activity.
  *
- * Setup returns fast. It registers the prompt hook, then locates td-telemetry and checks Node.js in the background.
- * Prompts that arrive before activation wait in a bounded queue.
+ * Setup returns fast. It registers the prompt hook, then locates td-telemetry and checks its version and Node.js in the
+ * background. Prompts that arrive before activation wait in a bounded queue.
  *
  * Telemetry never breaks a session: every path catches its own errors. The emitter sends IDs, names, counts,
  * durations, and costs only. It never sends prompt text, tool input or output, skill text, or file contents.
@@ -197,7 +197,10 @@ async function start(ctx: Plugin.Context, options: TelemetryOptions, log: Logger
   return Object.assign(cleanup, { ready })
 }
 
-/** Locates td-telemetry and starts the mapper, transport, and event subscription. Returns `undefined` when inactive. */
+/**
+ * Locates td-telemetry, checks its version and Node.js, and starts the mapper, transport, and event subscription.
+ * Returns `undefined` when inactive.
+ */
 async function activate(
   ctx: Plugin.Context,
   options: TelemetryOptions,
@@ -212,16 +215,22 @@ async function activate(
   const now = deps.now ?? Date.now
   const timers = deps.timers ?? realTimers
 
+  const locateFs = deps.locateFs ?? defaultLocateFs
   const located = await locateRoot({
     explicitRoot: options.root,
     ...(deps.homedir !== undefined ? { homedir: deps.homedir } : {}),
-    fs: deps.locateFs ?? defaultLocateFs,
+    fs: locateFs,
   })
   if (located.root === undefined) {
     log.info(`telemetry is off: ${located.reason}`)
     return undefined
   }
   const root = located.root
+  const version = await readTdTelemetryVersion(root, locateFs)
+  if (!tdTelemetryVersionSupported(version)) {
+    log.warn(`telemetry is off: td-telemetry ${MIN_TD_TELEMETRY} or later is required`, { version: version ?? "unknown", root })
+    return undefined
+  }
   const resolved = await resolveNode(run, options.node, managerEnv)
   if (!resolved.ok) {
     log.warn("telemetry is off: Node.js 22.5 or later is required to run td-telemetry", { node: options.node, detail: resolved.detail })
@@ -242,7 +251,7 @@ async function activate(
   })
   // Start the receiver and dashboard pair once per process. The script always exits 0 and runs detached.
   manager.ensure()
-  log.info("telemetry is on", { root, directory: ctx.location?.directory })
+  log.info("telemetry is on", { root, version, directory: ctx.location?.directory })
 
   const mapper = new Mapper({ subagentToolNames: options.subagentToolNames, now })
   const segments = new Segments({

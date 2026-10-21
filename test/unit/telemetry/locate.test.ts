@@ -2,7 +2,17 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { checkNode, compareSemver, locateRoot, nodeVersionSupported, resolveNode } from "../../../src/telemetry/locate.ts"
+import {
+  checkNode,
+  compareSemver,
+  locateRoot,
+  MIN_TD_TELEMETRY,
+  nodeVersionSupported,
+  readTdTelemetryVersion,
+  resolveNode,
+  tdTelemetryVersionSupported,
+} from "../../../src/telemetry/locate.ts"
+import type { LocateFs } from "../../../src/telemetry/locate.ts"
 import type { RunProcess } from "../../../src/telemetry/process.ts"
 
 let home: string
@@ -64,6 +74,92 @@ describe("locateRoot", () => {
     install("mk", "9.0.0")
     const result = await locateRoot({ explicitRoot: path.join(home, "missing"), homedir: home })
     expect(result.root).toBeUndefined()
+  })
+})
+
+describe("td-telemetry version", () => {
+  test("the minimum is 0.26.0, the first version that stores tool_decision", () => {
+    expect(MIN_TD_TELEMETRY).toBe("0.26.0")
+  })
+
+  test("accepts the minimum and later versions", () => {
+    for (const version of ["0.26.0", "0.26.1", "0.27.13", "1.0.0", "v0.26.0", "0.26.0+build.7"]) {
+      expect([version, tdTelemetryVersionSupported(version)]).toEqual([version, true])
+    }
+  })
+
+  test("rejects older versions", () => {
+    for (const version of ["0.25.2", "0.25.99", "0.22.5", "0.9.0"]) {
+      expect([version, tdTelemetryVersionSupported(version)]).toEqual([version, false])
+    }
+  })
+
+  test("a prerelease of the minimum is older than the minimum; a prerelease of a later version is newer", () => {
+    expect(tdTelemetryVersionSupported("0.26.0-rc.1")).toBe(false)
+    expect(tdTelemetryVersionSupported("0.25.3-rc.1")).toBe(false)
+    expect(tdTelemetryVersionSupported("0.26.1-rc.1")).toBe(true)
+    expect(tdTelemetryVersionSupported("0.27.0-beta.2")).toBe(true)
+  })
+
+  test("rejects a missing or non-semver version", () => {
+    for (const version of [undefined, "", "dev", "0.26", "latest"]) {
+      expect([version, tdTelemetryVersionSupported(version)]).toEqual([version, false])
+    }
+  })
+})
+
+describe("readTdTelemetryVersion", () => {
+  function writeManifest(content: string): string {
+    const root = path.join(home, "td")
+    mkdirSync(root, { recursive: true })
+    writeFileSync(path.join(root, "package.json"), content)
+    return root
+  }
+
+  test("reads version from package.json at the root", async () => {
+    expect(await readTdTelemetryVersion(writeManifest(JSON.stringify({ name: "td-telemetry", version: "0.27.13" })))).toBe("0.27.13")
+    expect(await readTdTelemetryVersion(writeManifest(JSON.stringify({ version: " 0.26.0\n" })))).toBe("0.26.0")
+  })
+
+  test("returns a version that is not semver as written; the gate rejects it", async () => {
+    const version = await readTdTelemetryVersion(writeManifest(JSON.stringify({ version: "dev" })))
+    expect(version).toBe("dev")
+    expect(tdTelemetryVersionSupported(version)).toBe(false)
+  })
+
+  test("returns undefined when package.json is missing", async () => {
+    expect(await readTdTelemetryVersion(path.join(home, "missing"))).toBeUndefined()
+  })
+
+  test("returns undefined when package.json is not valid JSON or has no string version", async () => {
+    for (const content of ["{ not json", "null", "[]", '"0.26.0"', "{}", '{"version":26}', '{"version":""}', '{"version":null}']) {
+      expect([content, await readTdTelemetryVersion(writeManifest(content))]).toEqual([content, undefined])
+    }
+  })
+
+  test("returns undefined when the file system throws", async () => {
+    const fs: LocateFs = {
+      readdir: async () => [],
+      exists: async () => true,
+      readFile: async () => {
+        throw new Error("EACCES")
+      },
+    }
+    expect(await readTdTelemetryVersion("/td", fs)).toBeUndefined()
+  })
+
+  test("reads through the given file system", async () => {
+    const read: string[] = []
+    const fs: LocateFs = {
+      readdir: async () => [],
+      exists: async () => true,
+      readFile: async (file) => {
+        read.push(file)
+        return JSON.stringify({ version: "0.26.0" })
+      },
+    }
+    expect(await readTdTelemetryVersion("/td", fs)).toBe("0.26.0")
+    expect(read).toEqual([path.join("/td", "package.json")])
   })
 })
 
