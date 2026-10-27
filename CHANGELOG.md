@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- `fuelix-openai/gpt-6.1-terra` in the catalog, with the price and limits from the FueliX inventory.
+
 ### Removed
 
 - td-telemetry events. td-telemetry is deprecated. The plugin ignores a `telemetry` section in its options.
