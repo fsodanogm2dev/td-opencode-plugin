@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (beta), 2026-10-28
+
+Second beta release. It needs OpenCode 2.0.32 or later. If you use v0.1.0, change the tag in your configuration to
+`#v0.2.0`.
 
 ### Added
 
@@ -8,8 +11,8 @@
 
 ### Changed
 
-- The README, the example, and `scripts/migrate-config.ts` use the plugin without a pinned tag.
-  `opencode plugin update github:fsodanogm2dev/td-opencode-plugin` installs the newest commit.
+- The README describes how OpenCode updates the plugin: with a pinned tag, change the tag; without a tag, run
+  `opencode plugin update github:fsodanogm2dev/td-opencode-plugin`.
 
 ### Removed
 

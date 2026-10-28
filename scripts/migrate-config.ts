@@ -5,7 +5,9 @@
  *
  *   bun scripts/migrate-config.ts                                  # reads ~/.config/opencode/opencode.json, prints to stdout
  *   bun scripts/migrate-config.ts --out /tmp/opencode.migrated.json
- *   bun scripts/migrate-config.ts --config ./opencode.json --plugin github:fsodanogm2dev/td-opencode-plugin
+ *   bun scripts/migrate-config.ts --config ./opencode.json --plugin github:fsodanogm2dev/td-opencode-plugin#v0.2.0
+ *
+ * The default plugin spec pins the tag of the version in package.json.
  *
  * The summary goes to stderr. Note: the output contains every other value of the input file, including secrets that
  * the file already holds. Write it to a file with `--out` instead of pasting it anywhere.
@@ -14,9 +16,10 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join, resolve } from "node:path"
+import pkg from "../package.json" with { type: "json" }
 
 export const FUELIX_PROVIDER_IDS = ["fuelix", "fuelix-openai", "fuelix-anthropic"] as const
-export const DEFAULT_PLUGIN_SPEC = "github:fsodanogm2dev/td-opencode-plugin"
+export const DEFAULT_PLUGIN_SPEC = `github:fsodanogm2dev/td-opencode-plugin#v${pkg.version}`
 const PROVIDER_BLOCK_KEYS = ["provider", "providers"] as const
 
 export interface MigrationResult {

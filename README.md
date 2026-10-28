@@ -25,32 +25,29 @@ Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decision
 
 The repository is private. You need read access to `fsodanogm2dev/td-opencode-plugin` on GitHub.
 
-Add the plugin to `~/.config/opencode/opencode.json`:
+Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.2.0", "options": {} }]
 }
 ```
 
 OpenCode installs the plugin with git when it starts, so git on your machine must be able to read the repository, for
-example with an SSH key or `gh auth setup-git`. OpenCode keeps that copy in its cache. Once a day it checks for a newer
-commit, and `opencode plugin check` then shows `update available`, but OpenCode does not install the update by itself.
-To update, run:
+example with an SSH key or `gh auth setup-git`. OpenCode keeps the install in its cache. To update, change the tag to a
+newer release ([`CHANGELOG.md`](CHANGELOG.md) lists them). OpenCode installs the new tag when the configuration changes.
+
+Without a tag, OpenCode installs the newest commit of `main` once and keeps that copy. Once a day it checks for a newer
+commit, and `opencode plugin check` then shows `update available`, but OpenCode installs the update only when you run
+`opencode plugin update github:fsodanogm2dev/td-opencode-plugin`.
+
+To install from a clone instead, check out the release tag and give OpenCode the absolute path of the folder. OpenCode
+does not expand `~` in this path, and it reloads the plugin when files in the folder change. The plugin has no runtime
+dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-opencode plugin update github:fsodanogm2dev/td-opencode-plugin
-```
-
-To stay on one version, add a tag to the package: `github:fsodanogm2dev/td-opencode-plugin#<tag>`.
-
-To install from a clone instead, give OpenCode the absolute path of the folder. OpenCode does not expand `~` in this
-path, and it reloads the plugin when files in the folder change. The plugin has no runtime dependencies, so the clone
-needs no `bun install`. To update, run `git pull` in the clone:
-
-```bash
-git clone https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.2.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
