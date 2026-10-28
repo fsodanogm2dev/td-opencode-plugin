@@ -6,6 +6,11 @@
 
 - `fuelix-openai/gpt-6.1-terra` in the catalog, with the price and limits from the FueliX inventory.
 
+### Changed
+
+- The README, the example, and `scripts/migrate-config.ts` use the plugin without a pinned tag.
+  `opencode plugin update github:fsodanogm2dev/td-opencode-plugin` installs the newest commit.
+
 ### Removed
 
 - td-telemetry events. td-telemetry is deprecated. The plugin ignores a `telemetry` section in its options.

@@ -6,7 +6,7 @@
   "model": "fuelix-openai/gpt-6-luna",
   "plugins": [
     {
-      "package": "github:fsodanogm2dev/td-opencode-plugin#v0.1.0",
+      "package": "github:fsodanogm2dev/td-opencode-plugin",
       "options": {
         "fuelix": {
           "keychainService": "fuelix-api-key",
