@@ -13,6 +13,7 @@ It does three things:
 3. **Low-cost session titles**: OpenCode writes session titles with one low-cost model per provider instead of the
    session model.
 
+A visual overview with diagrams is in [`docs/index.html`](docs/index.html). Open it in a browser from a clone.
 Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decisions, and its evidence are in
 [`docs/plans/done/2026-10-19-fuelix-catalog-usage.md`](docs/plans/done/2026-10-19-fuelix-catalog-usage.md).
 

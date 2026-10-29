@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>td-opencode-plugin v0.2.0</title>
+<style>
+:root {
+  --bg: #f6f5f9;
+  --surface: #ffffff;
+  --surface-2: #f0edf5;
+  --text: #1b1625;
+  --muted: #5a5367;
+  --border: #dedae8;
+  --accent: #4b286d;
+  --accent-soft: #ece4f5;
+  --green: #247a0a;
+  --green-bg: #e6f5df;
+  --red: #b0231a;
+  --red-bg: #fdebe9;
+  --amber: #8f5500;
+  --amber-bg: #fff2d6;
+  --blue: #1a57b3;
+  --blue-bg: #e4eefc;
+  --code-bg: #1d1828;
+  --code-text: #ece8f4;
+  --shadow: 0 1px 2px rgba(40, 20, 60, .06), 0 4px 16px rgba(40, 20, 60, .05);
+  --sans: ui-sans-serif, -apple-system, "Segoe UI Variable", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #110f16;
+    --surface: #1a1722;
+    --surface-2: #231f2e;
+    --text: #ebe7f2;
+    --muted: #a39cb1;
+    --border: #322c3f;
+    --accent: #c9a7ee;
+    --accent-soft: #2b2139;
+    --green: #86dc5e;
+    --green-bg: #18290f;
+    --red: #ff8f85;
+    --red-bg: #3a1a19;
+    --amber: #f3bb52;
+    --amber-bg: #33260d;
+    --blue: #86b6ff;
+    --blue-bg: #15243d;
+    --code-bg: #0b0910;
+    --code-text: #ebe7f2;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 16px rgba(0, 0, 0, .3);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+code, pre { font-family: var(--mono); }
+code {
+  font-size: .88em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: .05em .35em;
+  overflow-wrap: anywhere;
+}
+.wrap { max-width: 1060px; margin: 0 auto; padding: 0 1.25rem; }
+
+/* Hero */
+.hero {
+  background:
+    radial-gradient(900px 300px at 85% -20%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%),
+    var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 3rem 0 2.25rem;
+}
+.eyebrow {
+  font: 600 .78rem/1 var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 .9rem;
+}
+h1 {
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.08;
+  letter-spacing: -.02em;
+  margin: 0 0 .8rem;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.lead { max-width: 46rem; font-size: 1.1rem; color: var(--muted); margin: 0 0 1.5rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; font-size: .88rem; color: var(--muted); margin: 0 0 1.75rem; padding: 0; list-style: none; }
+.meta strong { color: var(--text); font-weight: 600; }
+.cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: .75rem; margin: 0; padding: 0; list-style: none; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .9rem 1rem;
+  box-shadow: var(--shadow);
+}
+.card .num { display: block; font: 700 1.55rem/1.1 var(--mono); letter-spacing: -.02em; }
+.card .lbl { display: block; font-size: .8rem; color: var(--muted); margin-top: .3rem; }
+.card.pass .num { color: var(--green); }
+.card.beta .num { color: var(--accent); }
+.pill {
+  display: inline-block;
+  font: 600 .68rem/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: .25em .55em;
+  border-radius: 99px;
+  background: var(--amber-bg);
+  color: var(--amber);
+  vertical-align: .2em;
+  margin-left: .35rem;
+}
+
+/* Nav */
+nav.top {
+  position: sticky; top: 0; z-index: 10;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+nav.top ul { display: flex; gap: .25rem; margin: 0; padding: .5rem 0; list-style: none; overflow-x: auto; scrollbar-width: none; }
+nav.top a {
+  display: block; white-space: nowrap; text-decoration: none;
+  color: var(--muted); font-size: .86rem; font-weight: 500;
+  padding: .35rem .7rem; border-radius: 8px;
+}
+nav.top a:hover { background: var(--accent-soft); color: var(--accent); }
+
+/* Sections */
+section { padding: 2.75rem 0 .5rem; }
+h2 {
+  font-size: 1.6rem; letter-spacing: -.015em; margin: 0 0 .4rem;
+  display: flex; align-items: center; gap: .7rem;
+}
+h2::before { content: ""; width: 6px; height: 1.4rem; border-radius: 3px; background: var(--accent); flex: none; }
+h3 { font-size: 1.1rem; margin: 0 0 .35rem; }
+.sub { color: var(--muted); margin: 0 0 1.4rem; max-width: 44rem; }
+p { margin: 0 0 .8rem; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem 1.35rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.1rem;
+}
+.panel > :last-child { margin-bottom: 0; }
+.panel header { display: flex; gap: .8rem; align-items: baseline; margin-bottom: .7rem; }
+.badge {
+  flex: none; width: 1.7rem; height: 1.7rem; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--accent); color: var(--surface);
+  font: 700 .85rem/1 var(--mono);
+}
+.badge + h3 { margin: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+.two > .panel { margin-bottom: 0; }
+
+/* Diagrams */
+.diagram {
+  margin: .9rem 0 0;
+  padding: 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  position: relative;
+}
+.diagram pre {
+  margin: 0; font-size: .8rem; line-height: 1.5; color: var(--text);
+  white-space: pre; background: none; border: 0;
+}
+.diagram[data-state="failed"]::before {
+  content: "The diagram did not load. This is its Mermaid source.";
+  display: block; font-size: .78rem; color: var(--amber); margin-bottom: .6rem;
+}
+.diagram.rendered { display: flex; justify-content: center; }
+.diagram.rendered svg { max-width: 100%; height: auto; }
+.diagram.wide.rendered { justify-content: flex-start; }
+.diagram.wide.rendered svg { min-width: 760px; margin: 0 auto; }
+.diagram-title { font-size: .78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 1.1rem 0 0; }
+
+/* Tables */
+.tablewrap { overflow-x: auto; margin: .5rem 0 0; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: .74rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+
+/* Lists */
+ul.plain { margin: 0; padding-left: 1.1rem; }
+ul.plain li { margin-bottom: .45rem; }
+ul.checks { list-style: none; margin: 0; padding: 0; }
+ul.checks li { position: relative; padding-left: 1.7rem; margin-bottom: .6rem; }
+ul.checks li::before {
+  content: ""; position: absolute; left: 0; top: .35em; width: 1rem; height: 1rem; border-radius: 50%;
+  background: var(--accent-soft); border: 2px solid var(--accent);
+}
+
+/* Limitations */
+.limit { border-left: 5px solid var(--amber); }
+.limit h3 { color: var(--amber); }
+
+/* Change list */
+.diff { list-style: none; margin: 0 0 1.1rem; padding: 0; display: grid; gap: .6rem; }
+.diff li {
+  display: grid; grid-template-columns: 6.2rem 1fr; gap: 1rem; align-items: start;
+  padding: .85rem 1rem; border-radius: 10px; border: 1px solid var(--border); border-left-width: 5px;
+  background: var(--surface);
+}
+.diff .tag { font: 700 .8rem/1.6 var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+.diff .tag::before { margin-right: .4rem; }
+.diff .added { border-left-color: var(--green); background: color-mix(in srgb, var(--green-bg) 70%, var(--surface)); }
+.diff .added .tag { color: var(--green); }
+.diff .added .tag::before { content: "+"; }
+.diff .removed { border-left-color: var(--red); background: color-mix(in srgb, var(--red-bg) 70%, var(--surface)); }
+.diff .removed .tag { color: var(--red); }
+.diff .removed .tag::before { content: "\2212"; }
+.diff .changed { border-left-color: var(--blue); background: color-mix(in srgb, var(--blue-bg) 70%, var(--surface)); }
+.diff .changed .tag { color: var(--blue); }
+.diff .changed .tag::before { content: "~"; }
+.diff p { margin: 0; }
+.diff p + p { margin-top: .3rem; color: var(--muted); font-size: .9rem; }
+
+.spec { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; margin: .8rem 0 0; }
+.spec div { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: .55rem .75rem; }
+.spec dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.spec dd { margin: .1rem 0 0; font: 600 .95rem var(--mono); }
+.note {
+  margin-top: .8rem; font-size: .88rem; padding: .55rem .8rem; border-radius: 8px;
+  background: var(--amber-bg); color: var(--amber);
+}
+
+/* Code */
+.code { position: relative; margin: .6rem 0 1rem; }
+.code pre {
+  margin: 0; padding: .95rem 1rem; padding-right: 4.5rem;
+  background: var(--code-bg); color: var(--code-text);
+  border-radius: 10px; font-size: .84rem; line-height: 1.55; overflow-x: auto;
+}
+.code .label { font-size: .76rem; color: var(--muted); margin: 0 0 .3rem; font-weight: 600; }
+.code button {
+  position: absolute; top: .5rem; right: .5rem;
+  font: 600 .72rem var(--sans); color: var(--code-text);
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 6px; padding: .25rem .55rem; cursor: pointer;
+}
+.code button:hover { background: rgba(255,255,255,.2); }
+.code .box { position: relative; }
+
+/* Steps */
+ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 2.6rem; margin-bottom: 1.2rem; }
+ol.steps > li::before {
+  content: counter(s); position: absolute; left: 0; top: 0; width: 1.8rem; height: 1.8rem; border-radius: 50%;
+  background: var(--accent); color: var(--surface); display: grid; place-items: center; font: 700 .85rem var(--mono);
+}
+ol.steps > li:not(:last-child)::after {
+  content: ""; position: absolute; left: .87rem; top: 2rem; bottom: -1rem; width: 2px; background: var(--border);
+}
+ol.steps h3 { margin-top: .2rem; }
+
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; font-size: .85rem; color: var(--muted); margin-top: .6rem; }
+.checkgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; margin-bottom: 1.1rem; }
+
+footer { padding: 2.5rem 0 3rem; color: var(--muted); font-size: .88rem; }
+footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
+
+@media (max-width: 900px) {
+  .cards { grid-template-columns: repeat(3, 1fr); }
+  .checkgrid { grid-template-columns: repeat(2, 1fr); }
+  .spec { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 680px) {
+  .two { grid-template-columns: 1fr; }
+  .cards { grid-template-columns: repeat(2, 1fr); }
+  .diff li { grid-template-columns: 1fr; gap: .3rem; }
+  .hero { padding-top: 2rem; }
+  .diagram.rendered { justify-content: flex-start; }
+  .diagram.rendered svg { min-width: 600px; }
+  .meta { overflow-wrap: anywhere; }
+  .diagram.rendered:has(svg[aria-roledescription="timeline"]) svg { min-width: 0; }
+  section { padding-top: 2.1rem; }
+  .panel { padding: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">OpenCode V2 plugin</p>
+    <h1>td-opencode-plugin</h1>
+    <p class="lead">An OpenCode V2 plugin for TELUS Digital engineers who use FueliX in OpenCode and OpenChamber.</p>
+    <ul class="meta">
+      <li>Repository: <strong><a href="https://github.com/fsodanogm2dev/td-opencode-plugin">github.com/fsodanogm2dev/td-opencode-plugin</a></strong> (private)</li>
+      <li>Release: <strong>v0.2.0</strong>, GitHub pre-release, 2026-10-28</li>
+      <li>Commit: <strong><code>b4de498</code></strong></li>
+      <li>Needs: <strong>OpenCode 2.0.32 or later</strong></li>
+    </ul>
+    <ul class="cards">
+      <li class="card beta"><span class="num">v0.2.0</span><span class="lbl">Release (beta)</span></li>
+      <li class="card pass"><span class="num">Passing</span><span class="lbl">CI</span></li>
+      <li class="card"><span class="num">3</span><span class="lbl">Providers</span></li>
+      <li class="card"><span class="num">109</span><span class="lbl">Catalog entries</span></li>
+      <li class="card"><span class="num">3</span><span class="lbl">Title models</span></li>
+    </ul>
+  </div>
+</header>
+
+<nav class="top" aria-label="Page sections">
+  <div class="wrap">
+    <ul>
+      <li><a href="#what">What the plugin does</a></li>
+      <li><a href="#safety">Safety checks</a></li>
+      <li><a href="#limits">Known limitations</a></li>
+      <li><a href="#changes">Changes in v0.2.0</a></li>
+      <li><a href="#timeline">Timeline</a></li>
+      <li><a href="#install">Install and check</a></li>
+      <li><a href="#updates">How updates work</a></li>
+      <li><a href="#checks">Checks behind the release</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- ============ WHAT ============ -->
+<section id="what">
+  <h2>What the plugin does</h2>
+  <p class="sub">The plugin runs inside OpenCode and connects it to the FueliX gateway. It has three features.</p>
+
+  <div class="panel">
+    <h3>Architecture</h3>
+    <div class="diagram" data-diagram="arch"><pre>flowchart LR
+  subgraph clients["Clients"]
+    OC["OpenCode"]
+    OCH["OpenChamber"]
+  end
+  subgraph plugin["td-opencode-plugin"]
+    CAT["Catalog and discovery"]
+    KEY["Key hook&lt;br&gt;(http.request)"]
+    TIT["Title model marks"]
+    ENV["Shell env scrub"]
+  end
+  subgraph gw["FueliX gateway"]
+    E4["GET /v1/models"]
+    E1["POST /v1/responses"]
+    E2["POST /v1/messages"]
+    E3["POST /chat/completions"]
+  end
+  OC --> plugin
+  OCH --> plugin
+  CAT --> E4
+  KEY --> E1
+  KEY --> E2
+  KEY --> E3
+  class CAT,KEY,TIT,ENV plain</pre></div>
+  </div>
+
+  <div class="panel">
+    <header><span class="badge">1</span><h3>FueliX catalog</h3></header>
+    <p>The plugin registers three providers. It reads the model list from <code>GET https://api.fuelix.ai/v1/models</code> at startup and every 60 minutes.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Provider</th><th>API</th><th>Endpoint</th></tr></thead>
+        <tbody>
+          <tr><td><code>fuelix-openai</code></td><td>OpenAI Responses</td><td><code>POST /v1/responses</code></td></tr>
+          <tr><td><code>fuelix-anthropic</code></td><td>Anthropic Messages</td><td><code>POST /v1/messages</code></td></tr>
+          <tr><td><code>fuelix</code></td><td>Chat Completions</td><td><code>POST /chat/completions</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:.9rem">Price, limits, and modalities come from <code>data/fuelix-models.json</code>. The file is generated from <code>fuelix/LLM-Inventory</code>. The plugin picks the data for each model as follows.</p>
+    <div class="diagram" data-diagram="data"><pre>flowchart LR
+  L["Model ID from&lt;br&gt;GET /v1/models"] --> Q1{"In data/fuelix-models.json?"}
+  Q1 -- yes --> D1["Use catalog data"]
+  Q1 -- no --> Q2{"In OpenCode&lt;br&gt;built-in data?"}
+  Q2 -- yes --> D2["Use OpenCode data"]
+  Q2 -- no --> D3["Use safe defaults&lt;br&gt;and log a warning"]
+  class D1 good
+  class D2 plain
+  class D3 warn</pre></div>
+  </div>
+
+  <div class="panel">
+    <header><span class="badge">2</span><h3>One FueliX key, kept out of API responses</h3></header>
+    <p>The plugin finds the key in this order. The first match wins.</p>
+    <div class="diagram" data-diagram="key"><pre>flowchart TB
+  subgraph order["Key sources, checked in order"]
+    direction LR
+    A["1. macOS Keychain item&lt;br&gt;fuelix-api-key"] -- not found --> B["2. OpenCode credential store&lt;br&gt;(/connect → FuelIX)"]
+    B -- not found --> C["3. FUELIX_API_KEY&lt;br&gt;environment variable"]
+  end
+  order -- first match wins --> H["session.hook http.request&lt;br&gt;sets the Authorization: Bearer header&lt;br&gt;on each FueliX request"]
+  class H good</pre></div>
+    <ul class="plain" style="margin-top:1rem">
+      <li>FueliX rejects the <code>x-api-key</code> header that the Anthropic package sends. The hook moves that value into the <code>Authorization</code> header.</li>
+      <li>The key never goes into provider <code>settings</code> or <code>headers</code>. <code>GET /api/model</code> returns those to every local client.</li>
+      <li>The plugin also removes <code>FUELIX_API_KEY</code> from agent shell environments.</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <header><span class="badge">3</span><h3>Low-cost session titles</h3></header>
+    <p>OpenCode writes each session title with one extra model request. The plugin marks one low-cost model per provider. OpenCode sends the title request to the marked model of the session's provider.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Provider</th><th>Title model</th></tr></thead>
+        <tbody>
+          <tr><td><code>fuelix-openai</code></td><td><code>gpt-6-luna</code></td></tr>
+          <tr><td><code>fuelix-anthropic</code></td><td><code>claude-haiku-5-5</code></td></tr>
+          <tr><td><code>fuelix</code></td><td><code>gemini-3.1-flash-lite</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="diagram" data-diagram="title"><pre>sequenceDiagram
+  participant S as Session
+  participant O as OpenCode
+  participant F as FueliX
+  Note over S,O: Session on fuelix-anthropic/claude-opus
+  S->>O: Session needs a title
+  Note over O: Reads the title mark&lt;br&gt;of fuelix-anthropic
+  O->>F: Title request to claude-haiku-5-5
+  alt Title model answers
+    F-->>O: Title
+  else Title model fails
+    O->>F: Retry with session model claude-opus
+    F-->>O: Title
+  end
+  O-->>S: Session title</pre></div>
+    <p style="margin-top:1rem">To change the choice, set <code>agents.title.model</code> in the OpenCode configuration.</p>
+  </div>
+</section>
+
+<!-- ============ SAFETY ============ -->
+<section id="safety">
+  <h2>Safety checks</h2>
+  <p class="sub">The plugin runs these checks without user action.</p>
+  <div class="panel">
+    <ul class="checks">
+      <li>A custom <code>fuelix.baseURL</code> needs <code>TD_OPENCODE_ALLOW_CUSTOM_FUELIX_URL=1</code> and https.</li>
+      <li>The plugin logs one warning when old FueliX provider blocks in the configuration still expose a key.</li>
+      <li>Discovery rejects a model list that drops more than 30% of the IDs or empties a provider.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ LIMITS ============ -->
+<section id="limits">
+  <h2>Known limitations</h2>
+  <div class="two">
+    <div class="panel limit">
+      <h3><code>POST /api/generate</code></h3>
+      <p>OpenCode runs no plugin request hooks for <code>POST /api/generate</code>. Those requests carry only the native credential, so some fail with HTTP 401.</p>
+      <p>Session traffic is not affected.</p>
+    </div>
+    <div class="panel limit">
+      <h3><code>fuelix-anthropic/claude-haiku-4-5</code></h3>
+      <p>On this model, a new user turn writes a new prompt cache entry instead of reading the previous one.</p>
+      <p>FueliX serves the model from the Vertex AI global endpoint. The plugin cannot change this.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHANGES ============ -->
+<section id="changes">
+  <h2>Changes in v0.2.0</h2>
+  <p class="sub">Compared with v0.1.0.</p>
+  <ul class="diff">
+    <li class="added">
+      <span class="tag">Added</span>
+      <div>
+        <p><code>fuelix-openai/gpt-6.1-terra</code> in the catalog, from the FueliX inventory.</p>
+        <dl class="spec">
+          <div><dt>Input</dt><dd>$1 / 1M</dd></div>
+          <div><dt>Output</dt><dd>$5 / 1M</dd></div>
+          <div><dt>Cached input</dt><dd>$0.05 / 1M</dd></div>
+          <div><dt>Cache write</dt><dd>$1.25 / 1M</dd></div>
+          <div><dt>Above 200K tokens</dt><dd>$2 in / $7.50 out</dd></div>
+          <div><dt>Context</dt><dd>1,050,000</dd></div>
+          <div><dt>Output limit</dt><dd>128,000</dd></div>
+          <div><dt>Capabilities</dt><dd>Text and image input, reasoning, tool calls</dd></div>
+        </dl>
+        <p class="note">The inventory marks this price as a placeholder (ticket ATL-1799).</p>
+      </div>
+    </li>
+    <li class="removed">
+      <span class="tag">Removed</span>
+      <div>
+        <p>The td-telemetry integration. td-telemetry is deprecated.</p>
+        <p>The plugin ignores a leftover <code>telemetry</code> section in its options.</p>
+      </div>
+    </li>
+    <li class="changed">
+      <span class="tag">Changed</span>
+      <div>
+        <p>The README pins <code>#v0.2.0</code> and explains how updates work with and without a pinned tag.</p>
+      </div>
+    </li>
+  </ul>
+  <p>Full list: <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
+</section>
+
+<!-- ============ TIMELINE ============ -->
+<section id="timeline">
+  <h2>Timeline</h2>
+  <div class="panel">
+    <div class="diagram" data-diagram="timeline"><pre>timeline TD
+  2026-10-19 : Repository bootstrap : FueliX catalog and secure key : Live token and cost parity checked for one model per provider
+  2026-10-20 : Independent code review : 2 high, 4 medium, 10 low findings, no blocker : All fixed or documented
+  2026-10-21 : v0.1.0 (beta) : Low-cost session titles
+  2026-10-27 : GPT-6.1 Terra added to the catalog
+  2026-10-28 : v0.2.0 (beta) : Terra added : td-telemetry integration removed</pre></div>
+  </div>
+</section>
+
+<!-- ============ INSTALL ============ -->
+<section id="install">
+  <h2>Install and check</h2>
+  <div class="panel">
+    <ol class="steps">
+      <li>
+        <h3>Add the plugin</h3>
+        <p>Add this to <code>~/.config/opencode/opencode.json</code>. Then remove the FueliX provider blocks from that file.</p>
+        <div class="code"><div class="box"><pre>{ "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.2.0", "options": {} }] }</pre><button type="button" data-copy>Copy</button></div></div>
+      </li>
+      <li>
+        <h3>Let git read the repository</h3>
+        <p>OpenCode installs the plugin with git. Git must be able to read the repository. Use an SSH key or run <code>gh auth setup-git</code>.</p>
+      </li>
+      <li>
+        <h3>Check the install</h3>
+        <p><code>opencode plugin list</code> shows this line.</p>
+        <div class="code"><div class="box"><pre>td-opencode-plugin  b4de498  github:fsodanogm2dev/td-opencode-plugin#v0.2.0</pre></div></div>
+      </li>
+      <li>
+        <h3>Set the key once</h3>
+        <p>For example, in the macOS Keychain.</p>
+        <div class="code"><div class="box"><pre>security add-generic-password -U -s fuelix-api-key -a "$USER" -w</pre><button type="button" data-copy>Copy</button></div></div>
+      </li>
+    </ol>
+    <p>Full steps: <a href="../README.md">README.md</a> and <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
+  </div>
+</section>
+
+<!-- ============ UPDATES ============ -->
+<section id="updates">
+  <h2>How updates work</h2>
+  <p class="sub">The result depends on whether the package is pinned to a tag.</p>
+  <div class="panel">
+    <div class="diagram" data-diagram="updates"><pre>flowchart TB
+  P0["Pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin#v0.2.0"] --> P1["You change the tag&lt;br&gt;in the configuration"]
+  P1 --> P2["OpenCode installs the new tag&lt;br&gt;when the configuration changes"]
+  U0["Not pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin"] --> U1["OpenCode installs the newest commit of main once and keeps that copy"]
+  U1 --> U2["Once a day, OpenCode checks&lt;br&gt;for a newer commit"]
+  U2 --> U3["opencode plugin check&lt;br&gt;shows: update available"]
+  U3 --> U4["You run opencode plugin update github:fsodanogm2dev/td-opencode-plugin"]
+  U4 --> U5["OpenCode installs the update"]
+  class P0,U0 warn
+  class P2,U5 good
+  class P1,U1,U2,U3,U4 plain</pre></div>
+  </div>
+</section>
+
+<!-- ============ CHECKS ============ -->
+<section id="checks">
+  <h2>Checks behind the release</h2>
+  <div class="cards checkgrid">
+    <div class="card pass"><span class="num">191</span><span class="lbl">Unit tests pass</span></div>
+    <div class="card pass"><span class="num">20</span><span class="lbl">Integration tests pass (isolated OpenCode servers)</span></div>
+    <div class="card pass"><span class="num">0</span><span class="lbl">Live models missing from the catalog (<code>bun run doctor</code>)</span></div>
+    <div class="card pass"><span class="num">3</span><span class="lbl">Title models present and active (<code>bun run doctor</code>)</span></div>
+  </div>
+  <div class="panel">
+    <p>The live test skips without a FueliX key. Its last run matched tokens and cost on every step.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>td-opencode-plugin v0.2.0 (beta). Source: <a href="https://github.com/fsodanogm2dev/td-opencode-plugin">github.com/fsodanogm2dev/td-opencode-plugin</a>. See <a href="../README.md">README.md</a> and <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('[data-copy]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var text = btn.parentElement.querySelector('pre').textContent;
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () {});
+    }
+  });
+});
+</script>
+
+<script type="module">
+const diagrams = Array.from(document.querySelectorAll('.diagram[data-diagram]')).map((el) => ({
+  el,
+  src: el.querySelector('pre').textContent.trim(),
+}));
+const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+
+function css(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function themeConfig() {
+  const dark = scheme.matches;
+  const text = css('--text'), accent = css('--accent'), border = css('--border');
+  const scale = dark
+    ? ['#c9a7ee', '#86b6ff', '#86dc5e', '#f3bb52', '#f59ac8']
+    : ['#4b286d', '#1a57b3', '#247a0a', '#8f5500', '#a0206a'];
+  const label = dark ? '#110f16' : '#ffffff';
+  const vars = {
+    fontFamily: css('--sans'),
+    fontSize: '14px',
+    background: 'transparent',
+    primaryColor: css('--accent-soft'),
+    primaryTextColor: text,
+    primaryBorderColor: accent,
+    secondaryColor: css('--surface'),
+    tertiaryColor: css('--surface'),
+    lineColor: css('--muted'),
+    textColor: text,
+    mainBkg: css('--accent-soft'),
+    nodeBorder: accent,
+    clusterBkg: css('--surface'),
+    clusterBorder: border,
+    titleColor: text,
+    edgeLabelBackground: css('--surface-2'),
+    noteBkgColor: css('--amber-bg'),
+    noteTextColor: text,
+    noteBorderColor: css('--amber'),
+    actorBkg: css('--accent-soft'),
+    actorBorder: accent,
+    actorTextColor: text,
+    actorLineColor: css('--muted'),
+    signalColor: text,
+    signalTextColor: text,
+    labelBoxBkgColor: css('--surface'),
+    labelBoxBorderColor: border,
+    labelTextColor: text,
+    loopTextColor: text,
+    activationBkgColor: css('--accent-soft'),
+    sequenceNumberColor: label,
+  };
+  scale.forEach((c, i) => {
+    vars['cScale' + i] = c;
+    vars['cScaleLabel' + i] = label;
+    vars['cScaleInv' + i] = c;
+  });
+  // Timeline cycles through 12 scale slots. Fill the rest by repeating.
+  for (let i = scale.length; i < 12; i++) {
+    vars['cScale' + i] = scale[i % scale.length];
+    vars['cScaleLabel' + i] = label;
+    vars['cScaleInv' + i] = scale[i % scale.length];
+  }
+  return { vars, text };
+}
+
+function classDefs() {
+  const text = css('--text');
+  return [
+    `classDef good fill:${css('--green-bg')},stroke:${css('--green')},color:${text}`,
+    `classDef warn fill:${css('--amber-bg')},stroke:${css('--amber')},color:${text}`,
+    `classDef plain fill:${css('--accent-soft')},stroke:${css('--accent')},color:${text}`,
+  ].join('\n');
+}
+
+let mermaid = null;
+try {
+  mermaid = (await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs')).default;
+} catch (err) {
+  console.warn('Mermaid did not load. Showing diagram source.', err);
+  diagrams.forEach((d) => d.el.setAttribute('data-state', 'failed'));
+}
+
+let counter = 0;
+async function renderAll() {
+  if (!mermaid) return;
+  const { vars } = themeConfig();
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: 'base',
+    themeVariables: vars,
+    flowchart: { curve: 'basis', htmlLabels: true, padding: 12, nodeSpacing: 36, rankSpacing: 44 },
+    sequence: { mirrorActors: false, messageMargin: 44, wrap: true, width: 200, noteMargin: 12 },
+    timeline: { disableMulticolor: false },
+  });
+  for (const d of diagrams) {
+    const id = 'mmd-' + (counter++);
+    const src = d.src.startsWith('flowchart') ? d.src + '\n' + classDefs() : d.src;
+    try {
+      const { svg } = await mermaid.render(id, src);
+      d.el.innerHTML = svg;
+      d.el.classList.add('rendered');
+      d.el.removeAttribute('data-state');
+    } catch (err) {
+      console.warn('Mermaid could not render a diagram.', err);
+      document.getElementById(id)?.remove();
+      document.getElementById('d' + id)?.remove();
+      const pre = document.createElement('pre');
+      pre.textContent = d.src;
+      d.el.replaceChildren(pre);
+      d.el.classList.remove('rendered');
+      d.el.setAttribute('data-state', 'failed');
+    }
+  }
+}
+
+await renderAll();
+scheme.addEventListener('change', renderAll);
+</script>
+</body>
+</html>
