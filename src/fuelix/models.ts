@@ -149,9 +149,13 @@ export function upstreamProviderID(providerID: FuelixProviderID, modelID: string
 /**
  * Copies missing cost, limit, and capabilities from the inactive built-in provider with the same model ID.
  * Only fields in `incomplete` change. Returns the fields that it filled.
+ *
+ * This function changes `info` in place and must run before `editor.add`. It must not call `editor.models.update`:
+ * OpenCode rewrites the package of every updated model (`AISDKNative.rewrite`), and that would replace
+ * `aisdk:@ai-sdk/anthropic` with the native Anthropic package, which sends `x-api-key`.
  */
 export function enrichFromUpstream(
-  editor: Pick<ProviderEditor, "get" | "models">,
+  editor: Pick<ProviderEditor, "get">,
   providerID: FuelixProviderID,
   modelID: string,
   info: Model.Info,
@@ -165,37 +169,34 @@ export function enrichFromUpstream(
 
   const filled: IncompleteField[] = []
   const reasoning = info.variants.length > 0
-  editor.models.update(providerID, modelID, (model) => {
-    if (incomplete.includes("cost") && upstream.cost.length > 0) {
-      model.cost = upstream.cost.map((item) => ({
-        ...(item.tier ? { tier: { type: item.tier.type, size: item.tier.size } } : {}),
-        input: item.input,
-        output: item.output,
-        cache: { read: item.cache.read, write: item.cache.write },
-      }))
-      filled.push("cost")
+  const model = info as unknown as PlainModelInfo
+  if (incomplete.includes("cost") && upstream.cost.length > 0) {
+    model.cost = upstream.cost.map((item) => ({
+      ...(item.tier ? { tier: { type: item.tier.type, size: item.tier.size } } : {}),
+      input: item.input,
+      output: item.output,
+      cache: { read: item.cache.read, write: item.cache.write },
+    }))
+    filled.push("cost")
+  }
+  if (incomplete.includes("limit")) {
+    model.limit = {
+      context: upstream.limit.context,
+      output: upstream.limit.output,
+      ...(upstream.limit.input !== undefined ? { input: upstream.limit.input } : {}),
     }
-    if (incomplete.includes("limit")) {
-      model.limit = {
-        context: upstream.limit.context,
-        output: upstream.limit.output,
-        ...(upstream.limit.input !== undefined ? { input: upstream.limit.input } : {}),
-      }
-      // Budget-based variants depend on the output limit.
-      if (reasoning) {
-        model.variants = resolveVariants({ providerID, modelID, outputLimit: upstream.limit.output }) as unknown as typeof model.variants
-      }
-      filled.push("limit")
+    // Budget-based variants depend on the output limit.
+    if (reasoning) model.variants = resolveVariants({ providerID, modelID, outputLimit: upstream.limit.output })
+    filled.push("limit")
+  }
+  if (incomplete.includes("capabilities")) {
+    model.capabilities = {
+      tools: upstream.capabilities.tools,
+      input: [...upstream.capabilities.input],
+      output: [...upstream.capabilities.output],
+      ...(upstream.capabilities.temperature !== undefined ? { temperature: upstream.capabilities.temperature } : {}),
     }
-    if (incomplete.includes("capabilities")) {
-      model.capabilities = {
-        tools: upstream.capabilities.tools,
-        input: [...upstream.capabilities.input],
-        output: [...upstream.capabilities.output],
-        ...(upstream.capabilities.temperature !== undefined ? { temperature: upstream.capabilities.temperature } : {}),
-      }
-      filled.push("capabilities")
-    }
-  })
+    filled.push("capabilities")
+  }
   return filled
 }

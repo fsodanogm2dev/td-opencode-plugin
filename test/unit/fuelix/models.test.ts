@@ -20,7 +20,7 @@ describe("buildProviderInfo", () => {
   test("Anthropic Messages provider", () => {
     const info = buildProviderInfo("fuelix-anthropic", "https://api.fuelix.ai", "enabled")
     expect(info.name).toBe("FuelIX (Anthropic Messages)")
-    expect(info.package).toBe("@opencode/ai/providers/anthropic")
+    expect(info.package).toBe("aisdk:@ai-sdk/anthropic")
     expect(info.settings).toEqual({ baseURL: "https://api.fuelix.ai/v1" })
     expect(info.activation).toBe("enabled")
   })
@@ -96,32 +96,37 @@ describe("enrichFromUpstream", () => {
   }
 
   function fakeEditor(upstream: Record<string, unknown> | undefined, upstreamProvider = "openai") {
-    const target: Record<string, any> = { cost: [], limit: { context: 200000, output: 32000 }, capabilities: {}, variants: [{ id: "x" }] }
-    const editor = {
+    return {
       get: (id: string) => (id === upstreamProvider && upstream ? { models: new Map(Object.entries(upstream)) } : undefined),
-      models: { update: (_p: string, _m: string, fn: (m: any) => void) => fn(target) },
-    }
-    return { editor: editor as never, target }
+    } as never
   }
 
   test("copies cost, limit, and capabilities for incomplete models", () => {
-    const { editor, target } = fakeEditor({ "gpt-9-new": upstreamModel })
+    const editor = fakeEditor({ "gpt-9-new": upstreamModel })
     const { info, incomplete } = buildModelInfo("fuelix-openai", "gpt-9-new", undefined)
     expect(enrichFromUpstream(editor, "fuelix-openai", "gpt-9-new", info, incomplete)).toEqual(["cost", "limit", "capabilities"])
-    expect(target.cost).toEqual(upstreamModel.cost)
-    expect(target.limit).toEqual({ context: 123000, output: 45000 })
-    expect(target.capabilities).toEqual({ tools: false, input: ["text", "image"], output: ["text"] })
+    expect(info.cost as unknown).toEqual(upstreamModel.cost)
+    expect(info.limit as unknown).toEqual({ context: 123000, output: 45000 })
+    expect(info.capabilities as unknown).toEqual({ tools: false, input: ["text", "image"], output: ["text"] })
+  })
+
+  test("keeps the package of the model", () => {
+    const editor = fakeEditor({ "claude-new-9": upstreamModel }, "anthropic")
+    const { info, incomplete } = buildModelInfo("fuelix-anthropic", "claude-new-9", undefined)
+    enrichFromUpstream(editor, "fuelix-anthropic", "claude-new-9", info, incomplete)
+    expect((info as unknown as { package?: string }).package).toBeUndefined()
   })
 
   test("does nothing for complete models", () => {
-    const { editor, target } = fakeEditor({ "gpt-6-luna": upstreamModel })
+    const editor = fakeEditor({ "gpt-6-luna": upstreamModel })
     const { info, incomplete } = buildModelInfo("fuelix-openai", "gpt-6-luna", entries["gpt-6-luna"])
+    const before = structuredClone(info)
     expect(enrichFromUpstream(editor, "fuelix-openai", "gpt-6-luna", info, incomplete)).toEqual([])
-    expect(target.cost).toEqual([])
+    expect(info).toEqual(before)
   })
 
   test("needs an exact model ID match", () => {
-    const { editor } = fakeEditor({ "gpt-9": upstreamModel })
+    const editor = fakeEditor({ "gpt-9": upstreamModel })
     const { info, incomplete } = buildModelInfo("fuelix-openai", "gpt-9-new", undefined)
     expect(enrichFromUpstream(editor, "fuelix-openai", "gpt-9-new", info, incomplete)).toEqual([])
   })
