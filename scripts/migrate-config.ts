@@ -5,7 +5,7 @@
  *
  *   bun scripts/migrate-config.ts                                  # reads ~/.config/opencode/opencode.json, prints to stdout
  *   bun scripts/migrate-config.ts --out /tmp/opencode.migrated.json
- *   bun scripts/migrate-config.ts --config ./opencode.json --plugin github:fsodanogm2dev/td-opencode-plugin#v0.3.0
+ *   bun scripts/migrate-config.ts --config ./opencode.json --plugin github:fsodanogm2dev/td-opencode-plugin#v0.3.1
  *
  * The default plugin spec pins the tag of the version in package.json.
  *

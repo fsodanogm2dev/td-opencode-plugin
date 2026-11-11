@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 (beta), 2026-11-11
+
+Patch release. It needs OpenCode 2.0.32 or later. If you use v0.3.0, change the tag in your configuration to
+`#v0.3.1`.
+
+### Fixed
+
+- FueliX OpenAI vision models, including SOL, now advertise PDF input, so OpenCode can attach PDF files to them.
+
 ## 0.3.0 (beta), 2026-11-11
 
 Third beta release. It needs OpenCode 2.0.32 or later. If you use v0.2.0, change the tag in your configuration to
