@@ -7,7 +7,7 @@ Patch release. It needs OpenCode 2.0.32 or later. If you use v0.2.0, change the 
 
 ### Fixed
 
-- Supported FueliX models, including SOL, now advertise PDF input, so OpenCode can attach PDF files to them.
+- FueliX OpenAI vision models, including SOL, now advertise PDF input, so OpenCode can attach PDF files to them.
 
 ## 0.2.0 (beta), 2026-10-28
 
