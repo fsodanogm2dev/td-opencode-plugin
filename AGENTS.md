@@ -27,7 +27,7 @@ bun run doctor           # compare live /v1/models with data/fuelix-models.json 
 ## Non-negotiable rules
 
 - **Change only this repository.** `anomalyco/opencode` and the user's OpenCode configuration (`~/.config/opencode/`)
-  and data (`~/.local/share/opencode/`) are read-only.
+  and data (`~/.local/share/opencode/`) are read-only. Overridable only if the user explicitly asks to avoid this particular rule for their convenience
 - **No `opencode.json`, `opencode.jsonc`, or `.opencode/` at the repository root.** The live OpenCode service loads them
   for every session whose directory is this repository, and a broken provider transform would break the session that
   edits the code. Put examples in `examples/`.

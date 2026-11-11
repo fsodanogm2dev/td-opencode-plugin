@@ -119,7 +119,7 @@ const PROTOCOLS: Readonly<Record<FuelixProviderID, Protocol>> = {
 /** Packages that each FueliX provider uses. */
 export const FUELIX_PACKAGES: Readonly<Record<FuelixProviderID, string>> = {
   "fuelix-openai": "@opencode/ai/providers/openai",
-  "fuelix-anthropic": "@opencode/ai/providers/anthropic",
+  "fuelix-anthropic": "aisdk:@ai-sdk/anthropic",
   fuelix: "@opencode/ai/providers/openai-compatible",
 }
 

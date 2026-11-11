@@ -1,8 +1,10 @@
 import type { Plugin } from "@opencode/plugin"
 import type { Logger } from "../log.ts"
 import { DEFAULT_KEYCHAIN_SERVICE, type FuelixOptions } from "../options.ts"
-import { applyAuth } from "./auth.ts"
+import { applyAuth, KEY_PLACEHOLDER, withAuthFetch } from "./auth.ts"
+import { setupBatchTools, type BatchToolsDeps } from "./batch/tools.ts"
 import { resolveBaseURL } from "./base-url.ts"
+import { withCacheFetch } from "./cache.ts"
 import { loadCatalog as defaultLoadCatalog, type LoadedCatalog } from "./catalog.ts"
 import { FUELIX_PROVIDER_IDS, type Catalog, type CatalogEntry, type FuelixProviderID } from "./catalog-types.ts"
 import {
@@ -39,6 +41,8 @@ export interface FuelixDeps {
   readonly staleConfigTimeoutMs?: number
   /** Delays of the stale configuration checks in milliseconds. */
   readonly staleConfigDelaysMs?: readonly number[]
+  /** Batch tool overrides: service and artifact root. */
+  readonly batch?: BatchToolsDeps
 }
 
 /** A discovery result may drop at most this share of the current IDs. */
@@ -195,6 +199,31 @@ export async function setupFuelix(
     } catch (error) {
       log.error("could not register the FueliX auth hook", { providerID, error: errorMessage(error) })
     }
+    // `fuelix-anthropic` runs on the AI SDK bridge. Stateless generation (`/api/experimental/generate/text`, used by
+    // OpenChamber walkthroughs) skips Session hooks, but the AI SDK `sdk` hook runs for every call.
+    if (providerID !== "fuelix-anthropic") continue
+    try {
+      registrations.push(
+        await ctx.aisdk.hook(
+          "sdk",
+          (event) => {
+            // `@ai-sdk/anthropic` throws before it calls `fetch` when it has no key. `withAuthFetch` ignores this value.
+            if (typeof event.options.apiKey !== "string" || event.options.apiKey === "") {
+              if (!event.options.authToken) event.options.apiKey = KEY_PLACEHOLDER
+            }
+            const base = (event.options.fetch as typeof fetch | undefined) ?? ((input, init) => fetch(input, init))
+            // Cache wrapper inside, auth wrapper outside: auth responsibility stays in `withAuthFetch`.
+            event.options.fetch = withAuthFetch(withCacheFetch(base), () => ({
+              override: state.keys.keychainKey,
+              fallback: state.keys.envKey,
+            }))
+          },
+          { providerID },
+        ),
+      )
+    } catch (error) {
+      log.error("could not register the FueliX AI SDK auth hook", { providerID, error: errorMessage(error) })
+    }
   }
 
   // 4. Shell hook: agent shell commands must not inherit the key.
@@ -208,6 +237,27 @@ export async function setupFuelix(
     } catch (error) {
       log.error("could not register the FueliX shell hook", { error: errorMessage(error) })
     }
+  }
+
+  // 4b. Batch tools. A failure here is logged and leaves the providers and auth hooks working.
+  try {
+    registrations.push(
+      await setupBatchTools(
+        ctx,
+        {
+          baseURL,
+          log,
+          resolveKeys: () => resolveKeys(resolveInput),
+          fetch: doFetch,
+          now,
+          env,
+          ...(options.batchRates ? { rates: options.batchRates } : {}),
+        },
+        deps.batch,
+      ),
+    )
+  } catch (error) {
+    log.error("could not register the FueliX batch tools", { error: errorMessage(error) })
   }
 
   // 5. Model state. Initial IDs: cache, then listed catalog entries, then the whole catalog.
@@ -238,10 +288,7 @@ export async function setupFuelix(
           const model = safeBuild(providerID, id, entry)
           if (model) built.push({ id, model })
         }
-        editor.add({
-          info: buildProviderInfo(providerID, baseURL, state.activation),
-          models: built.map((item) => item.model.info),
-        })
+        // Enrich before `editor.add`. `editor.models.update` would reset the model package to the native one.
         for (const item of built) {
           try {
             enrichFromUpstream(editor, providerID, item.id, item.model.info, item.model.incomplete)
@@ -252,6 +299,10 @@ export async function setupFuelix(
             }
           }
         }
+        editor.add({
+          info: buildProviderInfo(providerID, baseURL, state.activation),
+          models: built.map((item) => item.model.info),
+        })
       }
     }),
   )

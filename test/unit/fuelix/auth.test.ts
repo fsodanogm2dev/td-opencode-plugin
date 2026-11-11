@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { applyAuth } from "../../../src/fuelix/auth.ts"
+import { applyAuth, KEY_PLACEHOLDER } from "../../../src/fuelix/auth.ts"
 
 describe("applyAuth", () => {
   test("moves x-api-key to a Bearer header", () => {
@@ -39,5 +39,17 @@ describe("applyAuth", () => {
     expect(applyAuth(headers, {})).toBe(false)
     expect(headers.has("authorization")).toBe(false)
     expect(headers.get("accept")).toBe("application/json")
+  })
+
+  test("the placeholder key is treated as absent", () => {
+    const headers = new Headers({ "x-api-key": KEY_PLACEHOLDER })
+    expect(applyAuth(headers, { fallback: "sk-test-fallback" })).toBe(true)
+    expect(headers.get("authorization")).toBe("Bearer sk-test-fallback")
+    expect(headers.has("x-api-key")).toBe(false)
+    const bare = new Headers({ "x-api-key": KEY_PLACEHOLDER })
+    expect(applyAuth(bare, {})).toBe(false)
+    const bearer = new Headers({ authorization: `Bearer ${KEY_PLACEHOLDER}` })
+    applyAuth(bearer, { fallback: "sk-test-fallback" })
+    expect(bearer.get("authorization")).toBe("Bearer sk-test-fallback")
   })
 })

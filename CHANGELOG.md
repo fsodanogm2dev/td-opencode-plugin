@@ -1,13 +1,57 @@
 # Changelog
 
-## 0.2.1 (beta), 2026-11-11
+## 0.3.1 (beta), 2026-11-11
 
-Patch release. It needs OpenCode 2.0.32 or later. If you use v0.2.0, change the tag in your configuration to
-`#v0.2.1`.
+Patch release. It needs OpenCode 2.0.32 or later. If you use v0.3.0, change the tag in your configuration to
+`#v0.3.1`.
 
 ### Fixed
 
 - FueliX OpenAI vision models, including SOL, now advertise PDF input, so OpenCode can attach PDF files to them.
+
+## 0.3.0 (beta), 2026-11-11
+
+Third beta release. It needs OpenCode 2.0.32 or later. If you use v0.2.0, change the tag in your configuration to
+`#v0.3.0`.
+
+Known limitation: live batch submission was rejected with HTTP 403. Account access to FueliX batches and live result
+collection are not verified. Use the batch tools only after FueliX confirms that your account has batch access.
+
+### Added
+
+- `/fuelix-batch <prompt>` submits one prompt directly to FueliX as a deferred batch. The command uses
+  `claude-haiku-5-5-anthropic` with an output limit of 4096 tokens and makes no interactive agent call. It shares the batch
+  workflow's protected storage and duplicate-submission checks. Batch discounts depend on FueliX pricing; batching
+  does not inherently reduce token counts. FueliX lists batch-enabled deployment aliases in its
+  [model inventory](https://docs.fuelix.ai/docs/model-ranch.md#batch-processing).
+- Batch workflow for deferred, independent Messages requests. Six ordinary OpenCode tools: `fuelix_batch_submit`,
+  `fuelix_batch_list`, `fuelix_batch_inspect`, `fuelix_batch_status`, `fuelix_batch_cancel`, and
+  `fuelix_batch_collect`. Status and collection run on demand, with no background worker. The plugin never retries an
+  ambiguous submission. Results go to protected files outside the repository. Batch history is stored per session.
+  The plugin ships no verified FueliX batch rate card, so the cost of a batch is `unavailable` until you set the optional
+  `options.fuelix.batchRates` (prices per million tokens that you checked with FueliX). The plugin then estimates the
+  cost when you collect the results. The estimate is not billing. Live batch submission was rejected with HTTP 403;
+  account access and live result collection remain unverified. See [`docs/batches.md`](docs/batches.md) and
+  [`examples/batch-requests.json`](examples/batch-requests.json).
+
+### Fixed
+
+- `fuelix-anthropic` requests to `POST .../messages` now receive one ephemeral `cache_control` breakpoint when the body
+  has none. FueliX has rejected a long prompt with HTTP 400 (`requires a cache_control breakpoint on prompts of 1024
+  tokens or more`). The plugin does not count tokens, so short prompts get the marker too. Requests that already have
+  a marker, other endpoints, and non-JSON bodies are not changed. One live call through the wrapper chain with a
+  synthetic long prompt returned HTTP 200 (see the
+  [verification report](docs/reports/2026-11-11-cache-breakpoint-verification.md)). The live check did not cover a
+  resumed session, the AI SDK bridge, streaming, or a repeat call that reads the cache. The cause of the missing marker
+  in the original failure is not established.
+
+### Changed
+
+- `fuelix-anthropic` uses the AI SDK bridge package `aisdk:@ai-sdk/anthropic`. Stateless generation, such as OpenChamber
+  walkthroughs (`POST /api/experimental/generate/text`), now sends `Authorization: Bearer`. Before, it sent `x-api-key`,
+  and FueliX answered with HTTP 401.
+- The plugin copies missing model metadata from the built-in provider before it registers the models. This keeps the
+  AI SDK package on every `fuelix-anthropic` model.
 
 ## 0.2.0 (beta), 2026-10-28
 

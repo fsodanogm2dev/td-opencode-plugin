@@ -2,7 +2,7 @@
 
 OpenCode V2 plugin for TELUS Digital engineers who use FueliX with OpenCode and OpenChamber.
 
-It does three things:
+It does four things:
 
 1. **FueliX catalog**: registers the `fuelix-openai`, `fuelix-anthropic`, and `fuelix` providers and loads their
    models from `https://api.fuelix.ai/v1/models`. Prices, limits, and modalities come from a curated catalog
@@ -12,6 +12,10 @@ It does three things:
    provider `settings` or `headers`, which `GET /api/model` and `GET /api/provider` return to every local client.
 3. **Low-cost session titles**: OpenCode writes session titles with one low-cost model per provider instead of the
    session model.
+4. **Batch workflow**: six ordinary tools (`fuelix_batch_*`) submit independent Messages requests from a file to
+   FueliX, check the status, cancel, and collect the results into protected local files. Details are in
+   [`docs/batches.md`](docs/batches.md). Live batch submission was rejected with HTTP 403, so account access and result
+   collection are not verified.
 
 A visual overview with diagrams is in [`docs/index.html`](docs/index.html). Open it in a browser from a clone.
 Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decisions, and its evidence are in
@@ -24,19 +28,19 @@ Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decision
 
 ## Install
 
-The repository is private. You need read access to `fsodanogm2dev/td-opencode-plugin` on GitHub.
+The repository `fsodanogm2dev/td-opencode-plugin` is public. Installing it over HTTPS needs no GitHub authentication.
 
 Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.2.1", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.3.1", "options": {} }]
 }
 ```
 
-OpenCode installs the plugin with git when it starts, so git on your machine must be able to read the repository, for
-example with an SSH key or `gh auth setup-git`. OpenCode keeps the install in its cache. To update, change the tag to a
+OpenCode installs the plugin with git when it starts, so git must be installed on your machine and must be able to reach
+GitHub. An SSH key or `gh auth setup-git` is optional. OpenCode keeps the install in its cache. To update, change the tag to a
 newer release ([`CHANGELOG.md`](CHANGELOG.md) lists them). OpenCode installs the new tag when the configuration changes.
 
 Without a tag, OpenCode installs the newest commit of `main` once and keeps that copy. Once a day it checks for a newer
@@ -48,7 +52,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.2.1 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.3.1 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
@@ -82,9 +86,20 @@ The plugin looks for the key in this order and uses the first one it finds:
 How the plugin uses the key:
 
 - All three providers set `integrationID: "fuelix"`, so one credential serves them.
-- A `session.hook("http.request")` sets `Authorization: Bearer <key>` on each FueliX session request (chat, titles,
-  compaction). FueliX rejects the `x-api-key` header that the Anthropic package sends, so the hook moves that value into
-  the `Authorization` header.
+- FueliX accepts only `Authorization: Bearer <key>`. A `session.hook("http.request")` sets this header on each session
+  request (chat, titles, compaction) of the three providers.
+- `fuelix-anthropic` uses the AI SDK bridge package `aisdk:@ai-sdk/anthropic`. An `aisdk.hook("sdk")` wraps `fetch` for
+  this provider. It sets the `Authorization` header and removes `x-api-key` on every request, also on stateless calls
+  such as `POST /api/experimental/generate/text` (OpenChamber walkthroughs), which run no session hooks.
+- FueliX has rejected a long `fuelix-anthropic` prompt with HTTP 400: `Model claude-opus requires a cache_control
+  breakpoint on prompts of 1024 tokens or more`. The same `fetch` wrapper now guards against this. For a
+  `POST .../messages` JSON body that has no `cache_control` marker, it adds one `{"type":"ephemeral"}` marker. The
+  marker goes on the last cacheable system block, or on a cacheable message block when there is no usable system text. The plugin
+  does not count tokens, so short prompts get the marker too. A request that already has a marker is not changed.
+  Other endpoints, such as `/messages/count_tokens`, and bodies that are not JSON are not changed. One live call
+  with a synthetic long prompt was accepted. The live check did not cover a resumed session, the AI SDK bridge,
+  streaming, or a cache read. See the
+  [verification report](docs/reports/2026-11-11-cache-breakpoint-verification.md).
 - The key never goes into provider `settings` or `headers`, which `GET /api/model` returns to every local client, and
   never into a log line or a file.
 - The plugin removes `FUELIX_API_KEY` from the environment of agent shell commands (option `fuelix.scrubShellEnv`,
@@ -101,15 +116,17 @@ What each source protects against:
   environment of the server and of every process it starts.
 - Recommended: the Keychain or `/connect`. Remove `FUELIX_API_KEY` from `service.json` after you set one of them.
 
-Known limitation: OpenCode does not run plugin request hooks for `POST /api/generate` (`ctx.generate.text`), which
-some clients and plugins use for helper text. Those requests carry only the native credential:
+Known limitation: OpenCode does not run session hooks for stateless calls (`POST /api/generate` and
+`POST /api/experimental/generate/text`). On the native packages (`fuelix-openai`, `fuelix`), those requests carry only
+the native credential. `fuelix-anthropic` is not affected, because its `fetch` wrapper runs for every call.
 
-| Key source | `fuelix-openai` and `fuelix` on `/api/generate` | `fuelix-anthropic` on `/api/generate` |
+| Key source | `fuelix-openai` and `fuelix` on stateless calls | `fuelix-anthropic` on stateless calls |
 | --- | --- | --- |
-| `/connect` credential | Works (native `Bearer`) | Fails with HTTP 401 (`x-api-key`) |
-| Keychain only | Fails with HTTP 401 (no credential) | Fails with HTTP 401 |
+| `/connect` credential | Works (native `Bearer`) | Works |
+| Keychain only | Fails with HTTP 401 (no credential) | Works |
 
-Session traffic is not affected. If you use a feature that calls `/api/generate`, keep a `/connect` credential as well.
+Session traffic is not affected. If you use a stateless feature with `fuelix-openai` or `fuelix`, keep a `/connect`
+credential as well.
 
 A non-default `fuelix.baseURL` takes effect only when the environment of the OpenCode service sets
 `TD_OPENCODE_ALLOW_CUSTOM_FUELIX_URL=1` and the URL uses `https` (plain `http` only for `127.0.0.1`, `localhost`, and
@@ -148,6 +165,7 @@ variant of that model:
       "includeNonChatModels": false,        // also register embedding, speech, transcription, and image models
       "discoveryTimeoutMs": 5000,
       "scrubShellEnv": true                 // remove FUELIX_API_KEY from agent shell environments
+      // Optional batchRates: see docs/batches.md for sourced batch prices.
     },
     "debug": false
   }
