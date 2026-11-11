@@ -3109,7 +3109,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -3138,7 +3139,8 @@
       "name": "GPT-6.0 Sol",
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"
@@ -3185,7 +3187,8 @@
       },
       "input": [
         "text",
-        "image"
+        "image",
+        "pdf"
       ],
       "output": [
         "text"

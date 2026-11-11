@@ -114,6 +114,19 @@ describe("FueliX plugin in an isolated OpenCode server", () => {
     expect(problems).toEqual([])
   })
 
+  test("the SOL models accept PDF input", () => {
+    // Expected values are literal, not read from the catalog, so a wrong catalog fails here.
+    for (const id of ["gpt-6-sol", "gpt-6.0-sol", "gpt-6.1-sol"]) {
+      const found = models.filter((m) => m.id === id) as Array<ApiModel & { capabilities?: { input: string[]; output: string[] } }>
+      expect(found.map((m) => m.providerID)).toEqual(["fuelix-openai"])
+      expect([...(found[0]!.capabilities?.input ?? [])].sort()).toEqual(["image", "pdf", "text"])
+      expect(found[0]!.capabilities?.output).toEqual(["text"])
+    }
+    // A model with no PDF support in the catalog does not gain it.
+    const unknown = models.find((m) => m.id === NEW_ID) as (ApiModel & { capabilities?: { input: string[] } }) | undefined
+    expect(unknown?.capabilities?.input).not.toContain("pdf")
+  })
+
   test("reasoning variants follow the catalog", () => {
     const opus = models.find((m) => m.providerID === "fuelix-anthropic" && m.id === "claude-opus")
     expect(opus?.variants.length).toBe(5)
