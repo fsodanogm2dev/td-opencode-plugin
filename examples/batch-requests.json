@@ -1,0 +1,30 @@
+{
+  "requests": [
+    {
+      "custom_id": "doc-alpha-summary",
+      "params": {
+        "model": "claude-haiku-5-5-anthropic",
+        "max_tokens": 512,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Summarize this document in three bullet points.\n\nDocument (fake sample text): The Alpha service stores customer orders in a queue. A worker reads each order, checks the stock level, and writes the result to a database. Failed orders go to a retry queue."
+          }
+        ]
+      }
+    },
+    {
+      "custom_id": "doc-beta-summary",
+      "params": {
+        "model": "claude-haiku-5-5-anthropic",
+        "max_tokens": 512,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Summarize this document in three bullet points.\n\nDocument (fake sample text): The Beta report lists three open risks. The first risk is a missing backup test. The second risk is an expired certificate on a staging host. The third risk is an unowned alert rule."
+          }
+        ]
+      }
+    }
+  ]
+}

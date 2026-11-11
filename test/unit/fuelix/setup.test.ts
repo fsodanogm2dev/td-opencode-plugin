@@ -117,6 +117,76 @@ describe("setupFuelix", () => {
     expect(request.headers.has("x-api-key")).toBe(false)
   })
 
+  test("registers an AI SDK sdk hook for fuelix-anthropic only", async () => {
+    const { fake } = await setup()
+    const hooks = fake.aisdkHooks.filter((hook) => hook.name === "sdk")
+    expect(hooks.map((hook) => hook.options?.providerID)).toEqual(["fuelix-anthropic"])
+  })
+
+  test("the AI SDK hook sets a placeholder key and Bearer auth uses the env key", async () => {
+    const { fake } = await setup({}, { env: { FUELIX_API_KEY: KEY }, fetch: async () => modelsResponse("gpt-6-luna") })
+    const seen: Headers[] = []
+    const options: Record<string, any> = {
+      fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
+        seen.push(new Headers(init?.headers))
+        return new Response("{}")
+      },
+    }
+    fake.aisdkHooks.find((item) => item.options?.providerID === "fuelix-anthropic")!.callback({ options })
+    expect(options.apiKey).toBe("fuelix-plugin-managed")
+    // The AI SDK sends the placeholder as `x-api-key`. The wrapper must replace it with the real key.
+    await options.fetch("https://api.fuelix.test/v1/messages", { method: "POST", headers: { "x-api-key": options.apiKey } })
+    expect(seen[0]!.get("authorization")).toBe(`Bearer ${KEY}`)
+    expect(seen[0]!.has("x-api-key")).toBe(false)
+  })
+
+  test("the AI SDK hook keeps a real apiKey and an authToken", async () => {
+    const { fake } = await setup()
+    const hook = fake.aisdkHooks.find((item) => item.options?.providerID === "fuelix-anthropic")!
+    const withKey: Record<string, any> = { apiKey: "sk-test-existing" }
+    hook.callback({ options: withKey })
+    expect(withKey.apiKey).toBe("sk-test-existing")
+    const withToken: Record<string, any> = { authToken: "sk-test-token" }
+    hook.callback({ options: withToken })
+    expect(withToken.apiKey).toBeUndefined()
+  })
+
+  test("the AI SDK fetch wrapper sets Bearer auth for stateless calls", async () => {
+    const { fake } = await setup({}, { env: { FUELIX_API_KEY: KEY }, fetch: async () => modelsResponse("gpt-6-luna") })
+    const seen: Headers[] = []
+    const options: Record<string, any> = {
+      fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
+        seen.push(new Headers(init?.headers))
+        return new Response("{}")
+      },
+    }
+    const hook = fake.aisdkHooks.find((item) => item.options?.providerID === "fuelix-anthropic")!
+    hook.callback({ options })
+    await options.fetch("https://api.fuelix.test/v1/messages", { method: "POST", headers: { "x-api-key": "sk-test-other" } })
+    expect(seen[0]!.get("authorization")).toBe("Bearer sk-test-other")
+    expect(seen[0]!.has("x-api-key")).toBe(false)
+    await options.fetch("https://api.fuelix.test/v1/messages", { method: "POST" })
+    expect(seen[1]!.get("authorization")).toBe(`Bearer ${KEY}`)
+  })
+
+  test("the AI SDK fetch wrapper adds a cache breakpoint to /messages bodies only", async () => {
+    const { fake } = await setup({}, { env: { FUELIX_API_KEY: KEY }, fetch: async () => modelsResponse("gpt-6-luna") })
+    const seen: { url: string; headers: Headers; body: string }[] = []
+    const options: Record<string, any> = {
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        seen.push({ url: String(input), headers: new Headers(init?.headers), body: String(init?.body) })
+        return new Response("{}")
+      },
+    }
+    fake.aisdkHooks.find((item) => item.options?.providerID === "fuelix-anthropic")!.callback({ options })
+    const body = JSON.stringify({ model: "claude-opus", system: "Sys", messages: [{ role: "user", content: "hi" }] })
+    await options.fetch("https://api.fuelix.test/v1/messages", { method: "POST", headers: { "x-api-key": options.apiKey }, body })
+    await options.fetch("https://api.fuelix.test/v1/messages/count_tokens", { method: "POST", body })
+    expect(JSON.parse(seen[0]!.body).system[0].cache_control).toEqual({ type: "ephemeral" })
+    expect(seen[0]!.headers.get("authorization")).toBe(`Bearer ${KEY}`)
+    expect(seen[1]!.body).toBe(body)
+  })
+
   test("discovery with changed IDs reloads providers and writes the cache", async () => {
     let fetched = 0
     const { fake, log } = await setup(

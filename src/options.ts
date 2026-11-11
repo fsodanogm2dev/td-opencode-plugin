@@ -8,6 +8,8 @@
  * Invalid values fall back to defaults and add a warning. Parsing never throws.
  */
 
+import { parseBatchRateCard, type BatchRateCard } from "./fuelix/batch/pricing.ts"
+
 export interface FuelixOptions {
   /** Gateway origin without a path. Providers append `/v1` where their package needs it. */
   readonly baseURL: string
@@ -21,6 +23,11 @@ export interface FuelixOptions {
   readonly discoveryTimeoutMs: number
   /** Remove `FUELIX_API_KEY` from the environment of agent shell commands. */
   readonly scrubShellEnv: boolean
+  /**
+   * Optional user-supplied batch rates with a provenance `source`. No built-in rates exist. Absent or invalid
+   * values leave batch costs unavailable.
+   */
+  readonly batchRates?: BatchRateCard
 }
 
 export interface ParsedOptions {
@@ -90,6 +97,12 @@ export function parseOptions(raw: unknown, env: Env = process.env): ParsedOption
 
   const baseURL = readString(fuelixRaw, "fuelix", "baseURL", DEFAULT_FUELIX_BASE_URL).replace(/\/+$/, "").replace(/\/v1$/, "")
 
+  let batchRates: BatchRateCard | undefined
+  if (fuelixRaw.batchRates !== undefined) {
+    batchRates = parseBatchRateCard(fuelixRaw.batchRates)
+    if (!batchRates) warnings.push("options.fuelix.batchRates is invalid; ignoring it")
+  }
+
   const fuelix: FuelixOptions = {
     baseURL,
     keychainService,
@@ -97,6 +110,7 @@ export function parseOptions(raw: unknown, env: Env = process.env): ParsedOption
     includeNonChatModels: readBoolean(fuelixRaw, "fuelix", "includeNonChatModels", false),
     discoveryTimeoutMs: readNumber(fuelixRaw, "fuelix", "discoveryTimeoutMs", 5000, 500, 60000),
     scrubShellEnv: readBoolean(fuelixRaw, "fuelix", "scrubShellEnv", true),
+    ...(batchRates ? { batchRates } : {}),
   }
 
   const debug = readBoolean(root, "options", "debug", false) || env.TD_OPENCODE_PLUGIN_DEBUG === "1"

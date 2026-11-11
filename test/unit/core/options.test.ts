@@ -68,4 +68,41 @@ describe("parseOptions", () => {
     expect(parsed.fuelix.baseURL).toBe(DEFAULT_FUELIX_BASE_URL)
     expect(parsed.debug).toBe(false)
   })
+
+  describe("fuelix.batchRates", () => {
+    const rates = {
+      source: "customer-provided sheet",
+      currency: "USD",
+      models: { "fuelix-anthropic/model-a": { input: 1, output: 2 } },
+    }
+
+    test("is absent by default and defaults stay the same", () => {
+      const parsed = parseOptions({ fuelix: {} }, {})
+      expect("batchRates" in parsed.fuelix).toBe(false)
+      expect(parsed.warnings).toEqual([])
+    })
+
+    test("accepts a valid card and normalizes it", () => {
+      const parsed = parseOptions({ fuelix: { batchRates: rates } }, {})
+      expect(parsed.warnings).toEqual([])
+      expect(parsed.fuelix.batchRates).toEqual({
+        source: "customer-provided sheet",
+        currency: "USD",
+        models: { "model-a": { input: 1, output: 2 } },
+      })
+    })
+
+    test("ignores an invalid card with a short warning that hides its content", () => {
+      const parsed = parseOptions(
+        { fuelix: { baseURL: "https://x.test", batchRates: { ...rates, source: "SECRET-SOURCE", currency: "EUR" } } },
+        {},
+      )
+      expect("batchRates" in parsed.fuelix).toBe(false)
+      expect(parsed.fuelix.baseURL).toBe("https://x.test")
+      expect(parsed.warnings).toEqual(["options.fuelix.batchRates is invalid; ignoring it"])
+      for (const bad of ["x", 5, null, [], { source: "s" }]) {
+        expect(parseOptions({ fuelix: { batchRates: bad } }, {}).warnings).toEqual(["options.fuelix.batchRates is invalid; ignoring it"])
+      }
+    })
+  })
 })

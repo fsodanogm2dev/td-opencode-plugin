@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>td-opencode-plugin v0.2.0</title>
+<title>td-opencode-plugin v0.3.0</title>
 <style>
 :root {
   --bg: #f6f5f9;
@@ -413,13 +413,13 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
     <h1>td-opencode-plugin</h1>
     <p class="lead">Connects OpenCode to FueliX, the TELUS gateway to AI models.</p>
     <ul class="meta">
-      <li>Release <strong>v0.2.0 (beta)</strong>, 2026-10-28</li>
-      <li>Commit <strong><code>b4de498</code></strong></li>
+      <li>Release <strong>v0.3.0 (beta)</strong>, 2026-11-11</li>
+      <li>Tag <strong><code>v0.3.0</code></strong></li>
       <li>Needs <strong>OpenCode 2.0.32 or later</strong></li>
-      <li>Repository: <strong><a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a></strong> (private)</li>
+      <li>Repository: <strong><a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a></strong> (public)</li>
     </ul>
     <ul class="cards">
-      <li class="card beta lblfirst"><span class="lbl">Release</span><span class="num">v0.2.0 <small>(beta)</small></span></li>
+      <li class="card beta lblfirst"><span class="lbl">Release</span><span class="num">v0.3.0 <small>(beta)</small></span></li>
       <li class="card pass lblfirst"><span class="lbl">CI</span><span class="num">passing</span></li>
       <li class="card"><span class="num">3</span><span class="lbl">providers</span></li>
       <li class="card"><span class="num">109</span><span class="lbl">catalog entries</span></li>
@@ -436,7 +436,7 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
       <li><a href="#models">Model list</a></li>
       <li><a href="#key">Your key</a></li>
       <li><a href="#titles">Session titles</a></li>
-      <li><a href="#changes">Changes in v0.2.0</a></li>
+      <li><a href="#changes">Changes in v0.3.0</a></li>
       <li><a href="#install">Install</a></li>
       <li><a href="#updates">Updates</a></li>
       <li><a href="#verify">Check it yourself</a></li>
@@ -602,35 +602,35 @@ fuelix-openai: 35</pre></div>
         <div>
           <h3>Where it is in the code</h3>
           <ul class="refs-list">
-            <li><span class="what">Asks FueliX for the model list:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/discovery.ts#L25-L43" target="_blank" rel="noopener"><code>src/fuelix/discovery.ts:L25-L43</code></a></li>
-            <li><span class="what">Default refresh of 60 minutes:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/options.ts#L93-L99" target="_blank" rel="noopener"><code>src/options.ts:L93-L99</code></a></li>
-            <li><span class="what">Runs the refresh:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/index.ts#L278-L300" target="_blank" rel="noopener"><code>src/fuelix/index.ts:L278-L300</code></a></li>
-            <li><span class="what">Keeps the previous list when the new one is much shorter:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/index.ts#L102-L119" target="_blank" rel="noopener"><code>src/fuelix/index.ts:L102-L119</code></a> and <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/index.ts#L302-L320" target="_blank" rel="noopener"><code>src/fuelix/index.ts:L302-L320</code></a></li>
-            <li><span class="what">Reads the catalog file:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/catalog.ts#L92-L123" target="_blank" rel="noopener"><code>src/fuelix/catalog.ts:L92-L123</code></a></li>
-            <li><span class="what">Copies data from OpenCode's model list, or uses defaults:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/models.ts#L135-L199" target="_blank" rel="noopener"><code>src/fuelix/models.ts:L135-L199</code></a></li>
-            <li><span class="what">Defines the three providers:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/models.ts#L41-L65" target="_blank" rel="noopener"><code>src/fuelix/models.ts:L41-L65</code></a></li>
-            <li><span class="what">The catalog file:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/data/fuelix-models.json" target="_blank" rel="noopener"><code>data/fuelix-models.json</code></a></li>
+            <li><span class="what">Asks FueliX for the model list:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/discovery.ts#L25-L43" target="_blank" rel="noopener"><code>src/fuelix/discovery.ts:L25-L43</code></a></li>
+            <li><span class="what">Default refresh of 60 minutes:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/options.ts" target="_blank" rel="noopener"><code>src/options.ts</code></a></li>
+            <li><span class="what">Runs the refresh:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/index.ts" target="_blank" rel="noopener"><code>src/fuelix/index.ts</code></a></li>
+            <li><span class="what">Keeps the previous list when the new one is much shorter:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/index.ts" target="_blank" rel="noopener"><code>src/fuelix/index.ts</code></a> and <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/index.ts" target="_blank" rel="noopener"><code>src/fuelix/index.ts</code></a></li>
+            <li><span class="what">Reads the catalog file:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/catalog.ts#L92-L123" target="_blank" rel="noopener"><code>src/fuelix/catalog.ts:L92-L123</code></a></li>
+            <li><span class="what">Copies data from OpenCode's model list, or uses defaults:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/models.ts" target="_blank" rel="noopener"><code>src/fuelix/models.ts</code></a></li>
+            <li><span class="what">Defines the three providers:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/models.ts" target="_blank" rel="noopener"><code>src/fuelix/models.ts</code></a></li>
+            <li><span class="what">The catalog file:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/data/fuelix-models.json" target="_blank" rel="noopener"><code>data/fuelix-models.json</code></a></li>
           </ul>
         </div>
         <div>
           <h3>Tests that prove it</h3>
           <ul class="refs-list">
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/setup.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/setup.test.ts</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/setup.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/setup.test.ts</code></a>:
               <ul>
                 <li>"the provider transform adds the 3 providers with listed chat models"</li>
                 <li>"periodic refresh runs discovery again and cleanup clears the interval"</li>
                 <li>"enriches incomplete models from an upstream built-in provider"</li>
               </ul></li>
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/setup-hardening.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/setup-hardening.test.ts</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/setup-hardening.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/setup-hardening.test.ts</code></a>:
               <ul>
                 <li>"rejects a result that drops more than 30% of the current IDs"</li>
                 <li>"rejects a result that removes every model of one provider"</li>
               </ul></li>
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/models.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/models.test.ts</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/models.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/models.test.ts</code></a>:
               <ul>
                 <li>"unknown model gets defaults and reports incomplete fields"</li>
               </ul></li>
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/discovery.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/discovery.test.ts</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/discovery.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/discovery.test.ts</code></a>:
               <ul>
                 <li>"returns sorted unique IDs and sends a Bearer header"</li>
               </ul></li>
@@ -703,36 +703,36 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
         <div>
           <h3>Where it is in the code</h3>
           <ul class="refs-list">
-            <li><span class="what">The order of the three places:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/credentials.ts#L132-L145" target="_blank" rel="noopener"><code>src/fuelix/credentials.ts:L132-L145</code></a></li>
-            <li><span class="what">Reads the Keychain:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/credentials.ts#L85-L118" target="_blank" rel="noopener"><code>src/fuelix/credentials.ts:L85-L118</code></a></li>
-            <li><span class="what">Reads the OpenCode credential store:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/credentials.ts#L120-L130" target="_blank" rel="noopener"><code>src/fuelix/credentials.ts:L120-L130</code></a></li>
-            <li><span class="what">Adds the key to each request:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/index.ts#L179-L198" target="_blank" rel="noopener"><code>src/fuelix/index.ts:L179-L198</code></a> and <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/auth.ts#L1-L15" target="_blank" rel="noopener"><code>src/fuelix/auth.ts:L1-L15</code></a></li>
-            <li><span class="what">Builds the providers without a key:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/models.ts#L47-L65" target="_blank" rel="noopener"><code>src/fuelix/models.ts:L47-L65</code></a></li>
-            <li><span class="what">Removes the key from agent shells:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/index.ts#L200-L211" target="_blank" rel="noopener"><code>src/fuelix/index.ts:L200-L211</code></a></li>
-            <li><span class="what">Checks the FueliX address:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/base-url.ts#L4-L35" target="_blank" rel="noopener"><code>src/fuelix/base-url.ts:L4-L35</code></a></li>
-            <li><span class="what">Warns about old provider blocks:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/stale-config.ts#L54-L82" target="_blank" rel="noopener"><code>src/fuelix/stale-config.ts:L54-L82</code></a></li>
+            <li><span class="what">The order of the three places:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/credentials.ts#L132-L145" target="_blank" rel="noopener"><code>src/fuelix/credentials.ts:L132-L145</code></a></li>
+            <li><span class="what">Reads the Keychain:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/credentials.ts#L85-L118" target="_blank" rel="noopener"><code>src/fuelix/credentials.ts:L85-L118</code></a></li>
+            <li><span class="what">Reads the OpenCode credential store:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/credentials.ts#L120-L130" target="_blank" rel="noopener"><code>src/fuelix/credentials.ts:L120-L130</code></a></li>
+            <li><span class="what">Adds the key to each request:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/index.ts" target="_blank" rel="noopener"><code>src/fuelix/index.ts</code></a> and <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/auth.ts" target="_blank" rel="noopener"><code>src/fuelix/auth.ts</code></a></li>
+            <li><span class="what">Builds the providers without a key:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/models.ts" target="_blank" rel="noopener"><code>src/fuelix/models.ts</code></a></li>
+            <li><span class="what">Removes the key from agent shells:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/index.ts" target="_blank" rel="noopener"><code>src/fuelix/index.ts</code></a></li>
+            <li><span class="what">Checks the FueliX address:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/base-url.ts#L4-L35" target="_blank" rel="noopener"><code>src/fuelix/base-url.ts:L4-L35</code></a></li>
+            <li><span class="what">Warns about old provider blocks:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/stale-config.ts#L54-L82" target="_blank" rel="noopener"><code>src/fuelix/stale-config.ts:L54-L82</code></a></li>
           </ul>
         </div>
         <div>
           <h3>Tests that prove it</h3>
           <ul class="refs-list">
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/credentials.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/credentials.test.ts</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/credentials.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/credentials.test.ts</code></a>:
               <ul>
                 <li>"keychain wins and runs the expected command"</li>
                 <li>"falls to env when the store has no key"</li>
               </ul></li>
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/setup.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/setup.test.ts</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/setup.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/setup.test.ts</code></a>:
               <ul>
                 <li>"the hook sets Bearer auth from the keychain key"</li>
               </ul></li>
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/auth.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/auth.test.ts</code></a></li>
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/setup-hardening.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/setup-hardening.test.ts</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/auth.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/auth.test.ts</code></a></li>
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/setup-hardening.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/setup-hardening.test.ts</code></a>:
               <ul>
                 <li>"create.before removes FUELIX_API_KEY and keeps other variables"</li>
                 <li>"a custom URL needs the opt-in"</li>
                 <li>"warns once per process after setup and never prints the value"</li>
               </ul></li>
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/integration/fuelix-plugin.test.ts#L125-L153" target="_blank" rel="noopener"><code>test/integration/fuelix-plugin.test.ts:L125-L153</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/integration/fuelix-plugin.test.ts#L125-L153" target="_blank" rel="noopener"><code>test/integration/fuelix-plugin.test.ts:L125-L153</code></a>:
               <ul>
                 <li>"the key does not appear in provider or model data or in logs"</li>
                 <li>"discovery used the bearer key"</li>
@@ -809,19 +809,19 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
         <div>
           <h3>Where it is in the code</h3>
           <ul class="refs-list">
-            <li><span class="what">The three title models:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/rules.ts#L41-L53" target="_blank" rel="noopener"><code>src/fuelix/rules.ts:L41-L53</code></a></li>
-            <li><span class="what">Sets the family label:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/models.ts#L109-L110" target="_blank" rel="noopener"><code>src/fuelix/models.ts:L109-L110</code></a> and <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/src/fuelix/models.ts#L127-L129" target="_blank" rel="noopener"><code>src/fuelix/models.ts:L127-L129</code></a></li>
+            <li><span class="what">The three title models:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/rules.ts#L41-L53" target="_blank" rel="noopener"><code>src/fuelix/rules.ts:L41-L53</code></a></li>
+            <li><span class="what">Sets the family label:</span> <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/models.ts" target="_blank" rel="noopener"><code>src/fuelix/models.ts</code></a> and <a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/src/fuelix/models.ts" target="_blank" rel="noopener"><code>src/fuelix/models.ts</code></a></li>
           </ul>
         </div>
         <div>
           <h3>Tests that prove it</h3>
           <ul class="refs-list">
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/unit/fuelix/models.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/models.test.ts</code></a>:
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/unit/fuelix/models.test.ts" target="_blank" rel="noopener"><code>test/unit/fuelix/models.test.ts</code></a>:
               <ul>
                 <li>"the three title models get the family that OpenCode uses to pick a title model"</li>
                 <li>"other models get no family, including other luna, haiku, and flash-lite models"</li>
               </ul></li>
-            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.2.0/test/integration/title-model.test.ts" target="_blank" rel="noopener"><code>test/integration/title-model.test.ts</code></a></li>
+            <li><a href="https://github.com/fsodanogm2dev/td-opencode-plugin/blob/v0.3.0/test/integration/title-model.test.ts" target="_blank" rel="noopener"><code>test/integration/title-model.test.ts</code></a></li>
           </ul>
         </div>
       </div>
@@ -831,37 +831,29 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
 
 <!-- ============ CHANGES ============ -->
 <section id="changes">
-  <h2>Changes in v0.2.0</h2>
-  <p class="sub">What changed since v0.1.0.</p>
+  <h2>Changes in v0.3.0</h2>
+  <p class="sub">What changed since v0.2.0.</p>
   <ul class="diff">
     <li class="added">
       <span class="tag">Added</span>
       <div>
-        <p><code>fuelix-openai/gpt-6.1-terra</code> in the catalog, from the FueliX inventory.</p>
-        <dl class="spec">
-          <div><dt>Input</dt><dd>$1 / 1M</dd></div>
-          <div><dt>Output</dt><dd>$5 / 1M</dd></div>
-          <div><dt>Cached input</dt><dd>$0.05 / 1M</dd></div>
-          <div><dt>Cache write</dt><dd>$1.25 / 1M</dd></div>
-          <div><dt>Above 200K tokens</dt><dd>$2 in / $7.50 out</dd></div>
-          <div><dt>Context</dt><dd>1,050,000</dd></div>
-          <div><dt>Output limit</dt><dd>128,000</dd></div>
-          <div><dt>Capabilities</dt><dd>Text and image input, reasoning, tool calls</dd></div>
-        </dl>
-        <p class="note">The inventory marks this price as a placeholder (ticket ATL-1799).</p>
-      </div>
-    </li>
-    <li class="removed">
-      <span class="tag">Removed</span>
-      <div>
-        <p>The td-telemetry integration, because td-telemetry is deprecated.</p>
-        <p>The plugin ignores a leftover <code>telemetry</code> section in its options.</p>
+        <p>Batch workflow for deferred, independent Messages requests. Six tools: <code>fuelix_batch_submit</code>, <code>fuelix_batch_list</code>, <code>fuelix_batch_inspect</code>, <code>fuelix_batch_status</code>, <code>fuelix_batch_cancel</code>, and <code>fuelix_batch_collect</code>.</p>
+        <p><code>/fuelix-batch &lt;prompt&gt;</code> submits one prompt as a deferred batch.</p>
+        <p class="note">Live batch submission was rejected with HTTP 403. Account access and live result collection are not verified. Details: <a href="batches.md">docs/batches.md</a>.</p>
       </div>
     </li>
     <li class="changed">
       <span class="tag">Changed</span>
       <div>
-        <p>The README pins <code>#v0.2.0</code> and explains how updates work with and without a pinned tag.</p>
+        <p><code>fuelix-anthropic</code> uses the AI SDK bridge package <code>aisdk:@ai-sdk/anthropic</code>. Stateless generation, such as <code>POST /api/experimental/generate/text</code>, sends <code>Authorization: Bearer</code>.</p>
+        <p>The plugin copies missing model metadata from the built-in provider before it registers the models. This keeps the AI SDK package on every <code>fuelix-anthropic</code> model.</p>
+      </div>
+    </li>
+    <li class="changed">
+      <span class="tag">Fixed</span>
+      <div>
+        <p>A <code>fuelix-anthropic</code> request to <code>POST .../messages</code> receives one ephemeral <code>cache_control</code> marker when the body has none. FueliX has rejected a long prompt with HTTP 400 because of a missing marker.</p>
+        <p class="note">One live call with a synthetic long prompt returned HTTP 200. The check did not cover a resumed session, the AI SDK bridge, streaming, or a cache read. The cause of the missing marker is not established. Report: <a href="reports/2026-11-11-cache-breakpoint-verification.md">cache breakpoint verification</a>.</p>
       </div>
     </li>
   </ul>
@@ -877,7 +869,8 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
   2026-10-20 : Independent code review : 2 high, 4 medium, 10 low findings, no blocker : All fixed or documented
   2026-10-21 : v0.1.0 (beta) : Low-cost session titles
   2026-10-27 : GPT-6.1 Terra added to the catalog
-  2026-10-28 : v0.2.0 (beta) : Terra added : td-telemetry integration removed</pre></div>
+  2026-10-28 : v0.2.0 (beta) : Terra added : td-telemetry integration removed
+  2026-11-11 : v0.3.0 (beta) : Batch tools : Bearer auth for Anthropic calls : Cache marker safeguard</pre></div>
   </div>
 </section>
 
@@ -889,11 +882,11 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
       <li>
         <h3>Add the plugin</h3>
         <p>Add this line to <code>~/.config/opencode/opencode.json</code>, then remove the old FueliX provider blocks from that file:</p>
-        <div class="code"><div class="box"><pre>{ "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.2.0", "options": {} }] }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
+        <div class="code"><div class="box"><pre>{ "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.3.0", "options": {} }] }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
       </li>
       <li>
         <h3>Let git read the repository</h3>
-        <p>OpenCode installs the plugin with git, so git must be able to read the repository. Use an SSH key or run <code>gh auth setup-git</code>.</p>
+        <p>OpenCode installs the plugin with git, so git must be installed and must be able to reach GitHub. The repository is public, so an HTTPS install needs no GitHub authentication. An SSH key or <code>gh auth setup-git</code> is optional.</p>
       </li>
       <li>
         <h3>Store your key once</h3>
@@ -904,7 +897,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
         <h3>Check the install</h3>
         <p>This command shows the plugin line:</p>
         <div class="code nogap"><div class="box"><pre>opencode plugin list</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
-        <div class="result"><div class="rhead"><span class="tag">Expected result</span></div><pre>td-opencode-plugin  b4de498  github:fsodanogm2dev/td-opencode-plugin#v0.2.0</pre></div>
+        <div class="result"><div class="rhead"><span class="tag">Expected result</span></div><pre>td-opencode-plugin  &lt;commit&gt;  github:fsodanogm2dev/td-opencode-plugin#v0.3.0</pre></div>
       </li>
     </ol>
     <ul class="plain small">
@@ -921,7 +914,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
   <p class="sub">The result depends on whether the package is pinned to a tag.</p>
   <div class="panel">
     <div class="diagram" data-diagram="updates"><pre>flowchart TB
-  P0["Pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin#v0.2.0"] --> P1["You change the tag&lt;br&gt;in the configuration"]
+  P0["Pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin#v0.3.0"] --> P1["You change the tag&lt;br&gt;in the configuration"]
   P1 --> P2["OpenCode installs the new tag&lt;br&gt;when the configuration changes"]
   U0["Not pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin"] --> U1["OpenCode installs the newest commit of main once and keeps that copy"]
   U1 --> U2["Once a day, OpenCode checks&lt;br&gt;for a newer commit"]
@@ -957,7 +950,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
           <tr>
             <td>Plugin installed and current</td>
             <td data-label="Command"><div class="code"><div class="box"><pre>opencode plugin check</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div></td>
-            <td class="exp" data-label="Expected result">td-opencode-plugin b4de498 (current)</td>
+            <td class="exp" data-label="Expected result">td-opencode-plugin &lt;commit&gt; (current)</td>
           </tr>
           <tr>
             <td>FueliX models per provider</td>
@@ -1049,7 +1042,7 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
 
 <footer>
   <div class="wrap">
-    <p>td-opencode-plugin v0.2.0 (beta). Source: <a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a>. See <a href="../README.md">README.md</a> and <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
+    <p>td-opencode-plugin v0.3.0 (beta). Source: <a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a>. See <a href="../README.md">README.md</a> and <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
   </div>
 </footer>
 
