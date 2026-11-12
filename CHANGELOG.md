@@ -20,6 +20,10 @@ Review the local-service permission when updating the extension. Scope and enfor
 
 - The extension is named **TD-Plugin extension**. The combined installer ships the guard service and Work Status section.
 
+## 0.5.1 (beta), 2026-11-12
+
+Patch release. It defaults `jev.baseURL` to the TELUS TypeSafe gateway (`https://typesafe-gateway.k8smos.telus.gizmos.run`), supports `TYPESAFE_BASE_URL` from the server environment, and redacts `gzak_...` gateway keys.
+
 ## 0.5.0 (beta), 2026-11-12
 
 This release adds an optional TypeSafe Jev integration for OpenCode V2. Jev is disabled by default. It sends selected

@@ -48,7 +48,7 @@ const PRIVATE_KEY = new RegExp(
   "g",
 )
 const JWT = /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*/g
-const VENDOR_KEY = /\b(?:sk|ak)-[A-Za-z0-9_-]{6,}/g
+const VENDOR_KEY = /\b(?:(?:sk|ak)-[A-Za-z0-9_-]{6,}|gzak_[A-Za-z0-9_-]{6,})/g
 const AWS_KEY = /\b(?:AKIA|ASIA|AGPA|AIDA|AROA|ANPA|ANVA|AIPA)[A-Z0-9]{16}\b/g
 const GITHUB_TOKEN = /(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})/g
 const SLACK_TOKEN = /(?:xox[abprs]|xapp)-[A-Za-z0-9-]{10,}/g

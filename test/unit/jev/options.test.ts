@@ -4,6 +4,8 @@ import {
   ALLOW_CUSTOM_JEV_URL_ENV,
   DEFAULT_JEV_BASE_URL,
   DEFAULT_JEV_OPTIONS,
+  PUBLIC_JEV_BASE_URL,
+  TYPESAFE_BASE_URL_ENV,
   parseJevOptions,
   resolveJevBaseURL,
 } from "../../../src/jev/options.ts"
@@ -20,7 +22,7 @@ describe("parseJevOptions", () => {
     expect(options).toEqual(DEFAULT_JEV_OPTIONS)
     expect(options.enabled).toBe(false)
     expect(options.model).toBe("jev-1.14.0")
-    expect(options.baseURL).toBe("https://api.typesafe.ai")
+    expect(options.baseURL).toBe("https://typesafe-gateway.k8smos.telus.gizmos.run")
     expect(options.keychainService).toBe("typesafe-api-key")
     expect(options.points.safetyPreCheck).toEqual({ mode: "enforce", timeoutMs: 1500, riskThreshold: 0.2, failClosed: true })
     expect(options.points.testCompression).toEqual({ mode: "enforce", timeoutMs: 2500, maxRawLength: 1200 })
@@ -120,10 +122,39 @@ describe("resolveJevBaseURL", () => {
     return { url: resolveJevBaseURL(url, env, warnings), warnings }
   }
 
-  test("default and normalized default pass without warning", () => {
-    for (const value of ["https://api.typesafe.ai", "https://api.typesafe.ai/", "https://api.typesafe.ai/v1", "https://api.typesafe.ai/v1/"]) {
+  test("default TELUS gateway and public TypeSafe origins pass without warning", () => {
+    for (const value of [
+      "https://typesafe-gateway.k8smos.telus.gizmos.run",
+      "https://typesafe-gateway.k8smos.telus.gizmos.run/",
+      "https://typesafe-gateway.k8smos.telus.gizmos.run/v1",
+      "https://typesafe-gateway.k8smos.telus.gizmos.run/v1/",
+    ]) {
       expect(resolve(value)).toEqual({ url: DEFAULT_JEV_BASE_URL, warnings: [] })
     }
+    for (const value of ["https://api.typesafe.ai", "https://api.typesafe.ai/", "https://api.typesafe.ai/v1", "https://api.typesafe.ai/v1/"]) {
+      expect(resolve(value)).toEqual({ url: PUBLIC_JEV_BASE_URL, warnings: [] })
+    }
+  })
+
+  test("TYPESAFE_BASE_URL in the environment sets the default and is accepted without an extra flag", () => {
+    const env = { [TYPESAFE_BASE_URL_ENV]: "https://typesafe-gateway.k8smos.telus.gizmos.run/v1/" }
+    expect(parse(undefined, env)).toMatchObject({
+      options: { baseURL: "https://typesafe-gateway.k8smos.telus.gizmos.run" },
+      warnings: [],
+    })
+    const customEnv = { [TYPESAFE_BASE_URL_ENV]: "https://jev-gw.internal.example/v1" }
+    expect(parse({}, customEnv)).toMatchObject({
+      options: { baseURL: "https://jev-gw.internal.example" },
+      warnings: [],
+    })
+    expect(resolve("https://jev-gw.internal.example", customEnv)).toEqual({
+      url: "https://jev-gw.internal.example",
+      warnings: [],
+    })
+    const badEnv = { [TYPESAFE_BASE_URL_ENV]: "http://insecure.example.com" }
+    const parsedBad = parse({}, badEnv)
+    expect(parsedBad.options.baseURL).toBe(DEFAULT_JEV_BASE_URL)
+    expect(parsedBad.warnings.length).toBe(1)
   })
 
   test("custom URL needs the environment flag", () => {

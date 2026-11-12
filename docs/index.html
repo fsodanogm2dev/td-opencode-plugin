@@ -852,7 +852,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
 
   <div class="panel">
     <h3>What it does</h3>
-    <p>When you enable Jev, the plugin sends selected information directly to TypeSafe over HTTPS, at <code>https://api.typesafe.ai/v1/systemone</code>. These requests do not go through FueliX. There is no broker and no separate <code>jev.json</code> file.</p>
+    <p>When you enable Jev, the plugin sends selected information to the TELUS TypeSafe gateway over HTTPS, at <code>https://typesafe-gateway.k8smos.telus.gizmos.run/v1/systemone</code> (configurable with <code>TYPESAFE_BASE_URL</code> or <code>options.jev.baseURL</code>). There is no broker and no separate <code>jev.json</code> file.</p>
     <p class="note">TypeSafe is outside FueliX. Check your organization's data policy before you enable Jev on company projects.</p>
   </div>
 
