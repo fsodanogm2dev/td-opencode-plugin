@@ -19,13 +19,13 @@ in the options below. If you use `/connect`, enable Jev first, then connect. Do 
 Add `jev` to the options of your existing plugin entry:
 
 The combined OpenChamber package uses default options, so Jev remains disabled there. To enable Jev with custom
-options, use the standalone plugin and the status-only extension folder described in
+options, use the standalone plugin and the extension-only folder described in
 [the installation guide](../README.md#standalone-opencode-plugin). Do not load the bundled and standalone plugin
 at the same time. The status panel reports FueliX; Jev observations remain in its separate telemetry file.
 
 ```jsonc
 {
-  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.2",
+  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0",
   "options": {
     "jev": { "enabled": true, "model": "jev-1.14.0" }
   }
@@ -43,6 +43,9 @@ expires. Keychain misses are retried after at least five minutes.
 The permission hook only changes `allow` to `ask`. It never grants a permission or removes a configured prompt or
 denial. Destructive-command patterns request approval without an API call. Conservative read-only patterns skip
 Jev. Other commands are evaluated with a typed probability of destructive behavior.
+
+Execution guards run before Jev. A command denied by an active guard is rejected without a Jev shell-safety API call.
+An unrelated allowed command still receives the normal Jev safety check. See [`guards.md`](guards.md).
 
 When the probability exceeds `riskThreshold`, OpenCode asks for approval. With `failClosed: true`, API timeouts,
 HTTP errors, and invalid decisions also request approval. Setting `failClosed: false` keeps the existing permission

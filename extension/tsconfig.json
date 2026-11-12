@@ -15,5 +15,5 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["panel/**/*.ts", "test/**/*.ts"]
+  "include": ["panel/**/*.ts", "service/**/*.ts", "test/**/*.ts"]
 }

@@ -1,12 +1,19 @@
 /**
  * A fake OpenChamber host that speaks the SDK wire protocol.
- * It answers only `file-read` from an in-memory map of fake files.
+ * It answers `file-read` from an in-memory map of fake files, and `service-request`
+ * and `generate` through handlers that a test sets. Nothing reaches a real service or model.
  * Used by the panel tests (through `connectHost`'s `target` test seam)
  * and by the browser preview (through a real iframe).
  */
 import type { HostTheme } from "@openchamber/sdk"
 
 export type FileAnswer = { content: string } | { code: string }
+
+export type ServiceAnswer = { status: number; body: string } | { code: string }
+export type ServiceCall = { method: string; path: string; query?: Record<string, string>; body?: string }
+export type GenerateCall = { prompt: string; system?: string; maxOutputTokens?: number }
+export type GenerateAnswer = { text: string } | { code: string }
+export type MockSession = { id: string; title: string; busy: boolean }
 
 export type MockHostOptions = {
   /** Send a message to the panel. */
@@ -81,6 +88,15 @@ export const createMockHost = (options: MockHostOptions) => {
   const held: Waiter[] = []
   let holding = false
   let theme: HostTheme = DARK_THEME
+  let session: MockSession | null = null
+  let surface = "panel"
+  const serviceCalls: ServiceCall[] = []
+  const generateCalls: GenerateCall[] = []
+  const heights: number[] = []
+  /** Type of every message the frame sent, in order. */
+  const sent: string[] = []
+  let onService: (call: ServiceCall) => ServiceAnswer | Promise<ServiceAnswer> = () => ({ code: "NO_SERVICE" })
+  let onGenerate: (call: GenerateCall) => GenerateAnswer | Promise<GenerateAnswer> = () => ({ code: "NO_MODEL" })
 
   const send = (message: Record<string, unknown>) => options.post({ channel: CHANNEL, v: 1, ...message })
 
@@ -88,6 +104,7 @@ export const createMockHost = (options: MockHostOptions) => {
     if ("content" in result) send({ type: "result", id, ok: true, payload: { content: result.content } })
     else send({ type: "result", id, ok: false, code: result.code, error: `Mock host: ${result.code}` })
   }
+  const fail = (id: string, code: string) => send({ type: "result", id, ok: false, code, error: `Mock host: ${code}` })
 
   return {
     files,
@@ -96,6 +113,31 @@ export const createMockHost = (options: MockHostOptions) => {
     setTheme: (next: HostTheme) => {
       theme = next
     },
+    /** Every `serviceRequest` the panel sent, in order. */
+    serviceCalls,
+    /** Every `generate` the panel sent, in order. */
+    generateCalls,
+    /** Every `setHeight` the frame asked for. */
+    heights,
+    sent,
+    setService: (handler: (call: ServiceCall) => ServiceAnswer | Promise<ServiceAnswer>) => {
+      onService = handler
+    },
+    setGenerate: (handler: (call: GenerateCall) => GenerateAnswer | Promise<GenerateAnswer>) => {
+      onGenerate = handler
+    },
+    /** The session the next `ready` reports. */
+    setSession: (next: MockSession | null) => {
+      session = next
+    },
+    setSurface: (next: string) => {
+      surface = next
+    },
+    session: (next: MockSession | null) => {
+      session = next
+      send({ type: "session", payload: { session: next } })
+    },
+    lateGenerate: (payload: unknown) => send({ type: "generate-late", payload }),
     /** While on, reads wait until `release` answers them. */
     hold: (on: boolean) => {
       holding = on
@@ -108,8 +150,8 @@ export const createMockHost = (options: MockHostOptions) => {
           theme,
           locale: "en-US",
           directory,
-          session: null,
-          surface: "panel",
+          session,
+          surface,
           connection: { connected: false, account: "" },
           settings: {},
           item: null,
@@ -119,8 +161,35 @@ export const createMockHost = (options: MockHostOptions) => {
     /** Handle one message from the panel. */
     receive: (data: unknown) => {
       if (typeof data !== "object" || data === null) return
-      const message = data as { channel?: string; type?: string; id?: string; payload?: { path?: string } }
-      if (message.channel !== CHANNEL || message.type !== "file-read" || !message.id) return
+      const message = data as { channel?: string; type?: string; id?: string; payload?: Record<string, unknown> & { path?: string } }
+      if (message.channel !== CHANNEL) return
+      if (message.type) sent.push(message.type)
+      if (!message.id) return
+      const callId = message.id
+      if (message.type === "service-request") {
+        const call = message.payload as unknown as ServiceCall
+        serviceCalls.push(call)
+        void Promise.resolve(onService(call)).then((result) => {
+          if ("code" in result) fail(callId, result.code)
+          else send({ type: "result", id: callId, ok: true, payload: result })
+        })
+        return
+      }
+      if (message.type === "generate") {
+        const call = message.payload as unknown as GenerateCall
+        generateCalls.push(call)
+        void Promise.resolve(onGenerate(call)).then((result) => {
+          if ("code" in result) fail(callId, result.code)
+          else send({ type: "result", id: callId, ok: true, payload: result })
+        })
+        return
+      }
+      if (message.type === "resize") {
+        heights.push(Number((message.payload as { height?: number } | undefined)?.height))
+        send({ type: "result", id: callId, ok: true })
+        return
+      }
+      if (message.type !== "file-read") return
       const path = message.payload?.path ?? ""
       reads.push(path)
       const id = message.id

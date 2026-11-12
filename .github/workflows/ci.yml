@@ -24,6 +24,8 @@ jobs:
         working-directory: extension
       - name: Build panel and bundled plugin
         run: bun run build
+      - name: Reject stale generated files
+        run: git diff --exit-code -- extension/plugin/index.js extension/panel/main.js extension/panel/status.js extension/service/main.js
       - name: Typecheck root
         run: bun run typecheck
       - name: Typecheck extension

@@ -2,7 +2,7 @@
 
 OpenCode V2 plugin for TELUS Digital engineers who use FueliX with OpenCode and OpenChamber.
 
-It does five things:
+The plugin provides:
 
 1. **FueliX catalog**: registers the `fuelix-openai`, `fuelix-anthropic`, and `fuelix` providers and loads their
    models from `https://api.fuelix.ai/v1/models`. Prices, limits, and modalities come from a curated catalog
@@ -19,6 +19,8 @@ It does five things:
 5. **Optional Jev decisions**: Jev 1.14.0 adds shell permission checks and failure-output compression. Skill and
    reasoning observations are shadow-only. Jev is disabled by default and sends selected redacted data to TypeSafe,
    outside FueliX. Read [`docs/jev.md`](docs/jev.md) before enabling it.
+6. **Execution guards**: reject matching permission-checked actions before execution. The TD-Plugin extension
+   manages saved definitions and temporary activations. See [`docs/guards.md`](docs/guards.md) for scope and limits.
 
 A visual overview with diagrams is in [`docs/index.html`](docs/index.html). Open it in a browser from a clone.
 Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decisions, and its evidence are in
@@ -38,29 +40,30 @@ The repository `fsodanogm2dev/td-opencode-plugin` is public. Installing it over 
 Paste this prompt into an OpenChamber chat to let the agent request your FueliX and TypeSafe Jev keys on private cards, store them in your macOS login Keychain, and configure the plugin:
 
 ```text
-Install and configure td-opencode-plugin (v0.5.2):
+Install and configure td-opencode-plugin (v0.6.0):
 1. If `fuelix-api-key` is not already in my macOS Keychain (`security find-generic-password -s fuelix-api-key -a "$USER"`), call `openchamber_secret` (`secret.request`, label "FueliX API key", placeholder "sk-...") to ask for it on a private card, store it in my login Keychain under service `fuelix-api-key` via `/usr/bin/security -i` without printing or logging the key, and delete the temporary secret file.
 2. Call `openchamber_secret` (`secret.request`, label "TypeSafe Jev API key (optional)", placeholder "gzak_...") to ask for my TELUS TypeSafe gateway key on a private card. If I save one, store it in my login Keychain under service `typesafe-api-key` via `/usr/bin/security -i` without printing or logging the key, and delete the temporary secret file.
-3. Update `~/.config/opencode/opencode.json` (keeping a backup first) to register `{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.2", "options": { "jev": { "enabled": true } } }` in `plugins` (set `jev.enabled` to `false` if I declined the TypeSafe key) and remove any old `provider.fuelix-openai`, `provider.fuelix`, `providers.fuelix-anthropic`, or legacy `jev-plugin.js` entries.
+3. Update `~/.config/opencode/opencode.json` (keeping a backup first) to register `{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": { "jev": { "enabled": true } } }` in `plugins` (set `jev.enabled` to `false` if I declined the TypeSafe key) and remove any old `provider.fuelix-openai`, `provider.fuelix`, `providers.fuelix-anthropic`, or legacy `jev-plugin.js` entries.
 ```
 
-### OpenChamber: plugin and status panel together
+### OpenChamber: plugin and extension together
 
 Use OpenChamber 2.7.0 or later. Open **Settings → Extensions** and add this repository URL:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.5.2
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.6.0
 ```
 
-Approve the status-report file access and **Add a plugin to OpenCode**. OpenChamber then loads the bundled plugin and
-adds **FueliX status** to the rail. The package ships built files; no local build is needed.
+Review and approve the status-report file access, Small Model and session access, local guard service, and
+**Add a plugin to OpenCode**. OpenChamber loads the bundled plugin and adds **TD-Plugin extension** to the rail.
+The package ships built files; no local build is needed.
 
 If the plugin is already listed in your OpenCode configuration, remove that manual entry before installing the combined
 package. Do not install both copies. If you already installed the status-only `extension/` folder, remove that extension
 first. These steps do not remove your FueliX credential.
 
 The combined install uses default plugin options. For custom plugin options, use the standalone installation below
-and the status-only folder described in [`docs/openchamber-status.md`](docs/openchamber-status.md). OpenCode installations
+and the extension-only folder described in [`docs/openchamber-status.md`](docs/openchamber-status.md). OpenCode installations
 do not silently install OpenChamber extensions; OpenChamber asks for approval.
 
 ### Standalone OpenCode plugin
@@ -70,7 +73,7 @@ Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.2", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": {} }]
 }
 ```
 
@@ -87,7 +90,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.5.2 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.6.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
@@ -197,11 +200,14 @@ variant of that model:
 { "agents": { "title": { "model": { "providerID": "fuelix-anthropic", "model": "claude-haiku-4-5" } } } }
 ```
 
-## OpenChamber status extension
+## TD-Plugin extension
 
-The extension shows the plugin's recorded configuration and the latest automatic
-model-discovery result. It lists added and removed models and keeps the latest model change visible after an unchanged
-check. It reads reports, not credentials. **Reload report** reads the saved report; it does not run a check.
+The OpenChamber extension shows the plugin's recorded configuration and latest
+model-discovery result. It also manages saved execution guards. You inspect generated rules before saving or enabling
+them. The plugin rejects matching permission-checked actions before execution. See [`docs/guards.md`](docs/guards.md)
+for scope, release, and enforcement limits.
+
+The status view lists added and removed models. **Reload report** reads the saved report; it does not run a check.
 
 Install the combined repository package from **Settings → Extensions** in OpenChamber web or desktop. See
 [`docs/openchamber-status.md`](docs/openchamber-status.md) for build steps, permissions, and report limitations.
@@ -219,7 +225,7 @@ Install the combined repository package from **Settings → Extensions** in Open
       "includeNonChatModels": false,        // also register embedding, speech, transcription, and image models
       "discoveryTimeoutMs": 5000,
       "scrubShellEnv": true,                // remove FUELIX_API_KEY from agent shell environments
-      "statusReport": true                 // write credential-free reports for the optional OpenChamber extension
+      "statusReport": true                 // write the FueliX model status report
       // Optional batchRates: see docs/batches.md for sourced batch prices.
     },
     "jev": { "enabled": false, "model": "jev-1.14.0" }, // optional; see docs/jev.md

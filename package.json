@@ -1,6 +1,6 @@
 {
   "name": "td-opencode-plugin",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
   "description": "OpenCode V2 plugin for TELUS Digital: FueliX model catalog, secure key handling, and accurate usage.",
   "type": "module",
@@ -17,6 +17,9 @@
     "extension/icon.svg",
     "extension/panel/index.html",
     "extension/panel/main.js",
+    "extension/panel/status.html",
+    "extension/panel/status.js",
+    "extension/service/main.js",
     "extension/plugin/index.js"
   ],
   "scripts": {
@@ -39,11 +42,28 @@
       "openchamber": ">=2.7.0"
     },
     "id": "td-fuelix-status",
-    "name": "FueliX status",
+    "name": "TD-Plugin extension",
     "icon": "extension/icon.svg",
     "contributes": {
       "panel": {
         "entry": "extension/panel/index.html"
+      },
+      "statusSection": {
+        "entry": "extension/panel/status.html",
+        "title": "TD-Plugin guards",
+        "height": 48,
+        "requiresProject": false
+      },
+      "capabilities": [
+        "model",
+        "sessions"
+      ],
+      "service": {
+        "entry": "extension/service/main.js",
+        "runtime": "host",
+        "provides": [
+          "opencode"
+        ]
       },
       "filesystem": [
         "~/.td-opencode-plugin/status/*.json"

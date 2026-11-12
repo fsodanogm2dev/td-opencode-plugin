@@ -419,15 +419,16 @@ export function createSafetyHandlers(runtime: JevPointRuntime, options: SafetyPr
   const commands = new BoundedMap<string, string>(MAX_TRACKED_COMMANDS)
   const enforce = options.mode === "enforce"
 
-  const ask = (event: SafetyEvaluateEvent, message: string): void => {
-    if (!enforce) return
+  // Jev never allows and never relaxes a decision. It raises `allow` to `ask` only. Another hook can set `deny` while
+  // the upstream call is pending, so the effect is checked again here and a `deny` stays.
+  const ask = (event: SafetyEvaluateEvent, message: string): boolean => {
+    if (!enforce || event.effect !== "allow") return false
     event.effect = "ask"
     if (event.message === undefined || event.message === "") event.message = message
+    return true
   }
 
-  const failClosed = (event: SafetyEvaluateEvent, message: string): void => {
-    if (options.failClosed) ask(event, message)
-  }
+  const failClosed = (event: SafetyEvaluateEvent, message: string): boolean => options.failClosed && ask(event, message)
 
   return {
     before(event) {
@@ -485,19 +486,19 @@ export function createSafetyHandlers(runtime: JevPointRuntime, options: SafetyPr
         if (!outcome.ok) {
           // With no TypeSafe key there is no upstream check. The existing decision stays.
           const missingKey = outcome.error.code === "no-key"
-          if (!missingKey) failClosed(event, "The Jev safety check failed. Approval is required.")
-          runtime.record({ ...base, applied: !missingKey && enforce && options.failClosed, ...failureFields(outcome.error) })
+          const applied = !missingKey && failClosed(event, "The Jev safety check failed. Approval is required.")
+          runtime.record({ ...base, applied, ...failureFields(outcome.error) })
           return
         }
         const probability = noulProbability(outcome.value, SAFETY_QUESTION_ID)
         const risky = probability > options.riskThreshold
-        if (risky) ask(event, `Jev rates this command as possibly destructive (probability ${probability.toFixed(2)}). Approval is required.`)
+        const applied = risky && ask(event, `Jev rates this command as possibly destructive (probability ${probability.toFixed(2)}). Approval is required.`)
         runtime.record({
           ...base,
           model: outcome.value.model,
           probability,
           threshold: options.riskThreshold,
-          applied: risky && enforce,
+          applied,
           latencyMs: outcome.value.latencyMs,
           cached: outcome.value.cached,
         })

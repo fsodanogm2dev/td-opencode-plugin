@@ -50,8 +50,8 @@ describe("default status report writer", () => {
     expect(report).toMatchObject({ version: 1, directory: LOCATION, lastCheck: { outcome: "no-key" } })
   }, 20_000)
 
-  test("fuelix.statusReport false writes nothing", async () => {
+  test("fuelix.statusReport false writes no FueliX status report", async () => {
     await runPlugin(home, { statusReport: false })
-    expect(existsSync(join(home, ".td-opencode-plugin"))).toBe(false)
+    expect(existsSync(join(home, ".td-opencode-plugin", "status"))).toBe(false)
   }, 20_000)
 })

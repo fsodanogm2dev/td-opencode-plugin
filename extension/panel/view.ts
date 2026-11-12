@@ -9,8 +9,10 @@ import {
   mountButton,
   mountEmpty,
   mountSpinner,
+  mountTabs,
   type BadgeHandle,
   type ButtonHandle,
+  type TabsHandle,
 } from "@openchamber/sdk/ui"
 
 import type { PanelState } from "./controller.ts"
@@ -27,7 +29,15 @@ export type ViewOptions = {
   locale?: () => string
 }
 
+export type Tab = "guards" | "setup"
+
 export type View = {
+  /** The Guards tab panel. The guard view draws inside it. */
+  guardsRoot: HTMLElement
+  tab: () => Tab
+  setTab: (tab: Tab) => void
+  /** Number of guards active in this session, shown on the Guards tab. */
+  setGuardCount: (count: number) => void
   render: (state: PanelState, cause: string) => void
   /** Updates relative times and the "out of date" check without a full repaint. */
   tick: () => void
@@ -77,13 +87,26 @@ export const createView = (options: ViewOptions): View => {
   root.replaceChildren()
   const header = h("header", "hdr")
   const headerText = h("div", "hdr-text")
-  const title = h("h1", "hdr-title", "FueliX plugin")
+  const title = h("h1", "hdr-title", "TD-Plugin extension")
   const place = h("p", "hdr-place", "Connecting to OpenChamber…")
   const placePath = h("p", "hdr-path")
   placePath.hidden = true
   headerText.append(title, place, placePath)
   const badgeSlot = h("div", "hdr-badge")
   header.append(headerText, badgeSlot)
+
+  const tabsSlot = h("nav", "tabs")
+  tabsSlot.setAttribute("aria-label", "Sections")
+
+  const guardsPanel = h("div", "tab-panel")
+  guardsPanel.id = "tab-guards"
+  guardsPanel.setAttribute("role", "tabpanel")
+  guardsPanel.setAttribute("aria-label", "Guards")
+
+  const setupPanel = h("div", "tab-panel")
+  setupPanel.id = "tab-setup"
+  setupPanel.setAttribute("role", "tabpanel")
+  setupPanel.setAttribute("aria-label", "Plugin setup")
 
   const content = h("div", "content")
   content.id = "content"
@@ -98,7 +121,36 @@ export const createView = (options: ViewOptions): View => {
   live.setAttribute("aria-live", "polite")
   live.setAttribute("role", "status")
 
-  root.append(header, content, footer, live)
+  setupPanel.append(content, footer, live)
+  root.append(header, tabsSlot, guardsPanel, setupPanel)
+
+  let tab: Tab = "guards"
+  let guardCount = 0
+  const tabItems = () => [
+    { id: "guards", label: "Guards", ...(guardCount > 0 ? { count: guardCount } : {}) },
+    { id: "setup", label: "Plugin setup" },
+  ]
+  const applyTab = () => {
+    guardsPanel.hidden = tab !== "guards"
+    setupPanel.hidden = tab !== "setup"
+    // The badge describes the saved report, so it shows with the setup tab only.
+    badgeSlot.hidden = tab !== "setup"
+    for (const node of tabsSlot.querySelectorAll<HTMLElement>("[role=tab]")) {
+      node.setAttribute("aria-controls", node.dataset.id === "guards" ? guardsPanel.id : setupPanel.id)
+    }
+  }
+  const tabs: TabsHandle = mountTabs(tabsSlot, {
+    items: tabItems(),
+    activeId: tab,
+    onChange: (id) => setTab(id === "setup" ? "setup" : "guards"),
+  })
+  const setTab = (next: Tab) => {
+    if (next === tab) return
+    tab = next
+    tabs.update({ activeId: tab })
+    applyTab()
+  }
+  applyTab()
 
   const button: ButtonHandle = mountButton(buttonSlot, {
     label: "Reload report",
@@ -399,12 +451,25 @@ export const createView = (options: ViewOptions): View => {
   }
 
   return {
+    guardsRoot: guardsPanel,
+    tab: () => tab,
+    setTab,
+    setGuardCount: (count) => {
+      if (count === guardCount) return
+      guardCount = count
+      // Repainting the tabs moves focus out of them, so keep focus on the same tab.
+      const focused = tabsSlot.contains(document.activeElement)
+      tabs.update({ items: tabItems() })
+      applyTab()
+      if (focused) tabsSlot.querySelector<HTMLElement>(`[role=tab][aria-selected="true"]`)?.focus()
+    },
     render,
     tick,
     dispose: () => {
       clear()
       badge?.dispose()
       button.dispose()
+      tabs.dispose()
     },
   }
 }

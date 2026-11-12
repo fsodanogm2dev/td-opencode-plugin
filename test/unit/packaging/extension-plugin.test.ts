@@ -20,7 +20,14 @@ interface RootManifest {
     id: string
     name: string
     icon: string
-    contributes: { panel: { entry: string }; filesystem: string[]; opencodePlugin: string }
+    contributes: {
+      panel: { entry: string }
+      statusSection: { entry: string; title: string; height: number; requiresProject: boolean }
+      capabilities: string[]
+      service: { entry: string; runtime: string; provides: string[] }
+      filesystem: string[]
+      opencodePlugin: string
+    }
   }
 }
 
@@ -33,10 +40,18 @@ describe("root package manifest", () => {
       apiVersion: 1,
       engines: { openchamber: ">=2.7.0" },
       id: "td-fuelix-status",
-      name: "FueliX status",
+      name: "TD-Plugin extension",
       icon: "extension/icon.svg",
       contributes: {
         panel: { entry: "extension/panel/index.html" },
+        statusSection: {
+          entry: "extension/panel/status.html",
+          title: "TD-Plugin guards",
+          height: 48,
+          requiresProject: false,
+        },
+        capabilities: ["model", "sessions"],
+        service: { entry: "extension/service/main.js", runtime: "host", provides: ["opencode"] },
         filesystem: ["~/.td-opencode-plugin/status/*.json"],
         opencodePlugin: "extension/plugin",
       },
@@ -53,7 +68,15 @@ describe("root package manifest", () => {
   test("every manifest asset exists and is listed in files", async () => {
     const pkg = await readJson<RootManifest>(join(ROOT, "package.json"))
     const { icon, contributes } = pkg.openchamber
-    const assets = [icon, contributes.panel.entry, "extension/panel/main.js", `${contributes.opencodePlugin}/index.js`]
+    const assets = [
+      icon,
+      contributes.panel.entry,
+      "extension/panel/main.js",
+      contributes.statusSection.entry,
+      "extension/panel/status.js",
+      contributes.service.entry,
+      `${contributes.opencodePlugin}/index.js`,
+    ]
     for (const asset of assets) {
       expect(existsSync(join(ROOT, asset))).toBe(true)
       expect(pkg.files).toContain(asset)
@@ -61,13 +84,42 @@ describe("root package manifest", () => {
     expect(existsSync(join(ROOT, "data/fuelix-models.json"))).toBe(true)
   })
 
-  test("the root and the status-only extension manifests have one version", async () => {
+  test("the root and the child extension manifests have one version, id, and display name", async () => {
     const pkg = await readJson<RootManifest>(join(ROOT, "package.json"))
-    const child = await readJson<{ version: string; openchamber: { contributes: Record<string, unknown> } }>(
+    const child = await readJson<{ version: string; openchamber: { id: string; name: string; contributes: Record<string, unknown> } }>(
       join(ROOT, "extension/package.json"),
     )
     expect(child.version).toBe(pkg.version)
+    expect(child.openchamber.id).toBe(pkg.openchamber.id)
+    expect(child.openchamber.name).toBe(pkg.openchamber.name)
     expect(child.openchamber.contributes.opencodePlugin).toBeUndefined()
+  })
+
+  test("the child extension has the same contributions as the root, with paths relative to extension/", async () => {
+    const pkg = await readJson<RootManifest>(join(ROOT, "package.json"))
+    const child = await readJson<{ openchamber: { contributes: Record<string, any> } }>(join(ROOT, "extension/package.json"))
+    const { opencodePlugin: _plugin, ...rootContributes } = pkg.openchamber.contributes
+    const prefixed = JSON.parse(JSON.stringify(child.openchamber.contributes), (key, value) =>
+      key === "entry" && typeof value === "string" ? `extension/${value}` : value,
+    )
+    expect(prefixed).toEqual(rootContributes)
+  })
+
+  test("every file that the child extension ships is also shipped by the root package", async () => {
+    const pkg = await readJson<RootManifest>(join(ROOT, "package.json"))
+    const child = await readJson<{ files: string[] }>(join(ROOT, "extension/package.json"))
+    for (const file of child.files.filter((entry) => entry !== "package.json")) {
+      expect(existsSync(join(ROOT, "extension", file))).toBe(true)
+      expect(pkg.files).toContain(`extension/${file}`)
+    }
+  })
+
+  test("the root package has no broad file globs", async () => {
+    const pkg = await readJson<RootManifest>(join(ROOT, "package.json"))
+    for (const file of pkg.files) expect(file).not.toMatch(/\*/)
+    expect(pkg.files).not.toContain("extension")
+    expect(pkg.files).not.toContain("extension/panel")
+    expect(pkg.files).not.toContain("extension/service")
   })
 })
 
@@ -102,6 +154,8 @@ interface RunResult {
   aisdkHooks: number
   tools: string[]
   methods: number
+  permissionHooks: string[]
+  guardRuntime: Array<{ registered: boolean; coveredActions: string[]; storeState: string }>
 }
 
 describe("plugin bundle in the shipped package layout", () => {
@@ -133,9 +187,16 @@ import plugin from ${JSON.stringify(join(packageDir, "extension/plugin/index.js"
 import { createFakeCtx } from ${JSON.stringify(join(ROOT, "test/unit/fuelix/fake-ctx.ts"))}
 const fake = createFakeCtx({ directory: ${JSON.stringify(LOCATION)} })
 fake.ctx.options = { fuelix: ${JSON.stringify({ keychainService: false, refreshMinutes: 0, ...options })} }
+// The guards need the permission host. The fake context leaves it out.
+const permissionHooks = []
+fake.ctx.permission = { hook: async (name) => (permissionHooks.push(name), { dispose: async () => {} }) }
 const cleanup = await plugin.setup(fake.ctx)
 fake.runProviderTransforms()
 await new Promise((resolve) => setTimeout(resolve, 600))
+const { readdir, readFile } = await import("node:fs/promises")
+const runtimeDir = process.env.HOME + "/.td-opencode-plugin/guards/runtime"
+const guardRuntime = []
+for (const name of await readdir(runtimeDir).catch(() => [])) guardRuntime.push(JSON.parse(await readFile(runtimeDir + "/" + name, "utf8")))
 const providers = {}
 for (const [id, record] of fake.providers) providers[id] = { models: record.models.size, integrationID: record.provider.integrationID }
 console.log("RESULT " + JSON.stringify({
@@ -146,6 +207,8 @@ console.log("RESULT " + JSON.stringify({
   aisdkHooks: fake.aisdkHooks.length,
   tools: [...fake.tools.keys()].sort(),
   methods: fake.integrationMethods.length,
+  permissionHooks,
+  guardRuntime: guardRuntime.map((report) => ({ registered: report.registered, coveredActions: report.coveredActions, storeState: report.storeState })),
 }))
 await cleanup()
 process.exit(0)
@@ -185,6 +248,9 @@ process.exit(0)
       expect(result.methods).toBe(2)
       expect(result.sessionHookProviders).toEqual(["fuelix", "fuelix-anthropic", "fuelix-openai"])
       expect(result.aisdkHooks).toBeGreaterThan(0)
+      // The guards are separate from FueliX. They register the permission hook and write their own runtime report.
+      expect(result.permissionHooks).toEqual(["evaluate"])
+      expect(result.guardRuntime).toEqual([{ registered: true, coveredActions: ["shell", "subagent"], storeState: "missing" }])
 
       const catalog = await readJson<{ models: Record<string, { listed?: boolean; kind: string }> }>(join(ROOT, "data/fuelix-models.json"))
       const listedChat = Object.values(catalog.models).filter((entry) => entry.listed === true && entry.kind === "chat").length
@@ -212,10 +278,11 @@ process.exit(0)
     }
   }, 30_000)
 
-  test("fuelix.statusReport false writes no report", async () => {
+  test("fuelix.statusReport false writes no FueliX status report", async () => {
     const { home: dir } = await run({ statusReport: false })
     try {
-      expect(existsSync(join(dir, ".td-opencode-plugin"))).toBe(false)
+      // The guards keep their own files under `.td-opencode-plugin/guards`. Only the FueliX `status` folder must be absent.
+      expect(existsSync(join(dir, ".td-opencode-plugin", "status"))).toBe(false)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
@@ -305,7 +372,7 @@ const host = (kind) => ({
   hook: async (name, callback) => {
     const label = kind + "." + name
     registered.push(label)
-    callbacks.set(label, callback)
+    callbacks.set(label, [...(callbacks.get(label) ?? []), callback])
     return { dispose: async () => void disposed.push(label) }
   },
 })
@@ -323,11 +390,14 @@ try {
 fake.runProviderTransforms()
 await new Promise((resolve) => setTimeout(resolve, 400))
 const events = {}
+// Hooks run in registration order, as OpenCode runs them. The guard hook registers last and only ever denies.
 if (${JSON.stringify(exercise)} && callbacks.get("permission.evaluate")) {
-  const before = callbacks.get("tool.execute.before")
-  const evaluate = callbacks.get("permission.evaluate")
+  const before = callbacks.get("tool.execute.before")?.[0]
+  const evaluate = async (event) => {
+    for (const callback of callbacks.get("permission.evaluate")) await callback(event)
+  }
   const exec = async (name, command) => {
-    before({ tool: "shell", sessionID: "ses-1", id: "call-" + name, input: { command } })
+    before?.({ tool: "shell", sessionID: "ses-1", id: "call-" + name, input: { command } })
     const event = { sessionID: "ses-1", action: "shell", resources: [command], source: { type: "tool", id: "call-" + name }, effect: "allow" }
     await evaluate(event)
     events[name] = { effect: event.effect, hasMessage: typeof event.message === "string" && event.message.length > 0 }
@@ -436,8 +506,12 @@ describe("bundle and source behave the same with Jev", () => {
         expect(run.requests).toEqual([])
         expect(run.typesafeMethods).toEqual([])
         expect(run.typesafeName).toBeNull()
-        expect(run.hookLabels).toEqual([])
-        expect(run.events).toEqual({})
+        // Only the TD-Plugin guard hook is registered. With no active guard it leaves the permission effect as it was.
+        expect(run.hookLabels).toEqual(["permission.evaluate"])
+        expect(run.events).toEqual({
+          risky: { effect: "allow", hasMessage: false },
+          destructive: { effect: "allow", hasMessage: false },
+        })
         // The agent shell keeps TYPESAFE_API_KEY, which Jev does not manage when it is off. FueliX still removes its own key.
         expect(run.shellEnvAfter).toEqual(["PATH", "TYPESAFE_API_KEY"])
         expect(existsSync(join(home, "data", "td-opencode-plugin"))).toBe(false)
@@ -456,7 +530,7 @@ describe("bundle and source behave the same with Jev", () => {
     const result = await runEntry(bundleEntry(), { enabled: false, model: "jev-1.14.0" }, true)
     try {
       expect(result.run.requests).toEqual([])
-      expect(result.run.hookLabels).toEqual([])
+      expect(result.run.hookLabels).toEqual(["permission.evaluate"])
       expect(result.run.typesafeMethods).toEqual([])
       expect(existsSync(join(result.home, "data", "td-opencode-plugin"))).toBe(false)
     } finally {
@@ -504,7 +578,14 @@ describe("bundle and source behave the same with Jev", () => {
         ])
         expect(run.typesafeName).toBe("TypeSafe")
         // The default points (safety and test output) register their V2 hooks. Skill and reasoning stay off.
-        expect(run.hookLabels).toEqual(["permission.evaluate", "tool.execute.after", "tool.execute.after", "tool.execute.before"])
+        // The second `permission.evaluate` is the TD-Plugin guard hook.
+        expect(run.hookLabels).toEqual([
+          "permission.evaluate",
+          "permission.evaluate",
+          "tool.execute.after",
+          "tool.execute.after",
+          "tool.execute.before",
+        ])
         // The shell scrub removes both keys: the FueliX hook and the Jev hook each remove their own.
         expect(run.shellEnvAfter).toEqual(["PATH"])
         // Cleanup disposes every hook.
@@ -555,7 +636,8 @@ describe("bundle and source behave the same with Jev", () => {
 
       // No fake key, command text, or raw session ID anywhere under the isolated home, and none in the plugin log.
       for (const file of await walkFiles(home)) {
-        if (file.endsWith("run.mjs")) continue
+        // Bun may cache transpiled plugin code under `cache/`. That is code, not runtime data.
+        if (file.endsWith("run.mjs") || file.startsWith(join(home, "cache"))) continue
         const text = await readFile(file, "utf8").catch(() => "")
         for (const needle of [FAKE_JEV_KEY, FAKE_FUELIX_KEY, "npm test", "rm -rf", "ses-1"]) {
           expect(`${file}:${text.includes(needle)}`).toBe(`${file}:false`)
@@ -592,4 +674,288 @@ describe("bundle and source behave the same with Jev", () => {
       await cleanup(result)
     }
   }, 30_000)
+})
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Guards first, then Jev
+//
+// A real guard store (valid, in a temporary HOME) is active. TypeSafe is a fake `fetch` that rates every command that
+// reaches it as risky (`noul` 0.9, above the default threshold). `session.get` is a stub that answers the parent of
+// each session, so the guard resolves the session tree and does not fail closed. The same scenarios run against the
+// source and against the generated bundle in the shipped layout.
+// ---------------------------------------------------------------------------------------------------------------------
+
+const GUARD_MESSAGE = "Guard test message: commits are blocked in this session tree."
+const GUARDED_ROOT = "root-ses"
+const GUARDED_CHILD = "child-ses"
+const UNGUARDED_SESSION = "other-ses"
+
+interface ScenarioResult {
+  effect: string
+  message: string | null
+  upstreamCalls: number
+}
+
+interface GuardedRun {
+  registrationOrder: string[]
+  permissionHandlers: number
+  firstAloneGuarded: ScenarioResult
+  firstAloneUnguarded: ScenarioResult
+  chainGuardedAllow: ScenarioResult
+  chainGuardedAsk: ScenarioResult
+  chainUnguardedRisky: ScenarioResult
+  chainDestructive: ScenarioResult
+  chainGuardedUpstream503: ScenarioResult
+  chainUnguardedUpstream503: ScenarioResult
+  loadError: string | null
+  nonTypesafeRequests: number
+  upstreamUrls: string[]
+  runtime: Array<{ registered: boolean; storeState: string }>
+}
+
+function guardedScript(entry: string, options: Record<string, unknown>): string {
+  return `
+const requests = []
+let nonTypesafe = 0
+let upstream = "ok"
+globalThis.fetch = async (input, init) => {
+  const url = String(input && input.url ? input.url : input)
+  // The default is the TELUS gateway. The public TypeSafe origin is also trusted. Any other host counts as a leak.
+  if (!url.startsWith("https://typesafe-gateway.k8smos.telus.gizmos.run/") && !url.startsWith("https://api.typesafe.ai/")) {
+    nonTypesafe++
+    return new Response("{}", { status: 503 })
+  }
+  requests.push(url)
+  if (upstream === "503") return new Response("{}", { status: 503 })
+  const questions = JSON.parse(typeof (init && init.body) === "string" ? init.body : "{}").questions
+  const answers = {}
+  for (const [id, question] of Object.entries(questions)) {
+    if (question.type === "noul") answers[id] = { type: "noul", noul: 0.9 }
+    else if (question.type === "choice") answers[id] = { type: "choice", choice: Object.keys(question.criteria)[0] }
+    else answers[id] = { type: "score", score: 0 }
+  }
+  return new Response(JSON.stringify({ model: "jev-1.14.0", answers }), { status: 200, headers: { "content-type": "application/json" } })
+}
+const { default: plugin } = await import(${JSON.stringify(entry)})
+const { createFakeCtx } = await import(${JSON.stringify(join(ROOT, "test/unit/fuelix/fake-ctx.ts"))})
+const fake = createFakeCtx({ directory: ${JSON.stringify(LOCATION)} })
+const callbacks = new Map()
+const order = []
+const host = (kind) => ({
+  hook: async (name, callback) => {
+    const label = kind + "." + name
+    order.push(label)
+    callbacks.set(label, [...(callbacks.get(label) ?? []), callback])
+    return { dispose: async () => {} }
+  },
+})
+const parents = { ${JSON.stringify(GUARDED_ROOT)}: null, ${JSON.stringify(GUARDED_CHILD)}: ${JSON.stringify(GUARDED_ROOT)}, ${JSON.stringify(UNGUARDED_SESSION)}: null }
+fake.ctx.session = {
+  ...fake.ctx.session,
+  get: async ({ sessionID }) => (sessionID in parents ? { data: { id: sessionID, parentID: parents[sessionID] } } : { error: { name: "NotFound" } }),
+}
+fake.ctx.permission = host("permission")
+fake.ctx.tool.hook = host("tool").hook
+fake.ctx.model = { list: async () => ({ data: [] }) }
+fake.ctx.options = ${JSON.stringify(options)}
+let loadError = null
+let cleanup = async () => {}
+try {
+  cleanup = await plugin.setup(fake.ctx)
+} catch (error) {
+  loadError = String(error && error.message)
+}
+fake.runProviderTransforms()
+await new Promise((resolve) => setTimeout(resolve, 400))
+const evaluators = callbacks.get("permission.evaluate") ?? []
+const before = callbacks.get("tool.execute.before")?.[0]
+let counter = 0
+const scenario = async (sessionID, command, effect, firstOnly) => {
+  const id = "call-" + ++counter
+  before?.({ tool: "shell", sessionID, id, input: { command } })
+  const event = { sessionID, action: "shell", resources: [command], source: { type: "tool", id }, effect }
+  const calls = requests.length
+  for (const callback of firstOnly ? evaluators.slice(0, 1) : evaluators) await callback(event)
+  return { effect: event.effect, message: typeof event.message === "string" ? event.message : null, upstreamCalls: requests.length - calls }
+}
+const firstAloneGuarded = await scenario(${JSON.stringify(GUARDED_CHILD)}, "git commit -m x", "allow", true)
+const firstAloneUnguarded = await scenario(${JSON.stringify(UNGUARDED_SESSION)}, "git commit -m x", "allow", true)
+const chainGuardedAllow = await scenario(${JSON.stringify(GUARDED_CHILD)}, "git commit -m x", "allow", false)
+const chainGuardedAsk = await scenario(${JSON.stringify(GUARDED_ROOT)}, "git commit -m x", "ask", false)
+const chainUnguardedRisky = await scenario(${JSON.stringify(UNGUARDED_SESSION)}, "npm test", "allow", false)
+const chainDestructive = await scenario(${JSON.stringify(UNGUARDED_SESSION)}, "rm -rf build", "allow", false)
+upstream = "503"
+const chainGuardedUpstream503 = await scenario(${JSON.stringify(GUARDED_CHILD)}, "git commit -m y", "allow", false)
+const chainUnguardedUpstream503 = await scenario(${JSON.stringify(UNGUARDED_SESSION)}, "npm test", "allow", false)
+const { readdir, readFile } = await import("node:fs/promises")
+const runtimeDir = process.env.HOME + "/.td-opencode-plugin/guards/runtime"
+const runtime = []
+// The reporter writes through a temporary file and renames it, so read finished reports only.
+for (const name of (await readdir(runtimeDir).catch(() => [])).filter((entry) => entry.endsWith(".json"))) {
+  const report = JSON.parse(await readFile(runtimeDir + "/" + name, "utf8"))
+  runtime.push({ registered: report.registered, storeState: report.storeState })
+}
+await cleanup()
+console.log("RESULT " + JSON.stringify({
+  registrationOrder: order,
+  permissionHandlers: evaluators.length,
+  firstAloneGuarded,
+  firstAloneUnguarded,
+  chainGuardedAllow,
+  chainGuardedAsk,
+  chainUnguardedRisky,
+  chainDestructive,
+  chainGuardedUpstream503,
+  chainUnguardedUpstream503,
+  loadError,
+  nonTypesafeRequests: nonTypesafe,
+  upstreamUrls: requests,
+  runtime,
+}))
+process.exit(0)
+`
+}
+
+describe("guards run before Jev, in the source and in the bundle", () => {
+  let packageDir: string
+  const bundleEntry = () => join(packageDir, "extension/plugin/index.js")
+  const sourceEntry = join(ROOT, "src/index.ts")
+
+  beforeAll(async () => {
+    const pkg = await readJson<RootManifest>(join(ROOT, "package.json"))
+    packageDir = await mkdtemp(join(tmpdir(), "td-package-guards-"))
+    for (const entry of [...pkg.files.filter((file) => file === "data" || file.startsWith("extension/plugin/")), "package.json"]) {
+      await mkdir(dirname(join(packageDir, entry)), { recursive: true })
+      await cp(join(ROOT, entry), join(packageDir, entry), { recursive: true })
+    }
+  })
+
+  afterAll(async () => {
+    await rm(packageDir, { recursive: true, force: true })
+  })
+
+  async function runGuarded(entry: string, jev: Record<string, unknown> | undefined): Promise<ChildResult & { guarded: GuardedRun }> {
+    const home = await mkdtemp(join(tmpdir(), "td-guarded-home-"))
+    const guardsDir = join(home, ".td-opencode-plugin", "guards")
+    await mkdir(guardsDir, { recursive: true })
+    const stamp = "2026-11-12T10:00:00.000Z"
+    await Bun.write(
+      join(guardsDir, "store.json"),
+      JSON.stringify({
+        schema: "td-guards/1",
+        revision: 1,
+        guards: [
+          {
+            id: "no-commit",
+            label: "No commit",
+            summary: "Blocks git commit.",
+            request: "Do not commit.",
+            message: GUARD_MESSAGE,
+            rules: [{ kind: "command", program: "git", subcommands: [["commit"]] }],
+            createdAt: stamp,
+            updatedAt: stamp,
+          },
+        ],
+        activations: [{ id: "act-1", guardId: "no-commit", sessionId: GUARDED_ROOT, scope: "session", createdAt: stamp, expiresAt: null }],
+      }),
+    )
+    const script = join(home, "run.mjs")
+    // Fake keys only, no Keychain lookup (`keychainService: false` for FueliX and Jev), no network.
+    const options = { fuelix: { keychainService: false, refreshMinutes: 0 }, ...(jev ? { jev } : {}) }
+    await Bun.write(script, guardedScript(entry, options))
+    const env: Record<string, string> = {
+      PATH: process.env.PATH ?? "/usr/bin:/bin",
+      HOME: home,
+      XDG_CONFIG_HOME: join(home, "config"),
+      XDG_DATA_HOME: join(home, "data"),
+      XDG_STATE_HOME: join(home, "state"),
+      XDG_CACHE_HOME: join(home, "cache"),
+      TYPESAFE_API_KEY: FAKE_JEV_KEY,
+    }
+    const child = Bun.spawn([process.execPath, script], { env, cwd: home, stdout: "pipe", stderr: "pipe" })
+    const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()])
+    if (code !== 0) throw new Error(`child exited with ${code}: ${stderr}`)
+    const line = stdout.split("\n").find((entry) => entry.startsWith("RESULT "))
+    if (!line) throw new Error(`child printed no result: ${stdout}${stderr}`)
+    return { guarded: JSON.parse(line.slice("RESULT ".length)) as GuardedRun, run: undefined as unknown as JevRun, home, stderr }
+  }
+
+  const jevOn = { enabled: true, model: "jev-1.14.0", keychainService: false, telemetry: false }
+  const cleanup = async (...results: Array<{ home: string }>) => {
+    for (const result of results) await rm(result.home, { recursive: true, force: true })
+  }
+
+  for (const [label, entry] of [
+    ["bundle", () => bundleEntry()],
+    ["source", () => sourceEntry],
+  ] as const) {
+    test(`${label}: the guard hook is first and denies a guarded command alone, without a TypeSafe call`, async () => {
+      const result = await runGuarded(entry(), jevOn)
+      try {
+        const { guarded } = result
+        expect(guarded.loadError).toBeNull()
+        // Order of registration, not sorted: the guard hook comes first, and Jev adds one more permission hook.
+        expect(guarded.registrationOrder[0]).toBe("permission.evaluate")
+        expect(guarded.registrationOrder.filter((name) => name === "permission.evaluate")).toHaveLength(2)
+        expect(guarded.permissionHandlers).toBe(2)
+        expect(guarded.runtime).toEqual([{ registered: true, storeState: "ready" }])
+        // The first callback alone is the guard: it denies a guarded child session with the exact guard message
+        // (not the fail-closed text), and it leaves an unrelated session alone.
+        expect(guarded.firstAloneGuarded).toEqual({ effect: "deny", message: GUARD_MESSAGE, upstreamCalls: 0 })
+        expect(guarded.firstAloneUnguarded).toEqual({ effect: "allow", message: null, upstreamCalls: 0 })
+      } finally {
+        await cleanup(result)
+      }
+    }, 60_000)
+
+    test(`${label}: through the full hook chain a guard deny survives Jev, and Jev still asks for unguarded risky commands`, async () => {
+      const result = await runGuarded(entry(), jevOn)
+      try {
+        const { guarded } = result
+        // Guarded command with an incoming `allow` or `ask`: deny with the guard message, and no TypeSafe call.
+        expect(guarded.chainGuardedAllow).toEqual({ effect: "deny", message: GUARD_MESSAGE, upstreamCalls: 0 })
+        expect(guarded.chainGuardedAsk).toEqual({ effect: "deny", message: GUARD_MESSAGE, upstreamCalls: 0 })
+        // Unguarded `npm test` is risky (0.9): one TypeSafe call, and the effect becomes `ask`.
+        expect(guarded.chainUnguardedRisky.effect).toBe("ask")
+        expect(guarded.chainUnguardedRisky.upstreamCalls).toBe(1)
+        expect(guarded.chainUnguardedRisky.message).not.toBe(GUARD_MESSAGE)
+        // `rm -rf build` is deterministic: `ask` with no TypeSafe call.
+        expect(guarded.chainDestructive.effect).toBe("ask")
+        expect(guarded.chainDestructive.upstreamCalls).toBe(0)
+        // TypeSafe answers 503: a guarded command stays denied with the guard message and makes no call.
+        expect(guarded.chainGuardedUpstream503).toEqual({ effect: "deny", message: GUARD_MESSAGE, upstreamCalls: 0 })
+        // An unguarded command never receives the guard text.
+        expect(guarded.chainUnguardedUpstream503.message).not.toBe(GUARD_MESSAGE)
+        expect(guarded.nonTypesafeRequests).toBe(0)
+        // Every call that reached the fake goes to the default TELUS gateway, not to the public origin.
+        expect(guarded.upstreamUrls.length).toBeGreaterThan(0)
+        for (const url of guarded.upstreamUrls) expect(url.startsWith("https://typesafe-gateway.k8smos.telus.gizmos.run/")).toBe(true)
+        expect(result.stderr).not.toContain(FAKE_JEV_KEY)
+        for (const file of await walkFiles(result.home)) {
+          // The run script holds the commands, and the Bun cache (`cache/`) holds transpiled plugin source.
+          if (file.endsWith("run.mjs") || file.startsWith(join(result.home, "cache"))) continue
+          const text = await readFile(file, "utf8").catch(() => "")
+          for (const needle of [FAKE_JEV_KEY, FAKE_FUELIX_KEY, "npm test", "rm -rf"]) {
+            expect(`${file}:${text.includes(needle)}`).toBe(`${file}:false`)
+          }
+        }
+      } finally {
+        await cleanup(result)
+      }
+    }, 60_000)
+
+    test(`${label}: with Jev off one guard handler is registered and still denies the guarded command`, async () => {
+      const result = await runGuarded(entry(), undefined)
+      try {
+        const { guarded } = result
+        expect(guarded.registrationOrder).toEqual(["permission.evaluate"])
+        expect(guarded.permissionHandlers).toBe(1)
+        expect(guarded.chainGuardedAllow).toEqual({ effect: "deny", message: GUARD_MESSAGE, upstreamCalls: 0 })
+        expect(guarded.chainGuardedAsk).toEqual({ effect: "deny", message: GUARD_MESSAGE, upstreamCalls: 0 })
+        expect(guarded.chainUnguardedRisky).toEqual({ effect: "allow", message: null, upstreamCalls: 0 })
+      } finally {
+        await cleanup(result)
+      }
+    }, 60_000)
+  }
 })

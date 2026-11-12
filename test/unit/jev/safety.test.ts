@@ -394,6 +394,42 @@ describe("permission evaluate hook", () => {
     }
   })
 
+  test("a deny set by another hook while the upstream call is pending stays, with its message", async () => {
+    const event = evaluateEvent(["touch x"])
+    const { runtime, requests, records } = fakeRuntime(async () => {
+      event.effect = "deny"
+      event.message = "guard message"
+      return noul(0.9)
+    })
+    await armed(runtime, options()).evaluate(event)
+    expect(requests.length).toBe(1)
+    expect(event.effect).toBe("deny")
+    expect(event.message).toBe("guard message")
+    expect(records[0]).toMatchObject({ probability: 0.9, applied: false })
+  })
+
+  test("a deny set while the upstream call is pending stays when the check fails", async () => {
+    const event = evaluateEvent(["touch x"])
+    const { runtime } = fakeRuntime(async () => {
+      event.effect = "deny"
+      event.message = "guard message"
+      return { ok: false, error: { code: "timeout" } }
+    })
+    await armed(runtime, options()).evaluate(event)
+    expect(event.effect).toBe("deny")
+    expect(event.message).toBe("guard message")
+  })
+
+  test("a deny set while a decide that throws is pending stays", async () => {
+    const event = evaluateEvent(["touch x"])
+    const { runtime } = fakeRuntime(async () => {
+      event.effect = "deny"
+      throw new Error("boom")
+    })
+    await armed(runtime, options()).evaluate(event)
+    expect(event.effect).toBe("deny")
+  })
+
   test("other actions are ignored", async () => {
     const { runtime, requests } = fakeRuntime(() => noul(0.99))
     const event = evaluateEvent(["rm -rf build"], { action: "edit" })

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.6.0 (beta), 2026-11-12
+
+This release adds user-controlled execution guards to the TD-Plugin extension. It needs OpenChamber 2.7.0 or later.
+Review the local-service permission when updating the extension. Scope and enforcement limits are in
+[`docs/guards.md`](docs/guards.md).
+
+### Added
+
+- The TD-Plugin extension manages global guard definitions and session- or request-scoped activations. The plugin
+  rejects matching permission-checked actions before execution, including otherwise approved calls. Linked subagents
+  inherit guards. Request completion is best effort and retains guards when uncertain. See [`docs/guards.md`](docs/guards.md).
+
+- Plain-text guard drafting, deterministic rule previews, and a command tester. Saving a definition leaves it inactive.
+- Enable, release, and delete controls with session scope by default and no default expiry. Saved definitions are global.
+- Confirmed guard-store recovery with a private backup and idempotent mutation retries.
+
+### Changed
+
+- The extension is named **TD-Plugin extension**. The combined installer ships the guard service and Work Status section.
+
 ## 0.5.2 (beta), 2026-11-12
 
 Documentation release. Adds an OpenChamber installation prompt to `README.md` and `docs/jev.md` that requests the FueliX and TypeSafe Jev API keys through private secret cards (`openchamber_secret`) and stores them in the macOS login Keychain.

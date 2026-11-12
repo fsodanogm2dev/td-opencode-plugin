@@ -1,18 +1,24 @@
 {
   "name": "td-opencode-plugin-status",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
-  "description": "OpenChamber rail panel that shows what td-opencode-plugin configured and its latest model check.",
+  "description": "OpenChamber extension for td-opencode-plugin: plugin setup report and execution guards.",
   "license": "UNLICENSED",
   "type": "module",
   "files": [
     "package.json",
     "panel/index.html",
     "panel/main.js",
+    "panel/status.html",
+    "panel/status.js",
+    "service/main.js",
     "icon.svg"
   ],
   "scripts": {
-    "build": "openchamber-guest-bundle panel/main.ts panel/main.js",
+    "build": "bun run build:panel && bun run build:status && bun run build:service",
+    "build:panel": "openchamber-guest-bundle panel/main.ts panel/main.js",
+    "build:status": "openchamber-guest-bundle panel/status.ts panel/status.js",
+    "build:service": "openchamber-guest-bundle --node service/main.ts service/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test test",
     "check": "openchamber-guest-check ."
@@ -23,13 +29,32 @@
       "openchamber": ">=2.7.0"
     },
     "id": "td-fuelix-status",
-    "name": "FueliX status",
+    "name": "TD-Plugin extension",
     "icon": "icon.svg",
     "contributes": {
       "panel": {
         "entry": "panel/index.html"
       },
-      "filesystem": ["~/.td-opencode-plugin/status/*.json"]
+      "statusSection": {
+        "entry": "panel/status.html",
+        "title": "TD-Plugin guards",
+        "height": 48,
+        "requiresProject": false
+      },
+      "capabilities": [
+        "model",
+        "sessions"
+      ],
+      "service": {
+        "entry": "service/main.js",
+        "runtime": "host",
+        "provides": [
+          "opencode"
+        ]
+      },
+      "filesystem": [
+        "~/.td-opencode-plugin/status/*.json"
+      ]
     }
   },
   "devDependencies": {

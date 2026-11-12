@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>FueliX plugin status</title>
+    <title>TD-Plugin extension</title>
     <style>
       html, body { margin: 0; min-height: 100%; }
       body {
@@ -126,11 +126,146 @@
       }
       .ftr-hint { color: var(--oc-muted, gray); font-size: 11.5px; }
 
+      /* Tabs */
+      .tabs { margin: -4px 0 -2px; }
+      .tab-panel { display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; }
+      .tab-panel[hidden] { display: none; }
+
+      /* Guards */
+      .gd { display: grid; gap: 12px; }
+      .gd-status {
+        display: grid; gap: 3px; padding: 10px 12px;
+        border-radius: var(--oc-radius, 9px);
+        border: 1px solid var(--oc-border, rgba(127,127,127,.25));
+        border-left-width: 3px;
+      }
+      .gd-status[data-tone="success"] { border-left-color: var(--oc-success, green); }
+      .gd-status[data-tone="error"] { border-left-color: var(--oc-error, red); }
+      .gd-status[data-tone="warning"] { border-left-color: var(--oc-warning, orange); }
+      .gd-status-title { display: flex; align-items: baseline; gap: 8px; font-weight: 600; font-size: 13.5px; }
+      .gd-status[data-tone="success"] .dot { background: var(--oc-success, green); }
+      .gd-status[data-tone="error"] .dot { background: var(--oc-error, red); }
+      .gd-status[data-tone="warning"] .dot { background: var(--oc-warning, orange); }
+      .gd-status[data-tone="error"] .gd-status-title { color: var(--oc-error-text, inherit); }
+      .gd-status-body { font-size: 12px; }
+      .gd-status-meta { font-size: 11.5px; color: var(--oc-muted, gray); }
+      .gd-body { display: grid; gap: 8px; }
+      .gd-empty { color: var(--oc-muted, gray); font-size: 12.5px; }
+      .gd-list { list-style: none; display: grid; gap: 8px; }
+      .gd-row, .gd-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+      .gd-actions { margin-top: 2px; }
+      .gd-btn { display: inline-flex; }
+      .gd-hint { color: var(--oc-muted, gray); font-size: 11.5px; }
+      .gd-meta { color: var(--oc-muted, gray); font-size: 12px; }
+      .gd-note { font-size: 12px; }
+      .gd-note[data-tone="warning"] { color: var(--oc-warning-text, inherit); }
+      .gd-text { font-size: 12.5px; overflow-wrap: anywhere; white-space: pre-wrap; }
+      .gd-subtitle { font-size: 11px; font-weight: 600; color: var(--oc-muted, gray); margin-top: 4px; }
+      .gd-quote {
+        font-size: 12.5px; overflow-wrap: anywhere; white-space: pre-wrap;
+        padding: 6px 8px; border-radius: calc(var(--oc-radius, 9px) - 3px);
+        background: var(--oc-muted-surface, rgba(127,127,127,.12));
+      }
+      .gd-pill {
+        flex: none; font-size: 10.5px; font-weight: 600; letter-spacing: .03em;
+        padding: 1px 7px; border-radius: 999px;
+        background: var(--oc-muted-surface, rgba(127,127,127,.12)); color: var(--oc-muted, gray);
+      }
+
+      .gd-active {
+        display: grid; gap: 3px; padding: 8px 10px;
+        border-radius: calc(var(--oc-radius, 9px) - 2px);
+        background: var(--oc-muted-surface, rgba(127,127,127,.12));
+      }
+      .gd-active-top { display: flex; align-items: center; gap: 8px; }
+      .gd-active-dot {
+        flex: none; width: 8px; height: 8px; border-radius: 2px;
+        background: var(--oc-primary, currentColor);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--oc-primary, gray) 25%, transparent);
+      }
+      .gd-active[data-relation="unknown"] .gd-active-dot,
+      .gd-active[data-enforcing="false"] .gd-active-dot { background: var(--oc-muted, gray); box-shadow: none; }
+      .gd-active[data-enforcing="false"] .gd-active-label { color: var(--oc-muted, gray); text-decoration: line-through; }
+      .gd-active-label { font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
+      .gd-unknown-summary, .gd-about-summary, .gd-details > summary { cursor: pointer; font-size: 12px; }
+      .gd-unknown { display: grid; gap: 6px; }
+      .gd-unknown[open] > .gd-list { margin-top: 6px; }
+
+      .gd-label { font-size: 12px; font-weight: 600; }
+      .gd-input {
+        box-sizing: border-box; width: 100%; resize: vertical;
+        font: inherit; font-size: 13px; color: inherit;
+        padding: 7px 9px; border-radius: calc(var(--oc-radius, 9px) - 3px);
+        border: 1px solid var(--oc-border, rgba(127,127,127,.35));
+        background: var(--oc-bg, transparent);
+      }
+      .gd-input.mono { font-family: var(--oc-mono, monospace); font-size: 12px; }
+      .gd-input:focus-visible, .gd-select:focus-visible, .gd-choice input:focus-visible {
+        outline: 2px solid var(--oc-focus, Highlight); outline-offset: 1px;
+      }
+      .gd-input:disabled { opacity: .6; }
+      .gd-preview:not([hidden]) { margin-top: 4px; }
+      .gd-draft {
+        display: grid; gap: 4px; padding: 10px;
+        border-radius: calc(var(--oc-radius, 9px) - 2px);
+        border: 1px dashed var(--oc-border, rgba(127,127,127,.35));
+      }
+      .gd-draft-head, .gd-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+      .gd-draft-label, .gd-card-label { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+      .gd-rules { list-style: none; display: grid; gap: 4px; }
+      .gd-rule { display: grid; gap: 1px; padding-left: 12px; position: relative; }
+      .gd-rule::before {
+        content: ""; position: absolute; left: 1px; top: .55em; width: 5px; height: 5px; border-radius: 1px;
+        background: var(--oc-error, red);
+      }
+      .gd-rule-text { font-size: 12.5px; font-weight: 500; overflow-wrap: anywhere; }
+      .nowrap { white-space: nowrap; }
+      .gd-rule-note { font-size: 11.5px; color: var(--oc-muted, gray); }
+      .gd-tester { display: grid; gap: 4px; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--oc-border, rgba(127,127,127,.2)); }
+      .gd-test-result { font-size: 12px; color: var(--oc-muted, gray); overflow-wrap: anywhere; }
+      .gd-test-result[data-tone="error"] { color: var(--oc-error-text, inherit); font-weight: 600; }
+      .gd-test-result[data-tone="success"] { color: var(--oc-success-text, inherit); }
+      .gd-errors { list-style: none; display: grid; gap: 2px; margin-top: 4px; }
+      .gd-errors .mono { font-size: 11px; }
+
+      .gd-card {
+        display: grid; gap: 5px; padding: 10px;
+        border-radius: calc(var(--oc-radius, 9px) - 2px);
+        border: 1px solid var(--oc-border, rgba(127,127,127,.25));
+      }
+      .gd-card[data-active="true"] { border-color: color-mix(in srgb, var(--oc-primary, gray) 55%, transparent); }
+      .gd-card[data-active="true"] .gd-pill {
+        background: color-mix(in srgb, var(--oc-primary, gray) 18%, transparent); color: var(--oc-primary-text, inherit);
+      }
+      .gd-dl { display: grid; gap: 4px; margin-top: 4px; }
+      .gd-enable, .gd-confirm {
+        display: grid; gap: 6px; margin: 2px 0 0; padding: 8px 10px;
+        border: 1px solid var(--oc-border, rgba(127,127,127,.25));
+        border-radius: calc(var(--oc-radius, 9px) - 3px);
+        background: var(--oc-muted-surface, rgba(127,127,127,.08));
+      }
+      .gd-enable legend { padding: 0 4px; margin-left: -4px; }
+      .gd-choice { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+      .gd-choice input { margin: 2px 0 0; accent-color: var(--oc-primary, auto); }
+      .gd-choice-text { display: grid; gap: 1px; }
+      .gd-choice-label { font-size: 12.5px; font-weight: 600; }
+      .gd-choice-help { font-size: 11.5px; color: var(--oc-muted, gray); }
+      .gd-expiry { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+      .gd-select {
+        font: inherit; font-size: 12px; color: inherit; padding: 3px 6px;
+        border-radius: calc(var(--oc-radius, 9px) - 4px);
+        border: 1px solid var(--oc-border, rgba(127,127,127,.35)); background: var(--oc-bg, transparent);
+      }
+      .gd-op { display: grid; gap: 4px; justify-items: start; }
+      .gd-about { font-size: 12px; color: var(--oc-muted, gray); }
+      .gd-about[open] { display: grid; gap: 6px; }
+      .gd-about-text { font-size: 12px; line-height: 1.45; }
+
       @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
     </style>
   </head>
   <body>
-    <main id="root" aria-label="FueliX plugin status"></main>
+    <main id="root" aria-label="TD-Plugin extension"></main>
     <script src="main.js"></script>
   </body>
 </html>
