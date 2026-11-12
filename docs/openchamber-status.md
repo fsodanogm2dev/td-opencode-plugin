@@ -28,7 +28,7 @@ Use OpenChamber 2.7.0 or later on web or desktop. Mobile and VS Code do not load
 In **Settings → Extensions**, add:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.5.1
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.5.2
 ```
 
 Approve file access to the reports and **Add a plugin to OpenCode**. OpenChamber loads the bundled plugin and the status
