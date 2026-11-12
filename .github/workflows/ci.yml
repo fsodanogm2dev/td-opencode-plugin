@@ -20,3 +20,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun test test/unit
+      - run: cd extension && bun install --frozen-lockfile
+      - run: bun run extension:typecheck
+      - run: bun run extension:test
+      - run: bun run extension:build
+      - run: bun run extension:check

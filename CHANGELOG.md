@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- The TD-Plugin extension manages global guard definitions and session- or request-scoped activations. The plugin
+  rejects matching permission-checked actions before execution, including otherwise approved calls. Linked subagents
+  inherit guards. Request completion is best effort and retains guards when uncertain. See [`docs/guards.md`](docs/guards.md).
+
+- An optional OpenChamber status extension shows the plugin's recorded configuration, latest model-discovery result,
+  and added or removed models. It reads credential-free reports from the plugin's own report directory. It does not
+  change configuration or trigger discovery. See [`docs/openchamber-status.md`](docs/openchamber-status.md).
+- `options.fuelix.statusReport` controls report writing. The default is `true`.
+
 ## 0.3.1 (beta), 2026-11-11
 
 Patch release. It needs OpenCode 2.0.32 or later. If you use v0.3.0, change the tag in your configuration to

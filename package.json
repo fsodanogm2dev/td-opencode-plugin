@@ -18,6 +18,10 @@
     "test": "bun test test/unit",
     "test:integration": "bun test test/integration --timeout 180000",
     "typecheck": "tsc --noEmit",
+    "extension:build": "cd extension && bun run build",
+    "extension:typecheck": "cd extension && bun run typecheck",
+    "extension:test": "cd extension && bun run test",
+    "extension:check": "cd extension && bun run check",
     "doctor": "bun scripts/doctor.ts",
     "catalog": "bun scripts/build-catalog.ts"
   },

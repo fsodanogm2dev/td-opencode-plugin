@@ -1,0 +1,12 @@
+// Local plugin entry for the unreleased guard feature.
+// Replace only the existing td-opencode-plugin entry in your configuration.
+// Set this to the absolute path of your checkout; do not keep the placeholder.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [
+    {
+      "package": "/absolute/path/to/td-opencode-plugin/.slim/worktrees/td-plugin-guards",
+      "options": {}
+    }
+  ]
+}

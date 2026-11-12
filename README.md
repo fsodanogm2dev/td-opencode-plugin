@@ -2,7 +2,7 @@
 
 OpenCode V2 plugin for TELUS Digital engineers who use FueliX with OpenCode and OpenChamber.
 
-It does four things:
+The plugin provides:
 
 1. **FueliX catalog**: registers the `fuelix-openai`, `fuelix-anthropic`, and `fuelix` providers and loads their
    models from `https://api.fuelix.ai/v1/models`. Prices, limits, and modalities come from a curated catalog
@@ -15,7 +15,9 @@ It does four things:
 4. **Batch workflow**: six ordinary tools (`fuelix_batch_*`) submit independent Messages requests from a file to
    FueliX, check the status, cancel, and collect the results into protected local files. Details are in
    [`docs/batches.md`](docs/batches.md). Live batch submission was rejected with HTTP 403, so account access and result
-   collection are not verified.
+    collection are not verified.
+5. **Execution guards**: rejects matching permission-checked actions before execution. The TD-Plugin extension
+   manages saved definitions and temporary activations. See [`docs/guards.md`](docs/guards.md) for scope and limits.
 
 A visual overview with diagrams is in [`docs/index.html`](docs/index.html). Open it in a browser from a clone.
 Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decisions, and its evidence are in
@@ -152,6 +154,21 @@ variant of that model:
 { "agents": { "title": { "model": { "providerID": "fuelix-anthropic", "model": "claude-haiku-4-5" } } } }
 ```
 
+## TD-Plugin extension
+
+Status reporting and guards are unreleased features in this checkout. Use this checkout's plugin and extension to
+test them. Installing only the extension does not add guard enforcement to an older plugin.
+
+The optional OpenChamber extension in [`extension/`](extension/) shows the plugin's recorded configuration and latest
+model-discovery result. It also manages saved execution guards. You inspect generated rules before saving or enabling
+them. The plugin rejects matching permission-checked actions before execution. See [`docs/guards.md`](docs/guards.md)
+for scope, release, and enforcement limits.
+
+The status view lists added and removed models. **Reload report** reads the saved report; it does not run a check.
+
+Install the `extension/` folder from **Settings → Extensions** in OpenChamber web or desktop. See
+[`docs/openchamber-status.md`](docs/openchamber-status.md) for build steps, permissions, and report limitations.
+
 ## Options
 
 ```jsonc
@@ -164,7 +181,8 @@ variant of that model:
       "refreshMinutes": 60,                 // /v1/models refresh interval; 0 disables it
       "includeNonChatModels": false,        // also register embedding, speech, transcription, and image models
       "discoveryTimeoutMs": 5000,
-      "scrubShellEnv": true                 // remove FUELIX_API_KEY from agent shell environments
+      "scrubShellEnv": true,                // remove FUELIX_API_KEY from agent shell environments
+      "statusReport": true                 // write the FueliX model status report
       // Optional batchRates: see docs/batches.md for sourced batch prices.
     },
     "debug": false
