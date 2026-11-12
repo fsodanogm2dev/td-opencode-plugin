@@ -7,6 +7,7 @@
 
 import type { Plugin } from "@opencode/plugin"
 import { setupFuelix } from "./fuelix/index.ts"
+import { createFileStatusWriter } from "./fuelix/status.ts"
 import { createLogger } from "./log.ts"
 import { parseOptions } from "./options.ts"
 
@@ -28,7 +29,7 @@ const plugin: Plugin.Plugin = {
     // A setup failure is logged and does not stop OpenCode.
     const cleanups: Cleanup[] = []
     try {
-      cleanups.push(await setupFuelix(ctx, options.fuelix, log))
+      cleanups.push(await setupFuelix(ctx, options.fuelix, log, { statusReport: createFileStatusWriter() }))
     } catch (error) {
       log.error("FueliX setup failed", { error: errorMessage(error) })
     }

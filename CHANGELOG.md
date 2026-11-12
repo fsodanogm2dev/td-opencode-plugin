@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.4.0 (beta), 2026-11-12
+
+Feature release. It needs OpenCode 2.0.32 or later. The combined extension needs OpenChamber 2.7.0 or later.
+For a standalone plugin, change the configuration tag to `#v0.4.0`. For the combined package, use the repository URL in
+OpenChamber **Settings → Extensions** and approve the bundled plugin. Remove a previous manual plugin entry first.
+
+### Added
+
+- An optional OpenChamber status extension shows the plugin's recorded configuration, latest model-discovery result,
+  and added or removed models. The panel reads credential-free reports from the plugin's own report directory. It does not
+  change configuration or trigger discovery. See [`docs/openchamber-status.md`](docs/openchamber-status.md).
+- `options.fuelix.statusReport` controls report writing. The default is `true`.
+- The repository is also an OpenChamber extension package. One approved installation loads both the plugin and the
+  status panel. The standalone OpenCode plugin remains available for custom options.
+- Each setup setting has a visible explanation. The panel explains the three request formats and distinguishes
+  provider activation from credential validation.
+- CI builds and checks both the panel and the bundled server plugin.
+
+### Fixed
+
+- A failed provider reload is retried on the next model-discovery cycle. Reports do not claim that unapplied model
+  changes succeeded.
+
 ## 0.3.1 (beta), 2026-11-11
 
 Patch release. It needs OpenCode 2.0.32 or later. If you use v0.3.0, change the tag in your configuration to

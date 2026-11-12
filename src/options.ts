@@ -28,6 +28,11 @@ export interface FuelixOptions {
    * values leave batch costs unavailable.
    */
   readonly batchRates?: BatchRateCard
+  /**
+   * Write the status report that the OpenChamber extension reads. The parser defaults to `true`; `false` opts out.
+   * An absent value in a hand-built literal means the same as `true`.
+   */
+  readonly statusReport?: boolean
 }
 
 export interface ParsedOptions {
@@ -110,6 +115,7 @@ export function parseOptions(raw: unknown, env: Env = process.env): ParsedOption
     includeNonChatModels: readBoolean(fuelixRaw, "fuelix", "includeNonChatModels", false),
     discoveryTimeoutMs: readNumber(fuelixRaw, "fuelix", "discoveryTimeoutMs", 5000, 500, 60000),
     scrubShellEnv: readBoolean(fuelixRaw, "fuelix", "scrubShellEnv", true),
+    statusReport: readBoolean(fuelixRaw, "fuelix", "statusReport", true),
     ...(batchRates ? { batchRates } : {}),
   }
 
