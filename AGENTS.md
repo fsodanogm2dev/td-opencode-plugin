@@ -21,7 +21,7 @@ Release notes are in `CHANGELOG.md`.
 
 ```bash
 bun install
-bun test                 # unit tests
+bun run test             # unit tests; bare `bun test` scans all suites
 bun run typecheck        # tsc --noEmit
 bun run doctor           # compare live /v1/models with data/fuelix-models.json (needs a FueliX key)
 ```

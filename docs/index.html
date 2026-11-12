@@ -928,7 +928,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
 
   <div class="panel" style="margin-top:1.1rem">
     <h3>Turn it on</h3>
-    <p>Store the key in one of the three places above. Then add <code>jev</code> to the options of your plugin entry:</p>
+    <p>Add <code>jev</code> to the options of your plugin entry. Then store the key in one of the three places above. The <strong>TypeSafe</strong> connection appears in <code>/connect</code> after Jev is enabled:</p>
     <div class="code"><div class="box"><pre>{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.0", "options": { "jev": { "enabled": true, "model": "jev-1.14.0" } } }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
     <p>All options, the move from the standalone Jev plugin, and storage details: <a href="jev.md">docs/jev.md</a>.</p>
     <p class="note">The tests for Jev use fake keys and a local mock TypeSafe endpoint. Jev is not verified against the live TypeSafe service. Report: <a href="reports/2026-11-12-jev-verification.md">Jev verification</a>.</p>
@@ -1152,11 +1152,11 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
 <section id="checks">
   <h2>Checks behind the release</h2>
   <div class="cards checkgrid">
-    <div class="card pass"><span class="num">0</span><span class="lbl">Live models missing from the catalog (<code>bun run doctor</code>)</span></div>
-    <div class="card pass"><span class="num">3</span><span class="lbl">Title models present and active (<code>bun run doctor</code>)</span></div>
+    <div class="card pass"><span class="num">1,180</span><span class="lbl">Tests passed across all suites (<code>bun test</code>)</span></div>
+    <div class="card pass"><span class="num">71</span><span class="lbl">Isolated integration tests passed (<code>bun run test:integration</code>)</span></div>
   </div>
   <div class="panel">
-    <p>The live test skips without a FueliX key. Its last run matched tokens and cost on every step.</p>
+    <p>The live FueliX usage test was skipped. It requires <code>TD_LIVE=1</code> and a FueliX key. The <a href="reports/2026-11-12-jev-verification.md">verification report</a> lists the commands, results, and limits.</p>
     <p>Jev 1.14.0 checks use unit tests and isolated OpenCode tests with fake keys and a local mock TypeSafe endpoint. They do not verify the live TypeSafe service. Report: <a href="reports/2026-11-12-jev-verification.md">Jev verification</a>.</p>
   </div>
 </section>

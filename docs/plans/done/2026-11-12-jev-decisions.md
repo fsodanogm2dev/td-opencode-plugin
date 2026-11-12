@@ -13,9 +13,15 @@ This release targets v0.5.0. The separate OpenChamber extension work reserves v0
 - [x] Document the data flow, options, migration, limitations, and release.
 - [x] Run focused tests, reconcile the implementation, and review safety and lifecycle behavior.
 - [x] Incorporate the released v0.4.0 status extension without removing its behavior.
-- [ ] Rebuild the combined package and verify its Jev parity.
-- [ ] Run final unit, type, and isolated integration checks.
-- [ ] Open and link the PR, wait for its checks, merge, and tag the exact merge commit.
+- [x] Rebuild the combined package and verify its Jev parity.
+- [x] Run final unit, type, and isolated integration checks.
+- [x] Open and link PR #3. Prepare verified artifacts and source CI evidence for release.
+
+## Delivery
+
+The user authorized merging [PR #3](https://github.com/fsodanogm2dev/td-opencode-plugin/pull/3) after its checks and
+tagging its merge commit `v0.5.0`. GitHub records delivery; the implementation and verification work in this plan is
+complete.
 
 ## Scope
 
@@ -52,4 +58,5 @@ check requires an available private credential; if unavailable, document that li
 
 ## Evidence
 
-Evidence and deviations will be recorded in `docs/reports/2026-11-12-jev-verification.md` before merge.
+[`docs/reports/2026-11-12-jev-verification.md`](../../reports/2026-11-12-jev-verification.md) records the final
+commands, exit statuses, test totals, runtime observations, review decisions, and live-service limitations.

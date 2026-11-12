@@ -221,7 +221,7 @@ Install the combined repository package from **Settings → Extensions** in Open
 
 ```bash
 bun install
-bun test                  # unit tests
+bun run test              # unit tests; bare `bun test` scans all suites
 bun run typecheck
 bun run test:integration  # starts isolated OpenCode servers; see test/integration/README.md
 bun run doctor            # compares live /v1/models with data/fuelix-models.json (needs a FueliX key)

@@ -11,7 +11,8 @@ organization's data policy before enabling it on company projects.
 
 Store the TypeSafe key in the macOS Keychain, connect through `/connect` and select **TypeSafe**, or set
 `TYPESAFE_API_KEY` in the OpenCode server environment. The Keychain service name is `typesafe-api-key`.
-The resolver uses the first available key in that order. Do not put a key in plugin options.
+The resolver uses the first available key in that order. The **TypeSafe** connection appears after you enable Jev
+in the options below. If you use `/connect`, enable Jev first, then connect. Do not put a key in plugin options.
 
 Add `jev` to the options of your existing plugin entry:
 
