@@ -30,12 +30,33 @@ Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decision
 
 The repository `fsodanogm2dev/td-opencode-plugin` is public. Installing it over HTTPS needs no GitHub authentication.
 
+### OpenChamber: plugin and status panel together
+
+Use OpenChamber 2.7.0 or later. Open **Settings → Extensions** and add this repository URL:
+
+```text
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.4.0
+```
+
+Approve the status-report file access and **Add a plugin to OpenCode**. OpenChamber then loads the bundled plugin and
+adds **FueliX status** to the rail. The package ships built files; no local build is needed.
+
+If the plugin is already listed in your OpenCode configuration, remove that manual entry before installing the combined
+package. Do not install both copies. If you already installed the status-only `extension/` folder, remove that extension
+first. These steps do not remove your FueliX credential.
+
+The combined install uses default plugin options. For custom plugin options, use the standalone installation below
+and the status-only folder described in [`docs/openchamber-status.md`](docs/openchamber-status.md). OpenCode installations
+do not silently install OpenChamber extensions; OpenChamber asks for approval.
+
+### Standalone OpenCode plugin
+
 Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.3.1", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.4.0", "options": {} }]
 }
 ```
 
@@ -52,7 +73,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.3.1 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.4.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
@@ -74,6 +95,16 @@ diff ~/.config/opencode/opencode.json /tmp/opencode.migrated.json   # review, th
 The output keeps every other value of your file, including secrets that the file already holds, so keep it private.
 
 ## FueliX key
+
+The three provider names identify request formats, not separate FueliX accounts:
+
+- `fuelix-openai` uses OpenAI Responses, typically for GPT and o-series models.
+- `fuelix-anthropic` uses Anthropic Messages, typically for Claude models.
+- `fuelix` uses OpenAI-compatible Chat Completions for models such as Gemini, Llama, Mistral, and DeepSeek.
+
+All three connect to FueliX with the same key. The curated catalog chooses the route for each model; specific model
+aliases can use a different route from their family's default. OpenAI-compatible describes the format, not the model's
+vendor. Anthropic background-request authentication belongs to `fuelix-anthropic`; it is not a fourth provider.
 
 The plugin looks for the key in this order and uses the first one it finds:
 
@@ -152,6 +183,15 @@ variant of that model:
 { "agents": { "title": { "model": { "providerID": "fuelix-anthropic", "model": "claude-haiku-4-5" } } } }
 ```
 
+## OpenChamber status extension
+
+The extension shows the plugin's recorded configuration and the latest automatic
+model-discovery result. It lists added and removed models and keeps the latest model change visible after an unchanged
+check. It reads reports, not credentials. **Reload report** reads the saved report; it does not run a check.
+
+Install the combined repository package from **Settings → Extensions** in OpenChamber web or desktop. See
+[`docs/openchamber-status.md`](docs/openchamber-status.md) for build steps, permissions, and report limitations.
+
 ## Options
 
 ```jsonc
@@ -164,7 +204,8 @@ variant of that model:
       "refreshMinutes": 60,                 // /v1/models refresh interval; 0 disables it
       "includeNonChatModels": false,        // also register embedding, speech, transcription, and image models
       "discoveryTimeoutMs": 5000,
-      "scrubShellEnv": true                 // remove FUELIX_API_KEY from agent shell environments
+      "scrubShellEnv": true,                // remove FUELIX_API_KEY from agent shell environments
+      "statusReport": true                 // write credential-free reports for the optional OpenChamber extension
       // Optional batchRates: see docs/batches.md for sourced batch prices.
     },
     "debug": false

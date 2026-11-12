@@ -13,7 +13,16 @@ describe("parseOptions", () => {
       includeNonChatModels: false,
       discoveryTimeoutMs: 5000,
       scrubShellEnv: true,
+      statusReport: true,
     })
+  })
+
+  test("statusReport defaults to true and false opts out", () => {
+    expect(parseOptions({ fuelix: {} }, {}).fuelix.statusReport).toBe(true)
+    expect(parseOptions({ fuelix: { statusReport: false } }, {}).fuelix.statusReport).toBe(false)
+    const invalid = parseOptions({ fuelix: { statusReport: "no" } }, {})
+    expect(invalid.fuelix.statusReport).toBe(true)
+    expect(invalid.warnings).toEqual(["options.fuelix.statusReport must be true or false; using true"])
   })
 
   test("normalizes the FueliX base URL", () => {
