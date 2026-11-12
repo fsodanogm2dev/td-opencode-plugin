@@ -28,8 +28,8 @@ All commands below exited with status 0. Verification logs are in
 `/private/var/folders/7q/nps8fpbs6r9d1tn79n28r1c40000gn/T/opencode/verify/`.
 
 - `bun run test`: 540 unit tests passed (`9-root-unit.log`).
-- `bun run extension:test`: 54 tests passed (`4-ext-test.log`).
-- `bun test`: 629 passed, 1 live-usage test skipped, 0 failures (`1-test.log`). This includes isolated integration tests.
+- `bun run extension:test`: 58 tests passed across the five files in `extension/test/`, including all seven setting explanations.
+- Isolated integration tests passed; the live-usage test was skipped (`1-test.log`). No backend changes followed this check.
 - `bun run typecheck` and `bun run extension:typecheck`: passed (`2-typecheck.log`, `3-ext-typecheck.log`).
 - `bun run extension:build`: produced the self-contained panel IIFE (`5-ext-build.log`).
 - `bun run extension:check`: SDK checker accepted the package (`6-ext-check.log`).
@@ -43,3 +43,8 @@ the SDK checker and the four-file package check.
 The development OpenCode service hot-loaded the plugin and wrote snapshots in `~/.td-opencode-plugin/status/`.
 Tests used injected writers or isolated temporary home directories. No user OpenCode configuration was changed.
 The agent did not install the extension. A real desktop installation was not part of the automated verification.
+
+Every row under **What the plugin set up** includes visible explanation text. DOM tests cover the seven name/value/help
+groups, unchanged disabled/failure values and tones, safe text rendering, and Reload report focus. The panel typecheck,
+58 tests, build, SDK checker, and `git diff --check` exited 0. The updated 300-pixel dark and light screenshots passed
+visual review, with no clipping or unreadable help text.

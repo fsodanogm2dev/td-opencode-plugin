@@ -1,6 +1,6 @@
 {
   "name": "td-opencode-plugin",
-  "version": "0.3.1",
+  "version": "0.6.0",
   "private": true,
   "description": "OpenCode V2 plugin for TELUS Digital: FueliX model catalog, secure key handling, and accurate usage.",
   "type": "module",
@@ -10,20 +10,66 @@
   },
   "files": [
     "README.md",
+    "THIRD_PARTY_NOTICES.md",
     "data",
     "index.ts",
-    "src"
+    "src",
+    "extension/icon.svg",
+    "extension/panel/index.html",
+    "extension/panel/main.js",
+    "extension/panel/status.html",
+    "extension/panel/status.js",
+    "extension/service/main.js",
+    "extension/plugin/index.js"
   ],
   "scripts": {
     "test": "bun test test/unit",
     "test:integration": "bun test test/integration --timeout 180000",
     "typecheck": "tsc --noEmit",
+    "build": "bun run extension:build && bun run plugin:build",
+    "plugin:build": "bun scripts/build-extension-plugin.ts",
+    "plugin:check": "bun scripts/build-extension-plugin.ts --check",
     "extension:build": "cd extension && bun run build",
     "extension:typecheck": "cd extension && bun run typecheck",
     "extension:test": "cd extension && bun run test",
-    "extension:check": "cd extension && bun run check",
+    "extension:check": "bun run plugin:check && cd extension && bun run check && bun node_modules/@openchamber/sdk/scripts/check-guest.ts ..",
     "doctor": "bun scripts/doctor.ts",
     "catalog": "bun scripts/build-catalog.ts"
+  },
+  "openchamber": {
+    "apiVersion": 1,
+    "engines": {
+      "openchamber": ">=2.7.0"
+    },
+    "id": "td-fuelix-status",
+    "name": "TD-Plugin extension",
+    "icon": "extension/icon.svg",
+    "contributes": {
+      "panel": {
+        "entry": "extension/panel/index.html"
+      },
+      "statusSection": {
+        "entry": "extension/panel/status.html",
+        "title": "TD-Plugin guards",
+        "height": 48,
+        "requiresProject": false
+      },
+      "capabilities": [
+        "model",
+        "sessions"
+      ],
+      "service": {
+        "entry": "extension/service/main.js",
+        "runtime": "host",
+        "provides": [
+          "opencode"
+        ]
+      },
+      "filesystem": [
+        "~/.td-opencode-plugin/status/*.json"
+      ],
+      "opencodePlugin": "extension/plugin"
+    }
   },
   "devDependencies": {
     "@opencode/plugin": "2.0.32",

@@ -15,8 +15,11 @@ The plugin provides:
 4. **Batch workflow**: six ordinary tools (`fuelix_batch_*`) submit independent Messages requests from a file to
    FueliX, check the status, cancel, and collect the results into protected local files. Details are in
    [`docs/batches.md`](docs/batches.md). Live batch submission was rejected with HTTP 403, so account access and result
-    collection are not verified.
-5. **Execution guards**: rejects matching permission-checked actions before execution. The TD-Plugin extension
+   collection are not verified.
+5. **Optional Jev decisions**: Jev 1.14.0 adds shell permission checks and failure-output compression. Skill and
+   reasoning observations are shadow-only. Jev is disabled by default and sends selected redacted data to TypeSafe,
+   outside FueliX. Read [`docs/jev.md`](docs/jev.md) before enabling it.
+6. **Execution guards**: reject matching permission-checked actions before execution. The TD-Plugin extension
    manages saved definitions and temporary activations. See [`docs/guards.md`](docs/guards.md) for scope and limits.
 
 A visual overview with diagrams is in [`docs/index.html`](docs/index.html). Open it in a browser from a clone.
@@ -32,12 +35,34 @@ Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decision
 
 The repository `fsodanogm2dev/td-opencode-plugin` is public. Installing it over HTTPS needs no GitHub authentication.
 
+### OpenChamber: plugin and extension together
+
+Use OpenChamber 2.7.0 or later. Open **Settings → Extensions** and add this repository URL:
+
+```text
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.6.0
+```
+
+Review and approve the status-report file access, Small Model and session access, local guard service, and
+**Add a plugin to OpenCode**. OpenChamber loads the bundled plugin and adds **TD-Plugin extension** to the rail.
+The package ships built files; no local build is needed.
+
+If the plugin is already listed in your OpenCode configuration, remove that manual entry before installing the combined
+package. Do not install both copies. If you already installed the status-only `extension/` folder, remove that extension
+first. These steps do not remove your FueliX credential.
+
+The combined install uses default plugin options. For custom plugin options, use the standalone installation below
+and the extension-only folder described in [`docs/openchamber-status.md`](docs/openchamber-status.md). OpenCode installations
+do not silently install OpenChamber extensions; OpenChamber asks for approval.
+
+### Standalone OpenCode plugin
+
 Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.3.1", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": {} }]
 }
 ```
 
@@ -54,7 +79,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.3.1 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.6.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
@@ -76,6 +101,16 @@ diff ~/.config/opencode/opencode.json /tmp/opencode.migrated.json   # review, th
 The output keeps every other value of your file, including secrets that the file already holds, so keep it private.
 
 ## FueliX key
+
+The three provider names identify request formats, not separate FueliX accounts:
+
+- `fuelix-openai` uses OpenAI Responses, typically for GPT and o-series models.
+- `fuelix-anthropic` uses Anthropic Messages, typically for Claude models.
+- `fuelix` uses OpenAI-compatible Chat Completions for models such as Gemini, Llama, Mistral, and DeepSeek.
+
+All three connect to FueliX with the same key. The curated catalog chooses the route for each model; specific model
+aliases can use a different route from their family's default. OpenAI-compatible describes the format, not the model's
+vendor. Anthropic background-request authentication belongs to `fuelix-anthropic`; it is not a fourth provider.
 
 The plugin looks for the key in this order and uses the first one it finds:
 
@@ -156,17 +191,14 @@ variant of that model:
 
 ## TD-Plugin extension
 
-Status reporting and guards are unreleased features in this checkout. Use this checkout's plugin and extension to
-test them. Installing only the extension does not add guard enforcement to an older plugin.
-
-The optional OpenChamber extension in [`extension/`](extension/) shows the plugin's recorded configuration and latest
+The OpenChamber extension shows the plugin's recorded configuration and latest
 model-discovery result. It also manages saved execution guards. You inspect generated rules before saving or enabling
 them. The plugin rejects matching permission-checked actions before execution. See [`docs/guards.md`](docs/guards.md)
 for scope, release, and enforcement limits.
 
 The status view lists added and removed models. **Reload report** reads the saved report; it does not run a check.
 
-Install the `extension/` folder from **Settings → Extensions** in OpenChamber web or desktop. See
+Install the combined repository package from **Settings → Extensions** in OpenChamber web or desktop. See
 [`docs/openchamber-status.md`](docs/openchamber-status.md) for build steps, permissions, and report limitations.
 
 ## Options
@@ -185,6 +217,7 @@ Install the `extension/` folder from **Settings → Extensions** in OpenChamber 
       "statusReport": true                 // write the FueliX model status report
       // Optional batchRates: see docs/batches.md for sourced batch prices.
     },
+    "jev": { "enabled": false, "model": "jev-1.14.0" }, // optional; see docs/jev.md
     "debug": false
   }
 }
@@ -194,7 +227,7 @@ Install the `extension/` folder from **Settings → Extensions** in OpenChamber 
 
 ```bash
 bun install
-bun test                  # unit tests
+bun run test              # unit tests; bare `bun test` scans all suites
 bun run typecheck
 bun run test:integration  # starts isolated OpenCode servers; see test/integration/README.md
 bun run doctor            # compares live /v1/models with data/fuelix-models.json (needs a FueliX key)

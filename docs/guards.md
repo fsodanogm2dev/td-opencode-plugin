@@ -37,6 +37,10 @@ The plugin uses OpenCode's permission evaluation hook. A matching rule sets the 
 ordinary permissions would allow the action. It does not ask the model to respect an instruction or decide whether
 its own explanation justifies an exception. A blocked attempt does not open another approval prompt.
 
+The built-in Jev integration runs after the guard. Its shell-safety decision point skips guard-denied commands,
+so those attempts do not trigger a TypeSafe safety request. Jev can raise an allowed action to approval review;
+it cannot relax a guard denial.
+
 The plugin exposes no model tool, command, or RPC that enables, disables, or deletes guards. Management requests
 come from the extension's user controls through its authenticated local service.
 
@@ -86,6 +90,7 @@ do not share these definitions or activations.
 
 The extension asks for Small Model access, session information, and a local service. The service runs with your full
 user privileges, not inside the panel's sandbox. OpenChamber's approval dialog lists these permissions.
+The combined package also asks to load the bundled OpenCode plugin.
 
 Do not include credentials in guard requests or sample commands. Guard requests are saved as your data. Live command
 text and permission resources are not written to guard status reports or lifecycle facts.
@@ -95,24 +100,25 @@ extension does not remove the plugin's global store. Keep a working user control
 
 ## Check the active plugin
 
-The extension and the OpenCode plugin are separate installs. Both need this feature's version. Installing only the
-extension cannot add the enforcement hook to an older plugin. The guard controls show whether an enforcement
-runtime was recorded for the current location; a missing or stale report is not proof that guards are enforced.
+The combined package installs the extension and OpenCode plugin together. An extension-only folder needs a separate
+plugin installation at version 0.6.0 or later. The guard controls show whether an enforcement runtime was recorded
+for the current location; a missing or stale report is not proof that guards are enforced.
 
-This feature is developed in worktree `.slim/worktrees/td-plugin-guards`. It is not a released update. The agent has
-not changed your global OpenCode configuration to load that worktree.
+## Install
 
-## Try the worktree version
+In OpenChamber desktop, open **Settings → Extensions** and add:
 
-Use one `td-opencode-plugin` entry in your OpenCode configuration. Replace its package path with the absolute path
-of this worktree. Keep your existing plugin options and every unrelated setting. Do not add a second copy of the plugin.
+```text
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.6.0
+```
 
-[`../examples/td-plugin-guards.jsonc`](../examples/td-plugin-guards.jsonc) shows the local entry. The example is not a
-complete replacement for your configuration.
+Remove a previous manual `td-opencode-plugin` entry before using the combined package. Do not load two copies.
+Review the model, session, local-service, and bundled-plugin permissions. The global guard store survives an
+extension update or removal.
 
-In OpenChamber desktop, open **Settings → Extensions** and add the worktree's `extension/` folder. If an installed
-extension already uses the same ID, remove that extension entry before adding the worktree folder. This does not
-delete the plugin's global guard store. Review the new model, session, and local-service permissions.
+For custom options, use the standalone plugin and add the clone's `extension/` folder. For local development,
+[`../examples/td-plugin-guards.jsonc`](../examples/td-plugin-guards.jsonc) shows the plugin entry; it is not a complete
+replacement for your configuration. See [`openchamber-status.md`](openchamber-status.md) for build steps.
 
 Open **TD-Plugin extension → Guards** in a session. Wait for **Enforced by the plugin**, enter a request, and select
 **Generate**. Review the rules and test sample commands, then save the definition. Enable it with the scope you want.

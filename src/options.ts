@@ -9,6 +9,7 @@
  */
 
 import { parseBatchRateCard, type BatchRateCard } from "./fuelix/batch/pricing.ts"
+import { parseJevOptions, type JevOptions } from "./jev/options.ts"
 
 export interface FuelixOptions {
   /** Gateway origin without a path. Providers append `/v1` where their package needs it. */
@@ -37,6 +38,8 @@ export interface FuelixOptions {
 
 export interface ParsedOptions {
   readonly fuelix: FuelixOptions
+  /** Jev decision points. Disabled by default. */
+  readonly jev: JevOptions
   readonly debug: boolean
   readonly warnings: readonly string[]
 }
@@ -121,5 +124,7 @@ export function parseOptions(raw: unknown, env: Env = process.env): ParsedOption
 
   const debug = readBoolean(root, "options", "debug", false) || env.TD_OPENCODE_PLUGIN_DEBUG === "1"
 
-  return { fuelix, debug, warnings }
+  const jev = parseJevOptions(root.jev, env, warnings)
+
+  return { fuelix, jev, debug, warnings }
 }

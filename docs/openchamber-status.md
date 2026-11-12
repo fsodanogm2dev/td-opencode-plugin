@@ -13,6 +13,10 @@ described in [`guards.md`](guards.md).
 - The latest discovery attempt, its outcome, and the latest successful check.
 - Models added or removed by discovery in the current plugin run. The latest change stays available after an unchanged check.
 
+Each setting under **What the plugin set up** includes a short explanation below its recorded value. These explain
+the credential source, request authentication, automatic checks, model types, provider activation, shell key protection,
+and batch tools.
+
 The check calls FueliX's `/v1/models` endpoint. The separate `bun run doctor` command compares the live model list with
 the curated catalog. Its results do not appear in this extension.
 
@@ -20,10 +24,35 @@ the curated catalog. Its results do not appear in this extension.
 
 Use OpenChamber 2.7.0 or later on web or desktop. Mobile and VS Code do not load extensions.
 
-The plugin and the extension are separate installs. The extension does not install or update the plugin. The plugin
-must use a version that writes status reports; release 0.3.1 does not include this feature.
+### Combined package
 
-From a clone, install the extension's development dependencies and build it:
+In **Settings → Extensions**, add:
+
+```text
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.6.0
+```
+
+Review and approve report access, Small Model and session access, the local guard service, and **Add a plugin to OpenCode**.
+OpenChamber loads the bundled plugin and **TD-Plugin extension** from one package. Updating the extension updates both
+components. The plugin uses its default options.
+
+Remove an existing manual `td-opencode-plugin` entry from your OpenCode configuration before using the combined install.
+If the status-only folder extension is installed, remove it first. Neither step removes your FueliX credential.
+
+OpenChamber manages the bundled plugin through its own configuration; it does not write your `opencode.json`. Disabling
+or removing the extension removes its managed plugin entry. This works when OpenChamber manages the OpenCode server.
+When OpenChamber cannot reach that configuration, it can offer **Add to global config**. That action creates a manual
+entry which you must remove yourself when you remove the extension. A remote OpenCode cannot load a local plugin folder.
+
+Mobile and VS Code do not install this package. Sessions in isolated spaces use their own OpenCode and do not load the
+host's bundled plugin. Enterprise mode allows bundled plugins only from administrator-approved repositories.
+
+### Extension-only folder with a standalone plugin
+
+For custom plugin options, keep the standalone OpenCode plugin installation and add only the clone's `extension/`
+folder. Use plugin version 0.6.0 for guard enforcement. This folder does not install a plugin.
+
+To rebuild the extension during development:
 
 ```bash
 cd extension
@@ -35,7 +64,10 @@ bun run check
 In OpenChamber, open **Settings → Extensions**, add the absolute path of the clone's `extension/` folder, and review its
 permissions. Open **TD-Plugin extension** from the rail while viewing the project you want to inspect.
 
-The built JavaScript ships with the extension. OpenChamber does not compile TypeScript when it installs the folder.
+The built JavaScript ships with both packages. OpenChamber does not compile TypeScript when it installs them.
+
+For a combined folder install from a clone, add the repository root, not `extension/`. To rebuild both components,
+install dependencies at the root and in `extension/`, then run `bun run build` from the root.
 
 ## Reports and permissions
 
@@ -45,11 +77,13 @@ named with the SHA-256 hash of the directory. A location without a project uses 
 The status view requests file access only to `~/.td-opencode-plugin/status/*.json`. The SDK file permission allows reading
 and writing those files; this view only reads them. Guard management also requires session information, Small Model
 access, and an authenticated local service with full user privileges. See [`guards.md`](guards.md).
+The combined package also requests permission to load the bundled OpenCode plugin. The extension-only folder leaves
+plugin installation under your control.
 
 Reports contain no credentials, request headers, raw configuration, or arbitrary exception messages. Failure reasons
 use fixed descriptions. Reports identify the directory and the time they were written.
 
-Reporting is enabled by default. Set `options.fuelix.statusReport` to `false` to stop writing reports. This does not
+Reporting is enabled by default. With a standalone plugin, set `options.fuelix.statusReport` to `false` to stop writing reports. This does not
 remove reports that already exist. Removing the extension does not remove the plugin's reports.
 Guard runtime snapshots are separate; this option does not disable them.
 
@@ -82,11 +116,11 @@ the plugin and OpenChamber use different home directories. The extension cannot 
 From the repository root:
 
 ```bash
-bun test
+bun run build
+bun run test
 bun run typecheck
 bun run extension:typecheck
 bun run extension:test
-bun run extension:build
 bun run extension:check
 ```
 

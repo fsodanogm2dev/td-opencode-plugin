@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (beta), 2026-11-12
+
+This release adds user-controlled execution guards to the TD-Plugin extension. It needs OpenChamber 2.7.0 or later.
+Review the local-service permission when updating the extension. Scope and enforcement limits are in
+[`docs/guards.md`](docs/guards.md).
 
 ### Added
 
@@ -8,10 +12,56 @@
   rejects matching permission-checked actions before execution, including otherwise approved calls. Linked subagents
   inherit guards. Request completion is best effort and retains guards when uncertain. See [`docs/guards.md`](docs/guards.md).
 
+- Plain-text guard drafting, deterministic rule previews, and a command tester. Saving a definition leaves it inactive.
+- Enable, release, and delete controls with session scope by default and no default expiry. Saved definitions are global.
+- Confirmed guard-store recovery with a private backup and idempotent mutation retries.
+
+### Changed
+
+- The extension is named **TD-Plugin extension**. The combined installer ships the guard service and Work Status section.
+
+## 0.5.0 (beta), 2026-11-12
+
+This release adds an optional TypeSafe Jev integration for OpenCode V2. Jev is disabled by default. It sends selected
+redacted commands, failure excerpts, and shadow-mode requests to TypeSafe, outside FueliX. Review your data policy
+before enabling it. Configuration, migration, and limits are in [`docs/jev.md`](docs/jev.md).
+
+### Added
+
+- Direct Jev 1.14.0 decision requests, without a broker or runtime dependency. Key sources are macOS Keychain,
+  `/connect` (**TypeSafe**), and `TYPESAFE_API_KEY`.
+- Shell safety checks that escalate allowed commands to permission review. Deterministic destructive patterns ask
+  without an API call. Upstream failure asks by default; existing permission prompts and denials remain in force.
+- Extractive summaries of long failing shell output, with protected log access. Known secret formats are redacted
+  before transmission. Output that redaction changes stays unchanged, with no new log, so debugging values remain
+  available.
+- Skill selection and reasoning observations in shadow mode. They do not change model requests.
+- Bounded decision caching, private rotating telemetry without raw text, shell environment scrubbing, and tests.
+
+No measured token or billing savings are claimed. Category routing and context garbage collection are not included.
+
+## 0.4.0 (beta), 2026-11-12
+
+Feature release. It needs OpenCode 2.0.32 or later. The combined extension needs OpenChamber 2.7.0 or later.
+For a standalone plugin, change the configuration tag to `#v0.4.0`. For the combined package, use the repository URL in
+OpenChamber **Settings → Extensions** and approve the bundled plugin. Remove a previous manual plugin entry first.
+
+### Added
+
 - An optional OpenChamber status extension shows the plugin's recorded configuration, latest model-discovery result,
-  and added or removed models. It reads credential-free reports from the plugin's own report directory. It does not
+  and added or removed models. The panel reads credential-free reports from the plugin's own report directory. It does not
   change configuration or trigger discovery. See [`docs/openchamber-status.md`](docs/openchamber-status.md).
 - `options.fuelix.statusReport` controls report writing. The default is `true`.
+- The repository is also an OpenChamber extension package. One approved installation loads both the plugin and the
+  status panel. The standalone OpenCode plugin remains available for custom options.
+- Each setup setting has a visible explanation. The panel explains the three request formats and distinguishes
+  provider activation from credential validation.
+- CI builds and checks both the panel and the bundled server plugin.
+
+### Fixed
+
+- A failed provider reload is retried on the next model-discovery cycle. Reports do not claim that unapplied model
+  changes succeeded.
 
 ## 0.3.1 (beta), 2026-11-11
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>td-opencode-plugin v0.3.0</title>
+<title>td-opencode-plugin v0.6.0</title>
 <style>
 :root {
   --bg: #f6f5f9;
@@ -413,17 +413,17 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
     <h1>td-opencode-plugin</h1>
     <p class="lead">Connects OpenCode to FueliX, the TELUS gateway to AI models.</p>
     <ul class="meta">
-      <li>Release <strong>v0.3.0 (beta)</strong>, 2026-11-11</li>
-      <li>Tag <strong><code>v0.3.0</code></strong></li>
+      <li>Release <strong>v0.6.0 (beta)</strong>, 2026-11-12</li>
+      <li>Tag <strong><code>v0.6.0</code></strong></li>
       <li>Needs <strong>OpenCode 2.0.32 or later</strong></li>
       <li>Repository: <strong><a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a></strong> (public)</li>
     </ul>
     <ul class="cards">
-      <li class="card beta lblfirst"><span class="lbl">Release</span><span class="num">v0.3.0 <small>(beta)</small></span></li>
-      <li class="card pass lblfirst"><span class="lbl">CI</span><span class="num">passing</span></li>
-      <li class="card"><span class="num">3</span><span class="lbl">providers</span></li>
+      <li class="card beta lblfirst"><span class="lbl">Release</span><span class="num">v0.6.0 <small>(beta)</small></span></li>
+            <li class="card"><span class="num">3</span><span class="lbl">providers</span></li>
       <li class="card"><span class="num">109</span><span class="lbl">catalog entries</span></li>
       <li class="card"><span class="num">3</span><span class="lbl">title models</span></li>
+      <li class="card"><span class="num">4</span><span class="lbl">optional Jev decision points</span></li>
     </ul>
   </div>
 </header>
@@ -436,7 +436,8 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
       <li><a href="#models">Model list</a></li>
       <li><a href="#key">Your key</a></li>
       <li><a href="#titles">Session titles</a></li>
-      <li><a href="#changes">Changes in v0.3.0</a></li>
+      <li><a href="#jev">Jev (optional)</a></li>
+      <li><a href="#changes">Included features</a></li>
       <li><a href="#install">Install</a></li>
       <li><a href="#updates">Updates</a></li>
       <li><a href="#verify">Check it yourself</a></li>
@@ -469,6 +470,10 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
       <dd>the secret that proves that a request comes from your FueliX account.</dd>
       <dt>Plugin</dt>
       <dd>an add-on that gives OpenCode new features.</dd>
+      <dt>TypeSafe</dt>
+      <dd>an AI service outside FueliX. It runs the Jev model.</dd>
+      <dt>Jev</dt>
+      <dd>a TypeSafe model that returns typed decisions with a probability. It does not write code or explanations.</dd>
     </dl>
   </div>
 
@@ -490,12 +495,17 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
       <p>OpenCode names each conversation with a short title. The plugin makes OpenCode write that title with a low-cost model instead of the model you chat with.</p>
     </div>
   </div>
+  <div class="panel">
+    <span class="badge" style="margin-bottom:.6rem">4</span>
+    <h3>Optional Jev checks <span class="pill">Off by default</span></h3>
+    <p>You can turn on Jev. OpenCode then asks you before a shell command that Jev rates as risky, and long test or build failure output becomes a shorter summary. Jev suggestions for skills and reasoning are only recorded. This sends selected, redacted data to TypeSafe, outside FueliX. <a href="#jev">Details</a></p>
+  </div>
 </section>
 
 <!-- ============ HOW IT WORKS ============ -->
 <section id="how">
   <h2>How it works</h2>
-  <p class="sub">OpenCode sends each request through the plugin to FueliX. The plugin adds your key, and FueliX sends the request on to the service that runs the model.</p>
+  <p class="sub">OpenCode sends each request through the plugin to FueliX. The plugin adds your key, and FueliX sends the request on to the service that runs the model. When you enable Jev, the plugin also sends selected, redacted data directly to TypeSafe.</p>
   <div class="panel">
     <div class="diagram" data-diagram="arch"><pre>flowchart LR
   subgraph clients["Clients"]
@@ -507,6 +517,7 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
     KEY["Key hook&lt;br&gt;(http.request)"]
     TIT["Title model marks"]
     ENV["Shell env scrub"]
+    JEV["Jev decisions&lt;br&gt;(optional)"]
   end
   subgraph gw["FueliX gateway"]
     E4["GET /v1/models"]
@@ -514,13 +525,18 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
     E2["POST /v1/messages"]
     E3["POST /chat/completions"]
   end
+  subgraph ts["TypeSafe, outside FueliX"]
+    T1["POST /v1/systemone"]
+  end
   OC --> plugin
   OCH --> plugin
   CAT --> E4
   KEY --> E1
   KEY --> E2
   KEY --> E3
-  class CAT,KEY,TIT,ENV plain</pre></div>
+  JEV -. when enabled .-> T1
+  class CAT,KEY,TIT,ENV plain
+  class JEV warn</pre></div>
   </div>
 </section>
 
@@ -829,15 +845,112 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
   </details>
 </section>
 
+<!-- ============ JEV DECISIONS ============ -->
+<section id="jev">
+  <h2>Jev decisions (optional)</h2>
+  <p class="sub">Jev 1.14.0 adds four decision points to OpenCode: shell safety, failure-output compression, skill pruning, and reasoning budget. Jev is disabled by default. It needs plugin v0.5.0 or later.</p>
+
+  <div class="panel">
+    <h3>What it does</h3>
+    <p>When you enable Jev, the plugin sends selected information directly to TypeSafe over HTTPS, at <code>https://api.typesafe.ai/v1/systemone</code>. These requests do not go through FueliX. There is no broker and no separate <code>jev.json</code> file.</p>
+    <p class="note">TypeSafe is outside FueliX. Check your organization's data policy before you enable Jev on company projects.</p>
+  </div>
+
+  <div class="two" style="margin-bottom:1.1rem">
+    <div class="panel">
+      <span class="badge" style="margin-bottom:.6rem">1</span>
+      <h3>Shell safety <code>safetyPreCheck</code></h3>
+      <p>OpenCode can allow a shell command without a prompt. For such a command, Jev estimates the probability that it is destructive. Above <code>riskThreshold</code>, OpenCode asks you for approval.</p>
+      <p>The check only changes <code>allow</code> to <code>ask</code>. It never grants a permission and never removes a prompt or a denial.</p>
+    </div>
+    <div class="panel">
+      <span class="badge" style="margin-bottom:.6rem">2</span>
+      <h3>Failure-output compression <code>testCompression</code></h3>
+      <p>When a long shell output contains a test or build failure, the plugin can replace it with a shorter summary of excerpts. A protected log file keeps the available output. OpenCode can already have shortened that output.</p>
+      <p>If redaction changes a value, the plugin keeps the output unchanged and writes no new log, so debugging facts stay available. It also keeps the output unchanged if the summary is not shorter or a step fails. The failure class from Jev is an estimate, not a verified cause.</p>
+    </div>
+    <div class="panel">
+      <span class="badge" style="margin-bottom:.6rem">3</span>
+      <h3>Skill pruning <code>skillPruning</code> <span class="pill">Shadow only</span></h3>
+      <p>Jev suggests which skills a request needs. The plugin only records the suggestion. It does not change instructions, history, or tools.</p>
+    </div>
+    <div class="panel">
+      <span class="badge" style="margin-bottom:.6rem">4</span>
+      <h3>Reasoning budget <code>reasoningBudget</code> <span class="pill">Shadow only</span></h3>
+      <p>Jev suggests how much reasoning a request needs. The plugin only records the suggestion. It does not change model options.</p>
+    </div>
+  </div>
+  <p>Skill pruning and reasoning budget support <code>off</code> and <code>shadow</code> only. The request to your model stays the same. An <code>enforce</code> setting becomes <code>shadow</code> with a warning.</p>
+
+  <div class="panel">
+    <h3>How the shell safety check decides</h3>
+    <p>Known destructive patterns ask without a request to TypeSafe, also when no TypeSafe key is available. Known read-only commands skip Jev. Without a key, the other commands keep their OpenCode decision; a missing key is not an upstream failure. With <code>failClosed: true</code> (the default), a timeout, an HTTP error, or an invalid decision asks. With <code>failClosed: false</code>, those failures keep the OpenCode decision.</p>
+    <div class="diagram wide" data-diagram="jev-safety"><pre>flowchart LR
+  P["OpenCode permission&lt;br&gt;for a shell command"] --> Q0{"allow?"}
+  Q0 -- "no: ask or deny" --> K["Keep the decision"]
+  Q0 -- yes --> Q1{"Destructive&lt;br&gt;pattern?"}
+  Q1 -- yes --> A["Ask you"]
+  Q1 -- no --> Q2{"Read-only&lt;br&gt;pattern?"}
+  Q2 -- yes --> AL["Keep allow"]
+  Q2 -- no --> Q3{"TypeSafe key?"}
+  Q3 -- "no key: no request" --> AL
+  Q3 -- yes --> J["Jev probability"]
+  J -- "above riskThreshold" --> A
+  J -- "timeout, HTTP error, or&lt;br&gt;invalid decision, failClosed: true" --> A
+  J -- "below riskThreshold" --> AL
+  J -- "upstream failure,&lt;br&gt;failClosed: false" --> AL
+  class A warn
+  class K,AL plain</pre></div>
+  </div>
+
+  <div class="two">
+    <div class="panel">
+      <h3>Your TypeSafe key</h3>
+      <p>The plugin looks in three places, in this order, and uses the first key that it finds:</p>
+      <ol class="order">
+        <li>The macOS Keychain, item <code>typesafe-api-key</code>.</li>
+        <li>The OpenCode credential store. You add a key there with <code>/connect</code> in OpenCode and select <strong>TypeSafe</strong>.</li>
+        <li>The environment variable <code>TYPESAFE_API_KEY</code>.</li>
+      </ol>
+      <p>The key stays in memory and goes only into the Authorization header of requests to TypeSafe. It does not appear in provider settings, provider headers, telemetry, or error messages. When Jev is enabled and <code>scrubShellEnv</code> is <code>true</code> (the default), the plugin removes <code>TYPESAFE_API_KEY</code> from agent shells. Do not put the key in plugin options.</p>
+      <p>Without a key, the plugin sends no requests to TypeSafe. Known destructive shell patterns still ask. FueliX continues to work.</p>
+    </div>
+    <div class="panel">
+      <h3>What it sends</h3>
+      <ul class="plain">
+        <li>Shell safety: bounded command text.</li>
+        <li>Failure-output compression: bounded failure excerpts.</li>
+        <li>Skill pruning and reasoning budget: the latest user request. Skill pruning also sends skill IDs and descriptions.</li>
+      </ul>
+      <p style="margin-top:.8rem">The plugin redacts known secret formats and the active TypeSafe key before it sends a request. It does not send the whole repository or conversation. TypeSafe describes its data handling in <a href="https://docs.typesafe.ai/models#data-handling" target="_blank" rel="noopener">its documentation</a>.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:1.1rem">
+    <h3>Turn it on</h3>
+    <p>Add <code>jev</code> to the options of your plugin entry. Then store the key in one of the three places above. The <strong>TypeSafe</strong> connection appears in <code>/connect</code> after Jev is enabled:</p>
+    <div class="code"><div class="box"><pre>{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": { "jev": { "enabled": true, "model": "jev-1.14.0" } } }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
+    <p>All options, the move from the standalone Jev plugin, and storage details: <a href="jev.md">docs/jev.md</a>.</p>
+    <p class="note">The tests for Jev use fake keys and a local mock TypeSafe endpoint. Jev is not verified against the live TypeSafe service. Report: <a href="reports/2026-11-12-jev-verification.md">Jev verification</a>.</p>
+  </div>
+</section>
+
 <!-- ============ CHANGES ============ -->
 <section id="changes">
-  <h2>Changes in v0.3.0</h2>
-  <p class="sub">What changed since v0.2.0.</p>
+  <h2>Included features</h2>
+  <p class="sub">Execution guards, optional Jev decisions, and the batch workflow. The <a href="guards.md">guard guide</a> explains scope, release, and enforcement limits.</p>
   <ul class="diff">
     <li class="added">
       <span class="tag">Added</span>
       <div>
-        <p>Batch workflow for deferred, independent Messages requests. Six tools: <code>fuelix_batch_submit</code>, <code>fuelix_batch_list</code>, <code>fuelix_batch_inspect</code>, <code>fuelix_batch_status</code>, <code>fuelix_batch_cancel</code>, and <code>fuelix_batch_collect</code>.</p>
+        <p>v0.5.0: optional Jev 1.14.0 decisions, disabled by default. Four points: shell safety, failure-output compression, skill pruning, and reasoning budget. Skill pruning and reasoning budget run in shadow mode only.</p>
+        <p>Details: <a href="#jev">Jev decisions</a> and <a href="jev.md">docs/jev.md</a>.</p>
+      </div>
+    </li>
+    <li class="added">
+      <span class="tag">Added</span>
+      <div>
+        <p>v0.3.0: batch workflow for deferred, independent Messages requests. Six tools: <code>fuelix_batch_submit</code>, <code>fuelix_batch_list</code>, <code>fuelix_batch_inspect</code>, <code>fuelix_batch_status</code>, <code>fuelix_batch_cancel</code>, and <code>fuelix_batch_collect</code>.</p>
         <p><code>/fuelix-batch &lt;prompt&gt;</code> submits one prompt as a deferred batch.</p>
         <p class="note">Live batch submission was rejected with HTTP 403. Account access and live result collection are not verified. Details: <a href="batches.md">docs/batches.md</a>.</p>
       </div>
@@ -845,14 +958,14 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
     <li class="changed">
       <span class="tag">Changed</span>
       <div>
-        <p><code>fuelix-anthropic</code> uses the AI SDK bridge package <code>aisdk:@ai-sdk/anthropic</code>. Stateless generation, such as <code>POST /api/experimental/generate/text</code>, sends <code>Authorization: Bearer</code>.</p>
+        <p>v0.3.0: <code>fuelix-anthropic</code> uses the AI SDK bridge package <code>aisdk:@ai-sdk/anthropic</code>. Stateless generation, such as <code>POST /api/experimental/generate/text</code>, sends <code>Authorization: Bearer</code>.</p>
         <p>The plugin copies missing model metadata from the built-in provider before it registers the models. This keeps the AI SDK package on every <code>fuelix-anthropic</code> model.</p>
       </div>
     </li>
     <li class="changed">
       <span class="tag">Fixed</span>
       <div>
-        <p>A <code>fuelix-anthropic</code> request to <code>POST .../messages</code> receives one ephemeral <code>cache_control</code> marker when the body has none. FueliX has rejected a long prompt with HTTP 400 because of a missing marker.</p>
+        <p>v0.3.0: a <code>fuelix-anthropic</code> request to <code>POST .../messages</code> receives one ephemeral <code>cache_control</code> marker when the body has none. FueliX has rejected a long prompt with HTTP 400 because of a missing marker.</p>
         <p class="note">One live call with a synthetic long prompt returned HTTP 200. The check did not cover a resumed session, the AI SDK bridge, streaming, or a cache read. The cause of the missing marker is not established. Report: <a href="reports/2026-11-11-cache-breakpoint-verification.md">cache breakpoint verification</a>.</p>
       </div>
     </li>
@@ -870,7 +983,8 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
   2026-10-21 : v0.1.0 (beta) : Low-cost session titles
   2026-10-27 : GPT-6.1 Terra added to the catalog
   2026-10-28 : v0.2.0 (beta) : Terra added : td-telemetry integration removed
-  2026-11-11 : v0.3.0 (beta) : Batch tools : Bearer auth for Anthropic calls : Cache marker safeguard</pre></div>
+  2026-11-11 : v0.3.0 (beta) : Batch tools : Bearer auth for Anthropic calls : Cache marker safeguard
+  2026-11-12 : v0.5.0 (beta) : Optional Jev 1.14.0 decisions</pre></div>
   </div>
 </section>
 
@@ -882,7 +996,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
       <li>
         <h3>Add the plugin</h3>
         <p>Add this line to <code>~/.config/opencode/opencode.json</code>, then remove the old FueliX provider blocks from that file:</p>
-        <div class="code"><div class="box"><pre>{ "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.3.0", "options": {} }] }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
+    <div class="code"><div class="box"><pre>{ "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": {} }] }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
       </li>
       <li>
         <h3>Let git read the repository</h3>
@@ -897,7 +1011,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
         <h3>Check the install</h3>
         <p>This command shows the plugin line:</p>
         <div class="code nogap"><div class="box"><pre>opencode plugin list</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
-        <div class="result"><div class="rhead"><span class="tag">Expected result</span></div><pre>td-opencode-plugin  &lt;commit&gt;  github:fsodanogm2dev/td-opencode-plugin#v0.3.0</pre></div>
+        <div class="result"><div class="rhead"><span class="tag">Expected result</span></div><pre>td-opencode-plugin  &lt;commit&gt;  github:fsodanogm2dev/td-opencode-plugin#v0.6.0</pre></div>
       </li>
     </ol>
     <ul class="plain small">
@@ -914,7 +1028,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
   <p class="sub">The result depends on whether the package is pinned to a tag.</p>
   <div class="panel">
     <div class="diagram" data-diagram="updates"><pre>flowchart TB
-  P0["Pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin#v0.3.0"] --> P1["You change the tag&lt;br&gt;in the configuration"]
+  P0["Pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin#v0.6.0"] --> P1["You change the tag&lt;br&gt;in the configuration"]
   P1 --> P2["OpenCode installs the new tag&lt;br&gt;when the configuration changes"]
   U0["Not pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin"] --> U1["OpenCode installs the newest commit of main once and keeps that copy"]
   U1 --> U2["Once a day, OpenCode checks&lt;br&gt;for a newer commit"]
@@ -988,12 +1102,12 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
           <tr>
             <td>Unit tests</td>
             <td data-label="Command"><div class="code"><div class="box"><pre>bun test</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div></td>
-            <td class="exp" data-label="Expected result">191 pass, 0 fail</td>
+            <td class="exp" data-label="Expected result">0 fail</td>
           </tr>
           <tr>
             <td>Integration tests</td>
             <td data-label="Command"><div class="code"><div class="box"><pre>bun run test:integration</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div></td>
-            <td class="exp" data-label="Expected result">20 pass, 1 skip</td>
+            <td class="exp" data-label="Expected result">0 fail</td>
           </tr>
           <tr>
             <td>Costs match FueliX (live, uses your key)</td>
@@ -1003,7 +1117,7 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
         </tbody>
       </table>
     </div>
-    <p class="note">The live test sends 2 short prompts to each of 3 low-cost models. The skipped integration test in row 9 is this live test.</p>
+    <p class="note">The live test sends 2 short prompts to each of 3 low-cost models. Without a FueliX key, the integration tests in row 9 skip this live test.</p>
   </div>
 </section>
 
@@ -1021,6 +1135,16 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
       <p>A model can reuse the earlier part of a conversation at a lower price. This is the prompt cache. On <code>fuelix-anthropic/claude-haiku-4-5</code>, a new message does not reuse it, so each new message costs more than it should. FueliX runs this model on a Google Vertex AI endpoint that reuses the cache only for identical requests. The plugin cannot change this.</p>
       <p><a href="reports/2026-10-19-usage-accuracy.md">docs/reports/2026-10-19-usage-accuracy.md</a></p>
     </div>
+    <div class="panel limit">
+      <h3>Jev checks are not a security boundary</h3>
+      <p>Shell commands run with the authority of your user. Jev can classify a command incorrectly, and the fixed patterns are incomplete. Keep restrictive OpenCode permission rules for important resources. Redaction cannot find every secret.</p>
+      <p><a href="jev.md">docs/jev.md</a></p>
+    </div>
+    <div class="panel limit">
+      <h3>No measured savings from Jev</h3>
+      <p>Token figures calculated from character counts are estimates. They do not show billing savings and do not include prompt-cache costs. This release does not claim measured savings. Each enforced Jev check adds a bounded wait.</p>
+      <p><a href="jev.md">docs/jev.md</a></p>
+    </div>
   </div>
 </section>
 
@@ -1028,13 +1152,12 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
 <section id="checks">
   <h2>Checks behind the release</h2>
   <div class="cards checkgrid">
-    <div class="card pass"><span class="num">191</span><span class="lbl">Unit tests pass</span></div>
-    <div class="card pass"><span class="num">20</span><span class="lbl">Integration tests pass (isolated OpenCode servers)</span></div>
-    <div class="card pass"><span class="num">0</span><span class="lbl">Live models missing from the catalog (<code>bun run doctor</code>)</span></div>
-    <div class="card pass"><span class="num">3</span><span class="lbl">Title models present and active (<code>bun run doctor</code>)</span></div>
+    <div class="card pass"><span class="num">1,180</span><span class="lbl">Tests passed across all suites (<code>bun test</code>)</span></div>
+    <div class="card pass"><span class="num">71</span><span class="lbl">Isolated integration tests passed (<code>bun run test:integration</code>)</span></div>
   </div>
   <div class="panel">
-    <p>The live test skips without a FueliX key. Its last run matched tokens and cost on every step.</p>
+    <p>The live FueliX usage test was skipped. It requires <code>TD_LIVE=1</code> and a FueliX key. The <a href="reports/2026-11-12-jev-verification.md">verification report</a> lists the commands, results, and limits.</p>
+    <p>Jev 1.14.0 checks use unit tests and isolated OpenCode tests with fake keys and a local mock TypeSafe endpoint. They do not verify the live TypeSafe service. Report: <a href="reports/2026-11-12-jev-verification.md">Jev verification</a>.</p>
   </div>
 </section>
 
@@ -1042,7 +1165,7 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
 
 <footer>
   <div class="wrap">
-    <p>td-opencode-plugin v0.3.0 (beta). Source: <a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a>. See <a href="../README.md">README.md</a> and <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
+    <p>td-opencode-plugin v0.6.0 (beta). Source: <a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a>. See <a href="../README.md">README.md</a> and <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
   </div>
 </footer>
 
