@@ -23,7 +23,7 @@ at the same time. The status panel reports FueliX; Jev observations remain in it
 
 ```jsonc
 {
-  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.0",
+  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.1",
   "options": {
     "jev": { "enabled": true, "model": "jev-1.14.0" }
   }
@@ -87,7 +87,7 @@ its normal compaction handles long histories.
 "jev": {
   "enabled": false,
   "model": "jev-1.14.0",
-  "baseURL": "https://api.typesafe.ai",
+  "baseURL": "https://typesafe-gateway.k8smos.telus.gizmos.run",
   "keychainService": "typesafe-api-key", // false disables Keychain lookup
   "scrubShellEnv": true,
   "telemetry": true,
@@ -108,7 +108,10 @@ its normal compaction handles long histories.
 `off` skips a point. `shadow` evaluates without modifying behavior. `enforce` applies safety and compression
 decisions. Invalid options fall back to defaults and produce warnings that do not contain the invalid value.
 
-Custom endpoints require `TD_OPENCODE_ALLOW_CUSTOM_JEV_URL=1` in the server environment. HTTPS is required except
+`baseURL` defaults to the TELUS TypeSafe gateway (`https://typesafe-gateway.k8smos.telus.gizmos.run`). You can also set
+`TYPESAFE_BASE_URL` in the server environment, or set `options.jev.baseURL` to the TELUS gateway or
+`https://api.typesafe.ai`. Other custom endpoints in `options.jev.baseURL` require
+`TD_OPENCODE_ALLOW_CUSTOM_JEV_URL=1` in the server environment. HTTPS is required except
 for loopback HTTP test servers. Redirects are not followed. Project options alone cannot redirect the key.
 
 A non-default Keychain service requires `TD_OPENCODE_ALLOW_CUSTOM_JEV_KEYCHAIN=1` in the server environment.

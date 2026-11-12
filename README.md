@@ -38,7 +38,7 @@ The repository `fsodanogm2dev/td-opencode-plugin` is public. Installing it over 
 Use OpenChamber 2.7.0 or later. Open **Settings → Extensions** and add this repository URL:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.5.0
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.5.1
 ```
 
 Approve the status-report file access and **Add a plugin to OpenCode**. OpenChamber then loads the bundled plugin and
@@ -59,7 +59,7 @@ Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.0", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.1", "options": {} }]
 }
 ```
 
@@ -76,7 +76,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.5.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.5.1 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc

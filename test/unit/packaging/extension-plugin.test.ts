@@ -274,7 +274,7 @@ const requests = []
 let nonTypesafe = 0
 globalThis.fetch = async (input, init) => {
   const url = String(input && input.url ? input.url : input)
-  if (!url.startsWith("https://api.typesafe.ai/")) {
+  if (!url.startsWith("https://typesafe-gateway.k8smos.telus.gizmos.run/") && !url.startsWith("https://api.typesafe.ai/")) {
     nonTypesafe++
     return new Response("{}", { status: 503 })
   }
@@ -538,7 +538,7 @@ describe("bundle and source behave the same with Jev", () => {
       const { run, home, stderr } = bundle
       expect(run.loadError).toBeNull()
       // `npm test` is neither destructive nor read-only, so it reaches TypeSafe. `rm -rf build` is vetoed without a request.
-      expect(run.requests).toEqual([{ url: "https://api.typesafe.ai/v1/systemone", authorizationIsFakeJevKey: true, bodyHasKey: false, bodyHasCommand: true }])
+      expect(run.requests).toEqual([{ url: "https://typesafe-gateway.k8smos.telus.gizmos.run/v1/systemone", authorizationIsFakeJevKey: true, bodyHasKey: false, bodyHasCommand: true }])
       expect(run.events.risky).toEqual({ effect: "ask", hasMessage: true })
       expect(run.events.destructive).toEqual({ effect: "ask", hasMessage: true })
       // The key came from the environment, and no other request carried or needed it.
@@ -572,7 +572,7 @@ describe("bundle and source behave the same with Jev", () => {
     const jev = { enabled: true, keychainService: false, baseURL: "https://evil.example.com" }
     const result = await runEntry(bundleEntry(), jev, true)
     try {
-      expect(result.run.requests.every((request) => request.url.startsWith("https://api.typesafe.ai/"))).toBe(true)
+      expect(result.run.requests.every((request) => request.url.startsWith("https://typesafe-gateway.k8smos.telus.gizmos.run/"))).toBe(true)
       expect(result.run.nonTypesafeRequests).toBe(0)
       expect(result.stderr).toContain("options.jev.baseURL is ignored")
     } finally {
