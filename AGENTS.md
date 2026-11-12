@@ -11,6 +11,8 @@ Guidance for AI coding agents that work in this repository.
 2. Resolves one FueliX API key (macOS Keychain, OpenCode credential store, or `FUELIX_API_KEY`) and injects it per
    request. The key never goes into provider `settings` or `headers`.
 3. Marks one low-cost title model per provider, so OpenCode writes session titles with it.
+4. Optionally uses TypeSafe Jev 1.14.0 for shell safety and failure-output compression. Skill and reasoning points
+   are shadow-only. Jev is disabled by default. See `docs/jev.md` for data handling and limits.
 
 Active plans go in `docs/plans/pending/`; tick their steps as they finish. Finished plans move to `docs/plans/done/`.
 Release notes are in `CHANGELOG.md`.

@@ -105,4 +105,23 @@ describe("parseOptions", () => {
       }
     })
   })
+
+  describe("jev", () => {
+    test("is disabled with the documented defaults when absent", () => {
+      const parsed = parseOptions(undefined, {})
+      expect(parsed.jev.enabled).toBe(false)
+      expect(parsed.jev.model).toBe("jev-1.14.0")
+      expect(parsed.jev.points.skillPruning.mode).toBe("off")
+      expect(parsed.jev.points.reasoningBudget.mode).toBe("off")
+      expect(parsed.warnings).toEqual([])
+    })
+
+    test("parses options.jev and adds its warnings", () => {
+      const parsed = parseOptions({ jev: { enabled: true, points: { skillPruning: { mode: "enforce" } } } }, {})
+      expect(parsed.jev.enabled).toBe(true)
+      expect(parsed.jev.points.skillPruning.mode).toBe("shadow")
+      expect(parsed.warnings.length).toBe(1)
+      expect(parseOptions({ jev: "nope" }, {}).warnings).toEqual(["options.jev must be an object; using defaults"])
+    })
+  })
 })

@@ -2,7 +2,7 @@
 
 OpenCode V2 plugin for TELUS Digital engineers who use FueliX with OpenCode and OpenChamber.
 
-It does four things:
+It does five things:
 
 1. **FueliX catalog**: registers the `fuelix-openai`, `fuelix-anthropic`, and `fuelix` providers and loads their
    models from `https://api.fuelix.ai/v1/models`. Prices, limits, and modalities come from a curated catalog
@@ -15,7 +15,10 @@ It does four things:
 4. **Batch workflow**: six ordinary tools (`fuelix_batch_*`) submit independent Messages requests from a file to
    FueliX, check the status, cancel, and collect the results into protected local files. Details are in
    [`docs/batches.md`](docs/batches.md). Live batch submission was rejected with HTTP 403, so account access and result
-   collection are not verified.
+    collection are not verified.
+5. **Optional Jev decisions**: Jev 1.14.0 adds shell permission checks and failure-output compression. Skill and
+   reasoning observations are shadow-only. Jev is disabled by default and sends selected redacted data to TypeSafe,
+   outside FueliX. Read [`docs/jev.md`](docs/jev.md) before enabling it.
 
 A visual overview with diagrams is in [`docs/index.html`](docs/index.html). Open it in a browser from a clone.
 Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decisions, and its evidence are in
@@ -35,7 +38,7 @@ Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.3.1", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.0", "options": {} }]
 }
 ```
 
@@ -52,7 +55,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.3.1 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.5.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
@@ -167,6 +170,7 @@ variant of that model:
       "scrubShellEnv": true                 // remove FUELIX_API_KEY from agent shell environments
       // Optional batchRates: see docs/batches.md for sourced batch prices.
     },
+    "jev": { "enabled": false, "model": "jev-1.14.0" }, // optional; see docs/jev.md
     "debug": false
   }
 }
