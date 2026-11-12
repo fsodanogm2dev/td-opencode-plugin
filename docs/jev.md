@@ -15,6 +15,11 @@ The resolver uses the first available key in that order. Do not put a key in plu
 
 Add `jev` to the options of your existing plugin entry:
 
+The combined OpenChamber package uses default options, so Jev remains disabled there. To enable Jev with custom
+options, use the standalone plugin and the status-only extension folder described in
+[the installation guide](../README.md#standalone-opencode-plugin). Do not load the bundled and standalone plugin
+at the same time. The status panel reports FueliX; Jev observations remain in its separate telemetry file.
+
 ```jsonc
 {
   "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.0",
@@ -39,6 +44,9 @@ Jev. Other commands are evaluated with a typed probability of destructive behavi
 When the probability exceeds `riskThreshold`, OpenCode asks for approval. With `failClosed: true`, API timeouts,
 HTTP errors, and invalid decisions also request approval. Setting `failClosed: false` keeps the existing permission
 decision on those failures. A missing credential is not an upstream timeout; see **Enable**.
+
+If the hook cannot recover the complete shell command, it cannot safely classify scanner-only resources.
+With `failClosed: true`, that incomplete context also requests approval.
 
 These checks are not a security boundary. Shell commands have the host user's authority. Keep restrictive OpenCode
 permission rules for important resources. Jev can misclassify a command, and deterministic patterns are incomplete.

@@ -16,9 +16,20 @@ import {
   type KeychainCache,
   type ResolvedKeys,
 } from "./credentials.ts"
-import { fetchModelIDs, readCachedModels, writeCachedModels, type FetchFn } from "./discovery.ts"
+import { DiscoveryError, fetchModelIDs, readCachedModels, writeCachedModels, type FetchFn } from "./discovery.ts"
 import { buildModelInfo, buildProviderInfo, enrichFromUpstream, type BuiltModel } from "./models.ts"
 import { classifyKind, routeModel } from "./rules.ts"
+import {
+  createStatusRecorder,
+  REASONS,
+  type AuthSource,
+  type CheckOutcome,
+  type ModelSource,
+  type ReloadResult,
+  type StatusProvider,
+  type StatusReason,
+  type StatusReportWriter,
+} from "./status.ts"
 import { warnStaleFuelixConfig } from "./stale-config.ts"
 
 export type Cleanup = () => Promise<void> | void
@@ -43,6 +54,11 @@ export interface FuelixDeps {
   readonly staleConfigDelaysMs?: readonly number[]
   /** Batch tool overrides: service and artifact root. */
   readonly batch?: BatchToolsDeps
+  /**
+   * Writer of the status report. Without it, no report is written, so tests never touch the home directory.
+   * `src/index.ts` injects the file writer. `options.statusReport === false` turns the report off.
+   */
+  readonly statusReport?: StatusReportWriter
 }
 
 /** A discovery result may drop at most this share of the current IDs. */
@@ -103,13 +119,35 @@ function activationFor(keys: ResolvedKeys): "enabled" | "auto" {
   return keys.keychainKey || keys.envKey ? "enabled" : "auto"
 }
 
+function authSourceFor(keys: ResolvedKeys): AuthSource {
+  return keys.source === "env" ? "environment" : (keys.source ?? "none")
+}
+
+function failureReason(error: unknown): StatusReason {
+  if (error instanceof DiscoveryError && (error.status === 401 || error.status === 403)) return REASONS.keyRejected
+  return REASONS.checkFailed
+}
+
+interface BuiltSummary {
+  readonly providers: StatusProvider[]
+  /** IDs of the eligible models that were built successfully. */
+  readonly ids: Set<string>
+}
+
+function diffIDs(from: ReadonlySet<string>, to: ReadonlySet<string>): { added: string[]; removed: string[] } {
+  return {
+    added: [...to].filter((id) => !from.has(id)).sort(),
+    removed: [...from].filter((id) => !to.has(id)).sort(),
+  }
+}
+
 /** Why a discovery result must not replace the current list, or `undefined` when it is acceptable. */
 function rejectDrop(
   current: readonly string[],
   found: readonly string[],
   currentPlan: Plan,
   foundPlan: Plan,
-): { reason: string; dropped: string[] } | undefined {
+): { reason: string; kind: "drop-share" | "provider-emptied"; dropped: string[] } | undefined {
   const present = new Set(found)
   const dropped = current.filter((id) => !present.has(id))
   if (dropped.length === 0) return undefined
@@ -117,9 +155,9 @@ function rejectDrop(
     (providerID) => currentPlan.byProvider[providerID].length > 0 && foundPlan.byProvider[providerID].length === 0,
   )
   if (dropped.length > current.length * MAX_DROP_SHARE) {
-    return { reason: `drops ${dropped.length} of ${current.length} models`, dropped }
+    return { reason: `drops ${dropped.length} of ${current.length} models`, kind: "drop-share", dropped }
   }
-  if (emptied.length > 0) return { reason: `removes every model of ${emptied.join(", ")}`, dropped }
+  if (emptied.length > 0) return { reason: `removes every model of ${emptied.join(", ")}`, kind: "provider-emptied", dropped }
   return undefined
 }
 
@@ -139,6 +177,13 @@ export async function setupFuelix(
   const startInterval = deps.setInterval ?? ((callback, ms) => setInterval(callback, ms))
   const stopInterval = deps.clearInterval ?? ((handle) => clearInterval(handle as ReturnType<typeof setInterval>))
   const baseURL = resolveBaseURL(options.baseURL, env, log)
+  const startedAt = now()
+  const writeReport = options.statusReport === false ? undefined : deps.statusReport
+  // What the setup registered, for the status report.
+  const sessionHookProviders: FuelixProviderID[] = []
+  let aiSdkHookRegistered = false
+  let shellHookRegistered = false
+  let batchToolsRegistered = false
 
   const loaded = await (deps.loadCatalog ?? defaultLoadCatalog)()
   const catalog = loaded.catalog
@@ -196,6 +241,7 @@ export async function setupFuelix(
           { providerID },
         ),
       )
+      sessionHookProviders.push(providerID)
     } catch (error) {
       log.error("could not register the FueliX auth hook", { providerID, error: errorMessage(error) })
     }
@@ -221,6 +267,7 @@ export async function setupFuelix(
           { providerID },
         ),
       )
+      aiSdkHookRegistered = true
     } catch (error) {
       log.error("could not register the FueliX AI SDK auth hook", { providerID, error: errorMessage(error) })
     }
@@ -234,6 +281,7 @@ export async function setupFuelix(
           delete event.env[FUELIX_ENV_NAME]
         }),
       )
+      shellHookRegistered = true
     } catch (error) {
       log.error("could not register the FueliX shell hook", { error: errorMessage(error) })
     }
@@ -256,6 +304,7 @@ export async function setupFuelix(
         deps.batch,
       ),
     )
+    batchToolsRegistered = true
   } catch (error) {
     log.error("could not register the FueliX batch tools", { error: errorMessage(error) })
   }
@@ -326,14 +375,116 @@ export async function setupFuelix(
     incompleteIDs: incompleteIDs.slice(0, 10).join(","),
   })
 
+  // 7b. Status report. It records what the plugin applied. Writes are nonfatal, ordered, and never awaited here.
+  const modelsSource: { value: ModelSource } = { value: cached ? "cache" : "catalog" }
+  const summarize = (source: Plan): BuiltSummary => {
+    const builtIDs = new Set<string>()
+    const providers = FUELIX_PROVIDER_IDS.map((providerID): StatusProvider => {
+      let modelCount = 0
+      let titleModel: string | null = null
+      for (const { id, entry } of source.byProvider[providerID]) {
+        const built = safeBuild(providerID, id, entry)
+        if (!built) continue
+        modelCount++
+        builtIDs.add(id)
+        if ((built.info as unknown as { family?: unknown }).family) titleModel = id
+      }
+      return { id: providerID, count: modelCount, titleModel }
+    })
+    return { providers, ids: builtIDs }
+  }
+  const authSource = (): AuthSource => authSourceFor(state.keys)
+  const directory = typeof ctx.location?.directory === "string" && ctx.location.directory !== "" ? ctx.location.directory : null
+  const reportConfiguration = () => ({
+    authSource: authSource(),
+    activation: state.activation,
+  })
+  let applied: { plan: Plan; summary: BuiltSummary } | undefined
+  let recorder: ReturnType<typeof createStatusRecorder> | undefined
+  if (writeReport) {
+    try {
+      const summary = summarize(plan)
+      applied = { plan, summary }
+      const startedISO = startedAt.toISOString()
+      recorder = createStatusRecorder({
+        directory,
+        startedAt,
+        now,
+        write: writeReport,
+        log,
+        secrets: () => [state.keys.key, state.keys.keychainKey, state.keys.credentialStoreKey, state.keys.envKey],
+        initial: {
+          checking: false,
+          configuration: {
+            refreshMinutes: options.refreshMinutes,
+            includeNonChatModels: options.includeNonChatModels,
+            ...reportConfiguration(),
+            shellKeyScrubbing: !options.scrubShellEnv ? "disabled" : shellHookRegistered ? "enabled" : "failed",
+            batchTools: batchToolsRegistered ? "registered" : "failed",
+            authHooks: { sessionProviders: [...sessionHookProviders], aiSdk: aiSdkHookRegistered },
+          },
+          models: { source: modelsSource.value, providers: summary.providers },
+          // Without a key, no check runs at startup. The snapshot says so.
+          lastCheck: state.keys.key
+            ? null
+            : {
+                startedAt: startedISO,
+                finishedAt: startedISO,
+                outcome: "no-key",
+                added: [],
+                removed: [],
+                reason: REASONS.noKey,
+                reload: "not-needed",
+              },
+          lastSuccessfulCheckAt: null,
+          lastChange: null,
+        },
+      })
+      recorder.update({}) // Writes the startup snapshot.
+    } catch (error) {
+      log.warn("FueliX status report not started")
+      recorder = undefined
+    }
+  }
+
   // 8. Background discovery. Each cycle re-resolves the keys, so a later /connect, a rotated key, or a new Keychain
   // item takes effect without a restart. The Keychain read is memoized and retries at most every 5 minutes.
   let disposed = false
   let running = false
+  let needsReload = false // A reload failed. The next cycle retries it.
   const discover = async (skipKeys = false): Promise<void> => {
     if (disposed || running) return
     running = true
+    const checkStarted = now()
+    let outcome: CheckOutcome | undefined
+    let reason: StatusReason | null = null
+    // Widened: the catch block reads it after assignments in the try block.
+    let reload = "not-needed" as ReloadResult
+    const finishCheck = (added: string[], removed: string[], change: boolean): void => {
+      if (disposed || !recorder) return
+      const finished = now()
+      const finishedISO = finished.toISOString()
+      const finalOutcome = outcome ?? "unchanged"
+      const reported = finalOutcome === "updated"
+      recorder.update({
+        checking: false,
+        configuration: reportConfiguration(),
+        ...(applied ? { models: { source: modelsSource.value, providers: applied.summary.providers } } : {}),
+        lastCheck: {
+          startedAt: checkStarted.toISOString(),
+          finishedAt: finishedISO,
+          outcome: finalOutcome,
+          added: reported ? added : [],
+          removed: reported ? removed : [],
+          reason,
+          reload,
+        },
+        ...(finalOutcome === "updated" || finalOutcome === "unchanged" ? { lastSuccessfulCheckAt: finishedISO } : {}),
+        ...(change ? { lastChange: { at: finishedISO, added, removed } } : {}),
+      })
+    }
     try {
+      recorder?.update({ checking: true })
       let activationChanged = false
       if (!skipKeys) {
         const next = await resolveKeys(resolveInput)
@@ -352,6 +503,8 @@ export async function setupFuelix(
         if (disposed) return
         if (found.length === 0) {
           log.warn("FueliX discovery returned no models; keeping the current list")
+          outcome = "empty"
+          reason = REASONS.empty
         } else if (!sameIDs(found, ids)) {
           const foundPlan = planModels(catalog, found, options.includeNonChatModels)
           const rejected = trusted ? rejectDrop(ids, found, plan, foundPlan) : undefined
@@ -362,6 +515,8 @@ export async function setupFuelix(
               dropped: rejected.dropped.length,
               droppedIDs: rejected.dropped.slice(0, 10).join(","),
             })
+            outcome = "rejected"
+            reason = rejected.kind === "drop-share" ? REASONS.dropShare : REASONS.providerEmptied
           } else {
             ids = found
             plan = foundPlan
@@ -372,13 +527,40 @@ export async function setupFuelix(
         } else {
           trusted = true
         }
+      } else {
+        outcome = "no-key"
+        reason = REASONS.noKey
       }
-      if (idsChanged || activationChanged) {
-        await ctx.provider.reload()
+      if (idsChanged || activationChanged) needsReload = true
+      let added: string[] = []
+      let removed: string[] = []
+      let change = false
+      if (needsReload) {
+        try {
+          await ctx.provider.reload()
+        } catch (error) {
+          reload = "failed"
+          throw error
+        }
+        needsReload = false
+        reload = "succeeded"
         if (idsChanged) log.info("FueliX models refreshed", { count: ids.length })
+        // The reload applied the plan. Compare it with the last applied list, which a failed reload leaves unchanged.
+        if (recorder && applied && applied.plan !== plan && !disposed) {
+          const summary = summarize(plan)
+          ;({ added, removed } = diffIDs(applied.summary.ids, summary.ids))
+          applied = { plan, summary }
+          modelsSource.value = "discovery"
+          change = added.length > 0 || removed.length > 0
+        }
       }
+      if (change && (outcome === undefined || outcome === "unchanged")) outcome = "updated"
+      finishCheck(added, removed, change)
     } catch (error) {
       log.warn("FueliX discovery failed; keeping the current list", { error: errorMessage(error) })
+      outcome = "failed"
+      reason = reload === "failed" ? REASONS.reloadFailed : failureReason(error)
+      finishCheck([], [], false)
     } finally {
       running = false
     }
@@ -413,6 +595,7 @@ export async function setupFuelix(
 
   return async () => {
     disposed = true
+    recorder?.close() // Disposal writes no report.
     if (interval !== undefined) stopInterval(interval)
     for (const registration of registrations.reverse()) {
       await safely("FueliX registration dispose", log, () => registration.dispose())

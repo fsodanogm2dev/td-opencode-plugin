@@ -17,6 +17,20 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
-      - run: bun install --frozen-lockfile
-      - run: bun run typecheck
-      - run: bun test test/unit
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile
+      - name: Install extension dependencies
+        run: bun install --frozen-lockfile
+        working-directory: extension
+      - name: Build panel and bundled plugin
+        run: bun run build
+      - name: Typecheck root
+        run: bun run typecheck
+      - name: Typecheck extension
+        run: bun run extension:typecheck
+      - name: Test root
+        run: bun test test/unit
+      - name: Test extension
+        run: bun run extension:test
+      - name: Check extension manifest
+        run: bun run extension:check

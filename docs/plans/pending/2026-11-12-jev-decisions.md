@@ -6,12 +6,14 @@ This release targets v0.5.0. The separate OpenChamber extension work reserves v0
 ## Steps
 
 - [x] Create `feat/jev-decisions` from `origin/main` in an isolated worktree. Preserve the other checkout.
-- [ ] Verify the OpenCode V2 hook contracts and TypeSafe request format.
-- [ ] Implement options, secure credentials, a bounded direct client, redaction, private storage, and telemetry.
-- [ ] Implement shell safety checks and test-output compression.
-- [ ] Implement skill and reasoning observations in shadow mode.
-- [ ] Document the data flow, options, migration, limitations, and release.
-- [ ] Run focused tests, reconcile the implementation, and review safety and lifecycle behavior.
+- [x] Verify the OpenCode V2 hook contracts and TypeSafe request format.
+- [x] Implement options, secure credentials, a bounded direct client, redaction, private storage, and telemetry.
+- [x] Implement shell safety checks and test-output compression.
+- [x] Implement skill and reasoning observations in shadow mode.
+- [x] Document the data flow, options, migration, limitations, and release.
+- [x] Run focused tests, reconcile the implementation, and review safety and lifecycle behavior.
+- [x] Incorporate the released v0.4.0 status extension without removing its behavior.
+- [ ] Rebuild the combined package and verify its Jev parity.
 - [ ] Run final unit, type, and isolated integration checks.
 - [ ] Open and link the PR, wait for its checks, merge, and tag the exact merge commit.
 
