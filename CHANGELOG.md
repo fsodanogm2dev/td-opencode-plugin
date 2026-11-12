@@ -20,6 +20,10 @@ Review the local-service permission when updating the extension. Scope and enfor
 
 - The extension is named **TD-Plugin extension**. The combined installer ships the guard service and Work Status section.
 
+## 0.5.2 (beta), 2026-11-12
+
+Documentation release. Adds an OpenChamber installation prompt to `README.md` and `docs/jev.md` that requests the FueliX and TypeSafe Jev API keys through private secret cards (`openchamber_secret`) and stores them in the macOS login Keychain.
+
 ## 0.5.1 (beta), 2026-11-12
 
 Patch release. It defaults `jev.baseURL` to the TELUS TypeSafe gateway (`https://typesafe-gateway.k8smos.telus.gizmos.run`), supports `TYPESAFE_BASE_URL` from the server environment, and redacts `gzak_...` gateway keys.
