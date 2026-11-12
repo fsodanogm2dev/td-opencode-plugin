@@ -33,12 +33,23 @@ Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decision
 
 The repository `fsodanogm2dev/td-opencode-plugin` is public. Installing it over HTTPS needs no GitHub authentication.
 
+### Quick install in OpenChamber (with secret cards)
+
+Paste this prompt into an OpenChamber chat to let the agent request your FueliX and TypeSafe Jev keys on private cards, store them in your macOS login Keychain, and configure the plugin:
+
+```text
+Install and configure td-opencode-plugin (v0.5.2):
+1. If `fuelix-api-key` is not already in my macOS Keychain (`security find-generic-password -s fuelix-api-key -a "$USER"`), call `openchamber_secret` (`secret.request`, label "FueliX API key", placeholder "sk-...") to ask for it on a private card, store it in my login Keychain under service `fuelix-api-key` via `/usr/bin/security -i` without printing or logging the key, and delete the temporary secret file.
+2. Call `openchamber_secret` (`secret.request`, label "TypeSafe Jev API key (optional)", placeholder "gzak_...") to ask for my TELUS TypeSafe gateway key on a private card. If I save one, store it in my login Keychain under service `typesafe-api-key` via `/usr/bin/security -i` without printing or logging the key, and delete the temporary secret file.
+3. Update `~/.config/opencode/opencode.json` (keeping a backup first) to register `{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.2", "options": { "jev": { "enabled": true } } }` in `plugins` (set `jev.enabled` to `false` if I declined the TypeSafe key) and remove any old `provider.fuelix-openai`, `provider.fuelix`, `providers.fuelix-anthropic`, or legacy `jev-plugin.js` entries.
+```
+
 ### OpenChamber: plugin and status panel together
 
 Use OpenChamber 2.7.0 or later. Open **Settings → Extensions** and add this repository URL:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.5.1
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.5.2
 ```
 
 Approve the status-report file access and **Add a plugin to OpenCode**. OpenChamber then loads the bundled plugin and
@@ -59,7 +70,7 @@ Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.1", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.2", "options": {} }]
 }
 ```
 
@@ -76,7 +87,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.5.1 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.5.2 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
@@ -113,7 +124,7 @@ The plugin looks for the key in this order and uses the first one it finds:
 
 | Order | Source | How to set it | Storage |
 | --- | --- | --- | --- |
-| 1 | macOS Keychain item `fuelix-api-key` | `security add-generic-password -U -s fuelix-api-key -a "$USER" -w` (prompts for the key) | Encrypted login keychain |
+| 1 | macOS Keychain item `fuelix-api-key` | Ask an OpenChamber agent to open a secret card (`openchamber_secret`), or run `security add-generic-password -U -s fuelix-api-key -a "$USER" -w` | Encrypted login keychain |
 | 2 | OpenCode credential store | `/connect`, then choose **FuelIX** | Clear text in `~/.local/share/opencode/opencode.db` (mode `0600`) |
 | 3 | `FUELIX_API_KEY` | Environment of the OpenCode service, for example `~/.config/opencode/service.json` | Clear text in that file |
 

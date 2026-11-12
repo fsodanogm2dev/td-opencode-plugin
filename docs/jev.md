@@ -11,6 +11,8 @@ organization's data policy before enabling it on company projects.
 
 Store the TypeSafe key in the macOS Keychain, connect through `/connect` and select **TypeSafe**, or set
 `TYPESAFE_API_KEY` in the OpenCode server environment. The Keychain service name is `typesafe-api-key`.
+In OpenChamber, you can ask the agent to open a private secret card (`openchamber_secret`) and store the key in your
+login Keychain, or run `security add-generic-password -U -s typesafe-api-key -a "$USER" -w` in Terminal.
 The resolver uses the first available key in that order. The **TypeSafe** connection appears after you enable Jev
 in the options below. If you use `/connect`, enable Jev first, then connect. Do not put a key in plugin options.
 
@@ -23,7 +25,7 @@ at the same time. The status panel reports FueliX; Jev observations remain in it
 
 ```jsonc
 {
-  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.1",
+  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.2",
   "options": {
     "jev": { "enabled": true, "model": "jev-1.14.0" }
   }
