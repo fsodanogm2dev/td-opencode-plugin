@@ -1,6 +1,6 @@
 {
   "name": "td-opencode-plugin-status",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "OpenChamber rail panel that shows what td-opencode-plugin configured and its latest model check.",
   "license": "UNLICENSED",

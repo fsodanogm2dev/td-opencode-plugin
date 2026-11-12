@@ -9,11 +9,13 @@ const SLACK = "xoxb-" + "1234567890-abcdefghij"
 const JWT = "eyJhbGciOi" + "." + "eyJzdWIiOiIx" + "." + "c2lnbmF0dXJl"
 const VENDOR = "sk-test-not-a-real-key"
 const AK = "ak-test-not-a-real-key"
+const GZAK = "gzak_test_not_a_real_gateway_key"
 
 describe("redactText", () => {
   test.each([
     ["sk token", `key ${VENDOR} end`, VENDOR],
     ["ak token", `key ${AK} end`, AK],
+    ["gzak token", `key ${GZAK} end`, GZAK],
     ["aws key", `id ${AWS} end`, AWS],
     ["github token", `t ${GITHUB} end`, GITHUB],
     ["github pat", `t ${GITHUB_PAT} end`, GITHUB_PAT],

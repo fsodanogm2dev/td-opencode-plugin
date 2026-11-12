@@ -274,7 +274,7 @@ describe("setupJev", () => {
     expect(requests).toEqual([])
     expect(await run("touch fine")).toBe("allow")
     expect(requests.length).toBe(1)
-    expect(requests[0]!.url).toBe("https://api.typesafe.ai/v1/systemone")
+    expect(requests[0]!.url).toBe("https://typesafe-gateway.k8smos.telus.gizmos.run/v1/systemone")
     expect(requests[0]!.headers.Authorization).toBe("Bearer ts-test-not-a-real-key")
     expect(requests[0]!.body.model).toBe("jev-1.14.0")
     expect(await run("touch risky")).toBe("ask")

@@ -19,10 +19,10 @@ export interface LoggerOptions {
   readonly sink?: (line: string) => void
 }
 
-const SECRET_PATTERN = /\b(sk|ak)-[A-Za-z0-9_-]{6,}/g
+const SECRET_PATTERN = /\b(?:(sk|ak)-[A-Za-z0-9_-]{6,}|(gzak)_[A-Za-z0-9_-]{6,})/g
 
 export function redact(value: string): string {
-  return value.replace(SECRET_PATTERN, (match) => `${match.slice(0, 3)}[redacted]`)
+  return value.replace(SECRET_PATTERN, (match) => `${match.startsWith("gzak_") ? "gzak_" : match.slice(0, 3)}[redacted]`)
 }
 
 function formatFields(fields: LogFields | undefined): string {

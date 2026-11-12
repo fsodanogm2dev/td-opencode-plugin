@@ -5,7 +5,7 @@
  * "jev": {
  *   "enabled": false,
  *   "model": "jev-1.14.0",
- *   "baseURL": "https://api.typesafe.ai",
+ *   "baseURL": "https://typesafe-gateway.k8smos.telus.gizmos.run",
  *   "keychainService": "typesafe-api-key",
  *   "scrubShellEnv": true,
  *   "telemetry": true,
@@ -24,7 +24,10 @@
 
 import type { Env, JevMode } from "./types.ts"
 
-export const DEFAULT_JEV_BASE_URL = "https://api.typesafe.ai"
+export const DEFAULT_JEV_BASE_URL = "https://typesafe-gateway.k8smos.telus.gizmos.run"
+export const PUBLIC_JEV_BASE_URL = "https://api.typesafe.ai"
+export const TRUSTED_JEV_BASE_URLS: readonly string[] = [DEFAULT_JEV_BASE_URL, PUBLIC_JEV_BASE_URL]
+export const TYPESAFE_BASE_URL_ENV = "TYPESAFE_BASE_URL"
 export const DEFAULT_JEV_MODEL = "jev-1.14.0"
 export const DEFAULT_JEV_KEYCHAIN_SERVICE = "typesafe-api-key"
 export const ALLOW_CUSTOM_JEV_URL_ENV = "TD_OPENCODE_ALLOW_CUSTOM_JEV_URL"
@@ -116,36 +119,46 @@ function normalizeBaseURL(value: string): string {
   return value.replace(/\/+$/, "").replace(/\/v1$/, "").replace(/\/+$/, "")
 }
 
-/**
- * Chooses the TypeSafe origin. The Keychain or credential store key follows the base URL, and a project
- * configuration can set options. A custom URL therefore needs `TD_OPENCODE_ALLOW_CUSTOM_JEV_URL=1`, must use https
- * (http only for a loopback host), and must not carry credentials, a query, or a fragment. Anything else falls back
- * to the default with a warning.
- */
-export function resolveJevBaseURL(requested: string, env: Env, warnings: string[]): string {
-  const normalized = normalizeBaseURL(requested)
-  if (normalized === DEFAULT_JEV_BASE_URL) return DEFAULT_JEV_BASE_URL
-  if (env[ALLOW_CUSTOM_JEV_URL_ENV] !== "1") {
-    warnings.push(`options.jev.baseURL is ignored because ${ALLOW_CUSTOM_JEV_URL_ENV} is not "1"; using ${DEFAULT_JEV_BASE_URL}`)
-    return DEFAULT_JEV_BASE_URL
-  }
+function validateBaseURL(normalized: string, sourceLabel: string, fallback: string, warnings: string[]): string | undefined {
   let url: URL
   try {
     url = new URL(normalized)
   } catch {
-    warnings.push(`options.jev.baseURL is not a valid URL; using ${DEFAULT_JEV_BASE_URL}`)
-    return DEFAULT_JEV_BASE_URL
+    warnings.push(`${sourceLabel} is not a valid URL; using ${fallback}`)
+    return undefined
   }
   const secure = url.protocol === "https:" || (url.protocol === "http:" && LOCAL_HOSTS.has(url.hostname))
   if (!secure) {
-    warnings.push(`options.jev.baseURL must use https (http is allowed only for localhost); using ${DEFAULT_JEV_BASE_URL}`)
-    return DEFAULT_JEV_BASE_URL
+    warnings.push(`${sourceLabel} must use https (http is allowed only for localhost); using ${fallback}`)
+    return undefined
   }
   if (url.username || url.password || url.search || url.hash) {
-    warnings.push(`options.jev.baseURL must not contain credentials, a query, or a fragment; using ${DEFAULT_JEV_BASE_URL}`)
-    return DEFAULT_JEV_BASE_URL
+    warnings.push(`${sourceLabel} must not contain credentials, a query, or a fragment; using ${fallback}`)
+    return undefined
   }
   return normalized
+}
+
+function resolveEnvBaseURL(env: Env, warnings: string[]): string | undefined {
+  const raw = env[TYPESAFE_BASE_URL_ENV]
+  if (typeof raw !== "string" || raw.trim() === "") return undefined
+  return validateBaseURL(normalizeBaseURL(raw.trim()), TYPESAFE_BASE_URL_ENV, DEFAULT_JEV_BASE_URL, warnings)
+}
+
+/**
+ * Chooses the TypeSafe origin. Accepts the TELUS gateway and public TypeSafe origin, a URL from `TYPESAFE_BASE_URL`
+ * in the server environment, or a custom `options.jev.baseURL` when `TD_OPENCODE_ALLOW_CUSTOM_JEV_URL=1` is set.
+ */
+export function resolveJevBaseURL(requested: string, env: Env, warnings: string[]): string {
+  const envBaseURL = resolveEnvBaseURL(env, warnings)
+  const fallback = envBaseURL ?? DEFAULT_JEV_BASE_URL
+  const normalized = normalizeBaseURL(requested)
+  if (TRUSTED_JEV_BASE_URLS.includes(normalized) || normalized === envBaseURL) return normalized
+  if (env[ALLOW_CUSTOM_JEV_URL_ENV] !== "1") {
+    warnings.push(`options.jev.baseURL is ignored because ${ALLOW_CUSTOM_JEV_URL_ENV} is not "1"; using ${fallback}`)
+    return fallback
+  }
+  return validateBaseURL(normalized, "options.jev.baseURL", fallback, warnings) ?? fallback
 }
 
 /**
@@ -240,10 +253,15 @@ export function parseJevOptions(raw: unknown, env: Env, warnings: string[]): Jev
     else warnings.push(`options.jev.model must be a Jev model such as "jev-1.14.0", "jev-latest", or "jev-preview"; using ${JSON.stringify(defaults.model)}`)
   }
 
-  let requestedBaseURL: string = defaults.baseURL
-  if (root.baseURL !== undefined) {
-    if (typeof root.baseURL === "string" && root.baseURL.trim() !== "") requestedBaseURL = root.baseURL.trim()
-    else warnings.push(`options.jev.baseURL must be a non-empty string; using ${DEFAULT_JEV_BASE_URL}`)
+  let baseURL: string
+  if (root.baseURL === undefined) {
+    baseURL = resolveEnvBaseURL(env, warnings) ?? defaults.baseURL
+  } else if (typeof root.baseURL === "string" && root.baseURL.trim() !== "") {
+    baseURL = resolveJevBaseURL(root.baseURL.trim(), env, warnings)
+  } else {
+    const fallback = resolveEnvBaseURL(env, warnings) ?? DEFAULT_JEV_BASE_URL
+    warnings.push(`options.jev.baseURL must be a non-empty string; using ${fallback}`)
+    baseURL = fallback
   }
 
   const pointsRaw = section(root, "jev", "points")
@@ -260,7 +278,7 @@ export function parseJevOptions(raw: unknown, env: Env, warnings: string[]): Jev
   return {
     enabled: readBoolean(root, "jev", "enabled", defaults.enabled),
     model,
-    baseURL: resolveJevBaseURL(requestedBaseURL, env, warnings),
+    baseURL,
     keychainService,
     scrubShellEnv: readBoolean(root, "jev", "scrubShellEnv", defaults.scrubShellEnv),
     telemetry: readBoolean(root, "jev", "telemetry", defaults.telemetry),
