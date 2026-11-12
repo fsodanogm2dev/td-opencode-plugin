@@ -7,6 +7,7 @@
 
 import type { Plugin } from "@opencode/plugin"
 import { setupFuelix } from "./fuelix/index.ts"
+import { setupJev } from "./jev/index.ts"
 import { createFileStatusWriter } from "./fuelix/status.ts"
 import { createLogger } from "./log.ts"
 import { parseOptions } from "./options.ts"
@@ -32,6 +33,12 @@ const plugin: Plugin.Plugin = {
       cleanups.push(await setupFuelix(ctx, options.fuelix, log, { statusReport: createFileStatusWriter() }))
     } catch (error) {
       log.error("FueliX setup failed", { error: errorMessage(error) })
+    }
+    // Jev is independent of FueliX. Its error text is never logged, because it could carry TypeSafe data.
+    try {
+      cleanups.push(await setupJev(ctx, options.jev, log))
+    } catch {
+      log.error("Jev setup failed")
     }
 
     return async () => {

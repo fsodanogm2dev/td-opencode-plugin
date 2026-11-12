@@ -6,12 +6,13 @@
   "model": "fuelix-openai/gpt-6-luna",
   "plugins": [
     {
-      "package": "github:fsodanogm2dev/td-opencode-plugin#v0.3.1",
+      "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.0",
       "options": {
         "fuelix": {
           "keychainService": "fuelix-api-key",
           "refreshMinutes": 60
-        }
+        },
+        "jev": { "enabled": false, "model": "jev-1.14.0" }
       }
     }
   ]

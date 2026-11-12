@@ -2,7 +2,7 @@
 
 OpenCode V2 plugin for TELUS Digital engineers who use FueliX with OpenCode and OpenChamber.
 
-It does four things:
+It does five things:
 
 1. **FueliX catalog**: registers the `fuelix-openai`, `fuelix-anthropic`, and `fuelix` providers and loads their
    models from `https://api.fuelix.ai/v1/models`. Prices, limits, and modalities come from a curated catalog
@@ -16,6 +16,9 @@ It does four things:
    FueliX, check the status, cancel, and collect the results into protected local files. Details are in
    [`docs/batches.md`](docs/batches.md). Live batch submission was rejected with HTTP 403, so account access and result
    collection are not verified.
+5. **Optional Jev decisions**: Jev 1.14.0 adds shell permission checks and failure-output compression. Skill and
+   reasoning observations are shadow-only. Jev is disabled by default and sends selected redacted data to TypeSafe,
+   outside FueliX. Read [`docs/jev.md`](docs/jev.md) before enabling it.
 
 A visual overview with diagrams is in [`docs/index.html`](docs/index.html). Open it in a browser from a clone.
 Release notes are in [`CHANGELOG.md`](CHANGELOG.md). The work plan, its decisions, and its evidence are in
@@ -35,7 +38,7 @@ The repository `fsodanogm2dev/td-opencode-plugin` is public. Installing it over 
 Use OpenChamber 2.7.0 or later. Open **Settings → Extensions** and add this repository URL:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.4.0
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.5.0
 ```
 
 Approve the status-report file access and **Add a plugin to OpenCode**. OpenChamber then loads the bundled plugin and
@@ -56,7 +59,7 @@ Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.4.0", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.5.0", "options": {} }]
 }
 ```
 
@@ -73,7 +76,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.4.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.5.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
@@ -208,6 +211,7 @@ Install the combined repository package from **Settings → Extensions** in Open
       "statusReport": true                 // write credential-free reports for the optional OpenChamber extension
       // Optional batchRates: see docs/batches.md for sourced batch prices.
     },
+    "jev": { "enabled": false, "model": "jev-1.14.0" }, // optional; see docs/jev.md
     "debug": false
   }
 }
@@ -217,7 +221,7 @@ Install the combined repository package from **Settings → Extensions** in Open
 
 ```bash
 bun install
-bun test                  # unit tests
+bun run test              # unit tests; bare `bun test` scans all suites
 bun run typecheck
 bun run test:integration  # starts isolated OpenCode servers; see test/integration/README.md
 bun run doctor            # compares live /v1/models with data/fuelix-models.json (needs a FueliX key)

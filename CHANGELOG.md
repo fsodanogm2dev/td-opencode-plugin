@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0 (beta), 2026-11-12
+
+This release adds an optional TypeSafe Jev integration for OpenCode V2. Jev is disabled by default. It sends selected
+redacted commands, failure excerpts, and shadow-mode requests to TypeSafe, outside FueliX. Review your data policy
+before enabling it. Configuration, migration, and limits are in [`docs/jev.md`](docs/jev.md).
+
+### Added
+
+- Direct Jev 1.14.0 decision requests, without a broker or runtime dependency. Key sources are macOS Keychain,
+  `/connect` (**TypeSafe**), and `TYPESAFE_API_KEY`.
+- Shell safety checks that escalate allowed commands to permission review. Deterministic destructive patterns ask
+  without an API call. Upstream failure asks by default; existing permission prompts and denials remain in force.
+- Extractive summaries of long failing shell output, with protected log access. Known secret formats are redacted
+  before transmission. Output that redaction changes stays unchanged, with no new log, so debugging values remain
+  available.
+- Skill selection and reasoning observations in shadow mode. They do not change model requests.
+- Bounded decision caching, private rotating telemetry without raw text, shell environment scrubbing, and tests.
+
+No measured token or billing savings are claimed. Category routing and context garbage collection are not included.
+
 ## 0.4.0 (beta), 2026-11-12
 
 Feature release. It needs OpenCode 2.0.32 or later. The combined extension needs OpenChamber 2.7.0 or later.
