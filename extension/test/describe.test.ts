@@ -1,12 +1,19 @@
 import { describe, expect, test } from "bun:test"
 
-import { AUTH_BACKGROUND, describeReport, SETUP_HELP } from "../panel/describe.ts"
-import { NOW, scenarios, withReport } from "./support/fixtures.ts"
+import {
+  AUTH_BACKGROUND,
+  describeReport,
+  HISTORY_RECENT,
+  HISTORY_TEXT,
+  historyCoversChange,
+  SETUP_HELP,
+} from "../panel/describe.ts"
+import { historyEntry, NOW, scenarios, withReport } from "./support/fixtures.ts"
 
 describe("describeReport", () => {
   test("unchanged check keeps the earlier model change visible", () => {
     const view = describeReport(scenarios.unchanged, NOW)
-    expect(view.check.headline).toBe("No model changes")
+    expect(view.check.headline).toBe("No changes in this check")
     expect(view.check.groups).toEqual([])
     expect(view.change?.summary).toBe("1 model added")
     expect(view.change?.groups).toEqual([{ label: "Added", ids: ["gpt-5.2-codex"] }])
@@ -188,5 +195,159 @@ describe("describeReport", () => {
 
   test("model totals", () => {
     expect(describeReport(scenarios.unchanged, NOW).models.total).toBe("29 models from 3 providers")
+  })
+})
+
+const EARLIER = "Earlier changes are listed under Model change history."
+const NOT_IN_HISTORY = "The latest recorded change is shown below; it is not yet in the shared history."
+const NOW_ISO = new Date(NOW).toISOString()
+
+describe("describeReport: model change history", () => {
+  test("a change from another chat stays visible when this check found nothing new", () => {
+    const view = describeReport(scenarios.history, NOW)
+    expect(view.check.headline).toBe("No changes in this check")
+    expect(view.check.notes).toEqual([
+      "The registered model list did not change.",
+      "Earlier changes are listed under Model change history.",
+    ])
+    if (view.history.kind !== "list") throw new Error("expected a list")
+    expect(view.history.since).toBe(scenarios.history.modelHistory!.since)
+    expect(view.history.truncated).toBe(false)
+    expect(view.history.older).toEqual([])
+    expect(view.history.recent.map((e) => [e.kind, e.title, e.fetchedLabel, e.counts])).toEqual([
+      ["change", "1 model added", HISTORY_TEXT.fetchedDiscovery, "The list had 41 models. This plugin can register 29 models here."],
+      ["change", "1 model added, 1 removed", HISTORY_TEXT.fetchedCache, "The list had 40 models. This plugin can register 29 models here."],
+      ["baseline", "Starting model list · 28 eligible models", HISTORY_TEXT.fetchedCache, "The list had 40 models. This plugin can register 28 models here."],
+    ])
+    expect(view.history.recent[0]?.groups).toEqual([{ label: "Added", ids: ["hydrogen-1"] }])
+    expect(view.history.recent[1]?.groups).toEqual([
+      { label: "Added", ids: ["gpt-5.2-codex"] },
+      { label: "Removed", ids: ["gpt-4o"] },
+    ])
+  })
+
+  test("the starting list never lists its models as added", () => {
+    const view = describeReport(scenarios.historyBaselineOnly, NOW)
+    if (view.history.kind !== "list") throw new Error("expected a list")
+    expect(view.history.recent).toHaveLength(1)
+    expect(view.history.recent[0]?.groups).toEqual([])
+    expect(view.history.recent[0]?.title).not.toContain("added")
+    // Nothing changed after the starting list, so the check does not point at earlier changes.
+    expect(view.check.notes).not.toContain("Earlier changes are listed under Model change history.")
+  })
+
+  test("the count line names what the plugin can register, not a reason", () => {
+    const report = withReport({
+      modelHistory: { since: scenarios.history.modelHistory!.since, truncated: false, entries: [historyEntry(5, { totalIDs: 29, eligible: 29, added: ["a"] })] },
+    })
+    const view = describeReport(report, NOW)
+    expect(view.history.kind === "list" && view.history.recent[0]?.counts).toBe("The list had 29 models. This plugin can register 29 models here.")
+  })
+
+  test("history that holds the current-run change replaces its card", () => {
+    const report = withReport({
+      modelHistory: scenarios.history.modelHistory!,
+      lastChange: { at: scenarios.history.recordedAt, added: ["hydrogen-1"], removed: [] },
+    })
+    const view = describeReport(report, NOW)
+    expect(view.change).toBeNull()
+    expect(view.check.notes).toContain(EARLIER)
+    expect(view.check.notes).not.toContain(NOT_IN_HISTORY)
+  })
+
+  test("a change missing from history keeps its card after an unchanged check", () => {
+    // The plugin applied hydrogen-1, but the history write failed.
+    const report = withReport({
+      modelHistory: scenarios.historyBaselineOnly.modelHistory!,
+      lastChange: { at: scenarios.history.recordedAt, added: ["hydrogen-1"], removed: ["gpt-4o"] },
+    })
+    const view = describeReport(report, NOW)
+    expect(view.check.headline).toBe("No changes in this check")
+    expect(view.change?.summary).toBe("1 model added, 1 removed")
+    expect(view.change?.groups).toEqual([
+      { label: "Added", ids: ["hydrogen-1"] },
+      { label: "Removed", ids: ["gpt-4o"] },
+    ])
+    expect(view.check.notes).toContain(NOT_IN_HISTORY)
+    expect(view.check.notes).not.toContain(EARLIER)
+  })
+
+  test("valid history with no entries still shows the current-run change", () => {
+    const report = withReport({
+      modelHistory: { since: scenarios.history.modelHistory!.since, truncated: false, entries: [] },
+      lastChange: { at: scenarios.history.recordedAt, added: ["hydrogen-1"], removed: [] },
+    })
+    const view = describeReport(report, NOW)
+    expect(view.change?.groups).toEqual([{ label: "Added", ids: ["hydrogen-1"] }])
+    expect(view.check.notes).toContain(NOT_IN_HISTORY)
+  })
+
+  test("partial coverage is not coverage", () => {
+    const report = withReport({
+      modelHistory: scenarios.history.modelHistory!,
+      // hydrogen-1 is in history; helium-2 is not, and the history never removed gpt-5.
+      lastChange: { at: scenarios.history.recordedAt, added: ["hydrogen-1", "helium-2"], removed: ["gpt-5"] },
+    })
+    const view = describeReport(report, NOW)
+    expect(view.change?.summary).toBe("2 models added, 1 removed")
+    expect(view.check.notes).toContain(NOT_IN_HISTORY)
+  })
+
+  test("a latest check that shows the change keeps the card hidden", () => {
+    const report = withReport({
+      lastCheck: { outcome: "updated", added: ["hydrogen-1"], removed: [], reload: "succeeded" },
+      lastChange: { at: scenarios.history.recordedAt, added: ["hydrogen-1"], removed: [] },
+      modelHistory: scenarios.historyBaselineOnly.modelHistory!,
+    })
+    const view = describeReport(report, NOW)
+    expect(view.check.groups).toEqual([{ label: "Added", ids: ["hydrogen-1"] }])
+    expect(view.change).toBeNull()
+  })
+
+  test("historyCoversChange: change entries can cover across entries; a starting list never counts", () => {
+    const entries = scenarios.history.modelHistory!.entries
+    expect(historyCoversChange({ at: NOW_ISO, added: ["hydrogen-1", "gpt-5.2-codex"], removed: ["gpt-4o"] }, entries)).toBe(true)
+    expect(historyCoversChange({ at: NOW_ISO, added: ["helium-2"], removed: [] }, entries)).toBe(false)
+    expect(historyCoversChange({ at: NOW_ISO, added: ["gpt-4o"], removed: [] }, entries)).toBe(false)
+    const baselineOnly = [historyEntry(10, { kind: "baseline", added: [], removed: [] })]
+    expect(historyCoversChange({ at: NOW_ISO, added: ["hydrogen-1"], removed: [] }, baselineOnly)).toBe(false)
+  })
+
+  test("long history shows five entries and keeps every older entry and ID", () => {
+    const view = describeReport(scenarios.historyLong, NOW)
+    if (view.history.kind !== "list") throw new Error("expected a list")
+    expect(view.history.truncated).toBe(true)
+    expect(view.history.recent).toHaveLength(HISTORY_RECENT)
+    expect(view.history.older).toHaveLength(15 - HISTORY_RECENT)
+    const ids = [...view.history.recent, ...view.history.older].flatMap((e) => e.groups.flatMap((g) => g.ids))
+    expect(ids).toHaveLength(13 + 12 + 3)
+    expect(view.history.older[view.history.older.length - 1]?.kind).toBe("baseline")
+  })
+
+  test("entries show newest first even when the file order is wrong", () => {
+    const entries = [...scenarios.history.modelHistory!.entries].reverse()
+    const view = describeReport(withReport({ modelHistory: { ...scenarios.history.modelHistory!, entries } }), NOW)
+    expect(view.history.kind === "list" && view.history.recent.map((e) => e.kind)).toEqual(["change", "change", "baseline"])
+  })
+
+  test("absent, empty, and unreadable history each say what is true; the legacy card stays", () => {
+    const absent = describeReport(scenarios.unchanged, NOW)
+    expect(absent.history).toEqual({ kind: "message", title: "This plugin report does not include history.", body: null, tone: "neutral" })
+    expect(absent.change?.summary).toBe("1 model added")
+
+    const empty = withReport({ modelHistory: null, lastChange: scenarios.unchanged.lastChange })
+    expect(describeReport(empty, NOW).history).toEqual({ kind: "message", title: "Model history is not available.", body: null, tone: "neutral" })
+    expect(describeReport(empty, NOW).change?.summary).toBe("1 model added")
+
+    const unreadable = withReport({ modelHistoryProblem: { field: "modelHistory.entries" }, lastChange: scenarios.unchanged.lastChange })
+    const view = describeReport(unreadable, NOW)
+    expect(view.history).toEqual({
+      kind: "message",
+      title: "History could not be read.",
+      body: "The latest check and the rest of this report are still shown.",
+      tone: "warning",
+    })
+    expect(view.check.headline).toBe("No changes in this check")
+    expect(view.change?.summary).toBe("1 model added")
   })
 })

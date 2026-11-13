@@ -114,10 +114,111 @@ describe("panel with a mock host", () => {
     mock.ready(PROJECT)
     await tick()
     const t = text(root)
-    expect(t).toContain("No model changes")
+    expect(t).toContain("No changes in this check")
+    expect(t).toContain("This plugin report does not include history.")
     expect(t).toContain("Latest change since the plugin started")
-    expect(t).toContain("starts again when OpenCode restarts or reloads the plugin")
+    expect(t).toContain("This card covers only the current plugin run.")
     expect(t).toContain("gpt-5.2-codex")
+  })
+
+  test("model change history from another chat shows under an unchanged check", async () => {
+    const { root, mock } = await start()
+    await serve(mock, PROJECT, json(scenarios.history))
+    mock.ready(PROJECT)
+    await tick()
+    const sections = [...root.querySelectorAll<HTMLElement>("#content > .sec")].map((s) => s.querySelector(".sec-title")?.textContent)
+    expect(sections.slice(0, 2)).toEqual(["Latest model check", "Model change history"])
+    expect(sections).not.toContain("Latest change since the plugin started")
+    const history = root.querySelector<HTMLElement>('[aria-labelledby="sec-history"]')!
+    const t = text(history)
+    expect(t).toContain("Earliest recorded model list: ")
+    expect(t).toContain("They are not the dates FueliX announced the models.")
+    expect(t).not.toContain("Older history is omitted")
+    const items = [...history.querySelectorAll<HTMLElement>(".hist-item")]
+    expect(items.map((i) => i.dataset.kind)).toEqual(["change", "change", "baseline"])
+    expect(text(items[0]!)).toContain("1 model added")
+    expect(text(items[0]!)).toContain("Model list fetched from FueliX ")
+    expect(text(items[0]!)).toContain("hydrogen-1")
+    expect(text(items[1]!)).toContain("From a saved model list fetched ")
+    expect(text(items[2]!)).toContain("Starting model list · 28 eligible models")
+    expect(items[2]!.querySelector(".chip")).toBeNull()
+    for (const item of items) expect(item.querySelector("time")?.dateTime).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    expect(text(root.querySelector('[aria-labelledby="sec-check"]')!)).toContain("Earlier changes are listed under Model change history.")
+  })
+
+  test("long history folds older entries, keeps every ID, and stays open after Reload", async () => {
+    const { root, mock } = await start()
+    await serve(mock, PROJECT, json(scenarios.historyLong))
+    mock.ready(PROJECT)
+    await tick()
+    const history = () => root.querySelector<HTMLElement>('[aria-labelledby="sec-history"]')!
+    expect(text(history())).toContain("Older history is omitted from this view.")
+    expect(history().querySelectorAll(":scope > .hist > .hist-item")).toHaveLength(5)
+    const more = history().querySelector<HTMLDetailsElement>("details.hist-more")!
+    expect(more.querySelector("summary")?.textContent).toBe("Show 10 older entries")
+    expect(more.querySelectorAll(".hist-item")).toHaveLength(10)
+    expect(history().querySelectorAll(".chip")).toHaveLength(28)
+    const batch = history().querySelector<HTMLDetailsElement>("details.fold:not(.hist-more)")!
+    expect(batch.querySelectorAll(".chip")).toHaveLength(12)
+    more.open = true
+    batch.open = true
+    root.querySelector<HTMLButtonElement>(".ftr-button button")!.click()
+    await tick(6)
+    expect(history().querySelector<HTMLDetailsElement>("details.hist-more")?.open).toBe(true)
+    expect(history().querySelector<HTMLDetailsElement>("details.fold:not(.hist-more)")?.open).toBe(true)
+  })
+
+  test("a change missing from history shows its card below the history", async () => {
+    const { root, mock } = await start()
+    const report = withReport({
+      modelHistory: scenarios.historyBaselineOnly.modelHistory!,
+      lastChange: { at: scenarios.history.recordedAt, added: ["hydrogen-1"], removed: [] },
+    })
+    await serve(mock, PROJECT, json(report))
+    mock.ready(PROJECT)
+    await tick()
+    const sections = [...root.querySelectorAll<HTMLElement>("#content > .sec")].map((s) => s.querySelector(".sec-title")?.textContent)
+    expect(sections.slice(0, 3)).toEqual(["Latest model check", "Model change history", "Latest change since the plugin started"])
+    expect(text(root.querySelector('[aria-labelledby="sec-check"]')!)).toContain(
+      "The latest recorded change is shown below; it is not yet in the shared history.",
+    )
+    expect(text(root.querySelector('[aria-labelledby="sec-change"]')!)).toContain("hydrogen-1")
+  })
+
+  test("null and damaged history say so; the rest of the report still shows", async () => {
+    const { root, mock } = await start()
+    await serve(mock, PROJECT, json(scenarios.historyNull))
+    mock.ready(PROJECT)
+    await tick()
+    expect(text(root)).toContain("Model history is not available.")
+    await serve(mock, PROJECT, json({ ...scenarios.history, modelHistory: { since: "soon", truncated: false, entries: [] } }))
+    root.querySelector<HTMLButtonElement>(".ftr-button button")!.click()
+    await tick(6)
+    const t = text(root)
+    expect(t).toContain("History could not be read.")
+    expect(t).toContain("The latest check and the rest of this report are still shown.")
+    expect(t).toContain("No changes in this check")
+    expect(t).toContain("Models in OpenCode")
+    expect(t).not.toContain("The report could not be read")
+  })
+
+  test("history text is shown as text, never as HTML", async () => {
+    const { root, mock } = await start()
+    const hostile = '<img src=x onerror="globalThis.__pwned=1">'
+    const report = withReport({
+      modelHistory: {
+        since: scenarios.history.modelHistory!.since,
+        truncated: false,
+        entries: [{ ...scenarios.history.modelHistory!.entries[0]!, added: [hostile], removed: ["</li><script>x()</script>"] }],
+      },
+    })
+    await serve(mock, PROJECT, json(report))
+    mock.ready(PROJECT)
+    await tick()
+    const history = root.querySelector<HTMLElement>('[aria-labelledby="sec-history"]')!
+    expect(history.querySelector("img, script")).toBeNull()
+    expect(text(history)).toContain(hostile)
+    expect((globalThis as { __pwned?: number }).__pwned).toBeUndefined()
   })
 
   test("a sanitized directory in the report is not a mismatch", async () => {

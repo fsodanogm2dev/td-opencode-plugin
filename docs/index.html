@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>td-opencode-plugin v0.6.0</title>
+<title>td-opencode-plugin v0.7.0</title>
 <style>
 :root {
   --bg: #f6f5f9;
@@ -413,13 +413,13 @@ footer .wrap { border-top: 1px solid var(--border); padding-top: 1.2rem; }
     <h1>td-opencode-plugin</h1>
     <p class="lead">Connects OpenCode to FueliX, the TELUS gateway to AI models.</p>
     <ul class="meta">
-      <li>Release <strong>v0.6.0 (beta)</strong>, 2026-11-12</li>
-      <li>Tag <strong><code>v0.6.0</code></strong></li>
+      <li>Release <strong>v0.7.0 (beta)</strong>, 2026-11-12</li>
+      <li>Tag <strong><code>v0.7.0</code></strong></li>
       <li>Needs <strong>OpenCode 2.0.32 or later</strong></li>
       <li>Repository: <strong><a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a></strong> (public)</li>
     </ul>
     <ul class="cards">
-      <li class="card beta lblfirst"><span class="lbl">Release</span><span class="num">v0.6.0 <small>(beta)</small></span></li>
+      <li class="card beta lblfirst"><span class="lbl">Release</span><span class="num">v0.7.0 <small>(beta)</small></span></li>
             <li class="card"><span class="num">3</span><span class="lbl">providers</span></li>
       <li class="card"><span class="num">109</span><span class="lbl">catalog entries</span></li>
       <li class="card"><span class="num">3</span><span class="lbl">title models</span></li>
@@ -929,7 +929,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
   <div class="panel" style="margin-top:1.1rem">
     <h3>Turn it on</h3>
     <p>Add <code>jev</code> to the options of your plugin entry. Then store the key in one of the three places above. The <strong>TypeSafe</strong> connection appears in <code>/connect</code> after Jev is enabled:</p>
-    <div class="code"><div class="box"><pre>{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": { "jev": { "enabled": true, "model": "jev-1.14.0" } } }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
+    <div class="code"><div class="box"><pre>{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.7.0", "options": { "jev": { "enabled": true, "model": "jev-1.14.0" } } }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
     <p>All options, the move from the standalone Jev plugin, and storage details: <a href="jev.md">docs/jev.md</a>.</p>
     <p class="note">The tests for Jev use fake keys and a local mock TypeSafe endpoint. Jev is not verified against the live TypeSafe service. Report: <a href="reports/2026-11-12-jev-verification.md">Jev verification</a>.</p>
   </div>
@@ -996,7 +996,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
       <li>
         <h3>Add the plugin</h3>
         <p>Add this line to <code>~/.config/opencode/opencode.json</code>, then remove the old FueliX provider blocks from that file:</p>
-    <div class="code"><div class="box"><pre>{ "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": {} }] }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
+    <div class="code"><div class="box"><pre>{ "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.7.0", "options": {} }] }</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
       </li>
       <li>
         <h3>Let git read the repository</h3>
@@ -1011,7 +1011,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
         <h3>Check the install</h3>
         <p>This command shows the plugin line:</p>
         <div class="code nogap"><div class="box"><pre>opencode plugin list</pre><button type="button" data-copy aria-label="Copy command">Copy</button></div></div>
-        <div class="result"><div class="rhead"><span class="tag">Expected result</span></div><pre>td-opencode-plugin  &lt;commit&gt;  github:fsodanogm2dev/td-opencode-plugin#v0.6.0</pre></div>
+        <div class="result"><div class="rhead"><span class="tag">Expected result</span></div><pre>td-opencode-plugin  &lt;commit&gt;  github:fsodanogm2dev/td-opencode-plugin#v0.7.0</pre></div>
       </li>
     </ol>
     <ul class="plain small">
@@ -1028,7 +1028,7 @@ fuelix/gemini-3.1-flash-lite  family=gemini-flash-lite</pre></div>
   <p class="sub">The result depends on whether the package is pinned to a tag.</p>
   <div class="panel">
     <div class="diagram" data-diagram="updates"><pre>flowchart TB
-  P0["Pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin#v0.6.0"] --> P1["You change the tag&lt;br&gt;in the configuration"]
+  P0["Pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin#v0.7.0"] --> P1["You change the tag&lt;br&gt;in the configuration"]
   P1 --> P2["OpenCode installs the new tag&lt;br&gt;when the configuration changes"]
   U0["Not pinned&lt;br&gt;github:fsodanogm2dev/td-opencode-plugin"] --> U1["OpenCode installs the newest commit of main once and keeps that copy"]
   U1 --> U2["Once a day, OpenCode checks&lt;br&gt;for a newer commit"]
@@ -1165,7 +1165,7 @@ unset K</pre><button type="button" data-copy aria-label="Copy command">Copy</but
 
 <footer>
   <div class="wrap">
-    <p>td-opencode-plugin v0.6.0 (beta). Source: <a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a>. See <a href="../README.md">README.md</a> and <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
+    <p>td-opencode-plugin v0.7.0 (beta). Source: <a href="https://github.com/fsodanogm2dev/td-opencode-plugin" target="_blank" rel="noopener">github.com/fsodanogm2dev/td-opencode-plugin</a>. See <a href="../README.md">README.md</a> and <a href="../CHANGELOG.md">CHANGELOG.md</a>.</p>
   </div>
 </footer>
 

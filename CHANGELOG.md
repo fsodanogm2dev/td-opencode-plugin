@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0 (beta), 2026-11-12
+
+This release adds shared model-change history to the TD-Plugin extension. Both plugin and extension use version 0.7.0.
+
+### Added
+
+- Shared, persistent model-change history records additions and removals across unchanged checks, chats, and plugin
+  reloads. The panel separates the latest check from earlier changes. Dates refer to proxy-list fetches, not model
+  announcements. See [`docs/model-history.md`](docs/model-history.md).
+
+### Fixed
+
+- Guard status messages describe missing confirmation without development-only worktree instructions.
+
 ## 0.6.0 (beta), 2026-11-12
 
 This release adds user-controlled execution guards to the TD-Plugin extension. It needs OpenChamber 2.7.0 or later.

@@ -16,6 +16,7 @@ import {
   type KeychainCache,
   type ResolvedKeys,
 } from "./credentials.ts"
+import { createModelHistoryTracker, createStorageModelHistory, type ModelHistoryStore } from "./history.ts"
 import { DiscoveryError, fetchModelIDs, readCachedModels, writeCachedModels, type FetchFn } from "./discovery.ts"
 import { buildModelInfo, buildProviderInfo, enrichFromUpstream, type BuiltModel } from "./models.ts"
 import { classifyKind, routeModel } from "./rules.ts"
@@ -24,6 +25,7 @@ import {
   REASONS,
   type AuthSource,
   type CheckOutcome,
+  type ModelHistory,
   type ModelSource,
   type ReloadResult,
   type StatusProvider,
@@ -59,6 +61,11 @@ export interface FuelixDeps {
    * `src/index.ts` injects the file writer. `options.statusReport === false` turns the report off.
    */
   readonly statusReport?: StatusReportWriter
+  /**
+   * Store of the model-change history. Used only when a status report writer exists and `options.statusReport` is
+   * not `false`. The default is the store on `ctx.storage`. `null` turns the history off.
+   */
+  readonly modelHistory?: ModelHistoryStore | null
 }
 
 /** A discovery result may drop at most this share of the current IDs. */
@@ -375,6 +382,35 @@ export async function setupFuelix(
     incompleteIDs: incompleteIDs.slice(0, 10).join(","),
   })
 
+  // 7a. Model-change history. It exists only with a status report. It lives in the storage that all locations share.
+  const eligibility = new Map<string, boolean>()
+  const isEligible = (id: string): boolean => {
+    let known = eligibility.get(id)
+    if (known === undefined) {
+      const single = planModels(catalog, [id], options.includeNonChatModels)
+      known = FUELIX_PROVIDER_IDS.some((providerID) => {
+        const item = single.byProvider[providerID][0]
+        return item !== undefined && safeBuild(providerID, id, item.entry) !== undefined
+      })
+      eligibility.set(id, known)
+    }
+    return known
+  }
+  const historyStore = writeReport ? (deps.modelHistory === undefined ? createStorageModelHistory(ctx.storage) : (deps.modelHistory ?? undefined)) : undefined
+  const tracker = historyStore
+    ? createModelHistoryTracker({
+        store: historyStore,
+        log,
+        now,
+        isEligible,
+        secrets: () => [state.keys.key, state.keys.keychainKey, state.keys.credentialStoreKey, state.keys.envKey],
+      })
+    : undefined
+  // A cache with a valid `fetchedAt` is the baseline of an empty history. The startup catalog is never recorded.
+  let modelHistory: ModelHistory | null | undefined = tracker ? await tracker.seed(cached) : undefined
+  // The list that the plugin fetched and has not yet applied. A successful reload records it.
+  let pendingObservation: { readonly fetchedAt: string; readonly ids: readonly string[] } | undefined
+
   // 7b. Status report. It records what the plugin applied. Writes are nonfatal, ordered, and never awaited here.
   const modelsSource: { value: ModelSource } = { value: cached ? "cache" : "catalog" }
   const summarize = (source: Plan): BuiltSummary => {
@@ -438,6 +474,7 @@ export async function setupFuelix(
               },
           lastSuccessfulCheckAt: null,
           lastChange: null,
+          ...(modelHistory !== undefined ? { modelHistory } : {}),
         },
       })
       recorder.update({}) // Writes the startup snapshot.
@@ -481,6 +518,7 @@ export async function setupFuelix(
         },
         ...(finalOutcome === "updated" || finalOutcome === "unchanged" ? { lastSuccessfulCheckAt: finishedISO } : {}),
         ...(change ? { lastChange: { at: finishedISO, added, removed } } : {}),
+        ...(modelHistory !== undefined ? { modelHistory } : {}),
       })
     }
     try {
@@ -522,7 +560,9 @@ export async function setupFuelix(
             plan = foundPlan
             trusted = true
             idsChanged = true
-            await safely("FueliX model cache write", log, () => writeCachedModels(ctx.storage, ids, now()))
+            const fetchedAt = now()
+            pendingObservation = Number.isNaN(fetchedAt.getTime()) ? undefined : { fetchedAt: fetchedAt.toISOString(), ids: [...ids] }
+            await safely("FueliX model cache write", log, () => writeCachedModels(ctx.storage, ids, fetchedAt))
           }
         } else {
           trusted = true
@@ -552,6 +592,16 @@ export async function setupFuelix(
           applied = { plan, summary }
           modelsSource.value = "discovery"
           change = added.length > 0 || removed.length > 0
+        }
+      }
+      // The reload applied the list. The record is durable before the status report finishes the check.
+      if (tracker && !disposed) {
+        if (reload === "succeeded" && pendingObservation) {
+          const observation = pendingObservation
+          pendingObservation = undefined
+          modelHistory = await tracker.record({ ...observation, source: "discovery" })
+        } else if (outcome === undefined || outcome === "unchanged") {
+          modelHistory = await tracker.refresh() // Another location may have recorded a change.
         }
       }
       if (change && (outcome === undefined || outcome === "unchanged")) outcome = "updated"
@@ -596,6 +646,7 @@ export async function setupFuelix(
   return async () => {
     disposed = true
     recorder?.close() // Disposal writes no report.
+    tracker?.close()
     if (interval !== undefined) stopInterval(interval)
     for (const registration of registrations.reverse()) {
       await safely("FueliX registration dispose", log, () => registration.dispose())

@@ -47,6 +47,72 @@ describe("parseReport", () => {
   })
 })
 
+describe("parseReport: modelHistory", () => {
+  const parse = (modelHistory: unknown) => {
+    const parsed = parseReport(json({ ...baseReport(), modelHistory }))
+    if (!parsed.ok) throw new Error("the whole report must stay readable")
+    return parsed.report
+  }
+  const valid = scenarios.history.modelHistory!
+
+  test("an old report without the field reads normally, with no history and no problem", () => {
+    const parsed = parseReport(json(baseReport()))
+    expect(parsed.ok).toBe(true)
+    if (!parsed.ok) return
+    expect("modelHistory" in parsed.report).toBe(false)
+    expect(parsed.report.modelHistoryProblem).toBeUndefined()
+  })
+
+  test("null stays null", () => {
+    const report = parse(null)
+    expect(report.modelHistory).toBeNull()
+    expect(report.modelHistoryProblem).toBeUndefined()
+  })
+
+  test("valid history keeps every entry and ID", () => {
+    expect(parse(valid).modelHistory).toEqual(valid)
+  })
+
+  test("a file cannot set the parser's problem flag", () => {
+    const parsed = parseReport(json({ ...baseReport(), modelHistory: valid, modelHistoryProblem: { field: "x" } }))
+    expect(parsed.ok && parsed.report.modelHistoryProblem).toBeUndefined()
+  })
+
+  const entry = valid.entries[0]!
+  const damaged: Array<[string, unknown, string]> = [
+    ["not an object", "yesterday", "modelHistory"],
+    ["entries missing", { since: valid.since, truncated: false }, "modelHistory.entries"],
+    ["bad since", { ...valid, since: "long ago" }, "modelHistory.since"],
+    ["truncated not boolean", { ...valid, truncated: "yes" }, "modelHistory.truncated"],
+    ["unknown kind", { ...valid, entries: [{ ...entry, kind: "rumor" }] }, "modelHistory.entries[0].kind"],
+    ["bad fetchedAt", { ...valid, entries: [{ ...entry, fetchedAt: "today" }] }, "modelHistory.entries[0].fetchedAt"],
+    ["unknown source", { ...valid, entries: [{ ...entry, source: "announcement" }] }, "modelHistory.entries[0].source"],
+    ["count as text", { ...valid, entries: [{ ...entry, totalIDs: "41" }] }, "modelHistory.entries[0].totalIDs"],
+    ["fractional count", { ...valid, entries: [{ ...entry, eligible: 2.5 }] }, "modelHistory.entries[0].eligible"],
+    ["negative count", { ...valid, entries: [{ ...entry, eligible: -1 }] }, "modelHistory.entries[0].eligible"],
+    ["eligible above total", { ...valid, entries: [{ ...entry, eligible: 99, totalIDs: 41 }] }, "modelHistory.entries[0].eligible"],
+    ["ID that is not text", { ...valid, entries: [entry, { ...entry, added: ["ok", 7] }] }, "modelHistory.entries[1].added[1]"],
+    ["baseline with changes", { ...valid, entries: [{ ...entry, kind: "baseline" }] }, "modelHistory.entries[0].added"],
+    ["more than 50 entries", { ...valid, entries: Array.from({ length: 51 }, () => entry) }, "modelHistory.entries"],
+  ]
+  for (const [name, value, field] of damaged) {
+    test(`damaged history (${name}) is marked unreadable; the rest of the report stays`, () => {
+      const report = parse(value)
+      expect(report.modelHistory).toBeUndefined()
+      expect(report.modelHistoryProblem).toEqual({ field })
+      expect(report.lastCheck?.outcome).toBe("unchanged")
+      expect(report.models.providers).toHaveLength(3)
+    })
+  }
+
+  test("a damaged main field still rejects the whole report, even with valid history", () => {
+    expect(parseReport(json({ ...baseReport(), recordedAt: "nope", modelHistory: valid }))).toEqual({
+      ok: false,
+      problem: "malformed",
+    })
+  })
+})
+
 describe("matchesLocation", () => {
   test("exact match", () => {
     expect(matchesLocation("/work/a", "/work/a")).toBe(true)

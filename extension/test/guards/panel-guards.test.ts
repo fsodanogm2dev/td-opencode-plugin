@@ -162,7 +162,8 @@ describe("Guards tab", () => {
     const status = guards.querySelector(".gd-status") as HTMLElement
     expect(status.dataset.tone).toBe("warning")
     expect(text(status)).toContain("Enforcement not confirmed")
-    expect(text(status)).toContain("has not reported from this location")
+    expect(text(status)).toContain("No guard status report was found for this session’s location.")
+    expect(text(status)).toContain("this panel cannot confirm it")
     expect(text(status)).toContain("Existing rules may still be active.")
     expect(text(status)).not.toContain("Not enforced")
     expect(text(guards)).toContain("Git commits blocked")
@@ -175,7 +176,8 @@ describe("Guards tab", () => {
     const status = guards.querySelector(".gd-status") as HTMLElement
     expect(status.dataset.tone).toBe("error")
     expect(text(status)).toContain("Not enforced")
-    expect(text(status)).toContain("Load this worktree version of td-opencode-plugin")
+    expect(text(status)).toContain("The plugin reported that its guard hook was not registered. Check the TD-Plugin installation in OpenCode.")
+    expect(text(status)).not.toMatch(/worktree/i)
     expect(findButton(guards, "Enable…")?.disabled).toBe(true)
     expect(text(guards)).toContain("Enable is available when the plugin confirms enforcement here.")
     expect(findButton(guards, "Generate preview")).not.toBeNull()

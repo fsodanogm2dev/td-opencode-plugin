@@ -40,10 +40,10 @@ The repository `fsodanogm2dev/td-opencode-plugin` is public. Installing it over 
 Paste this prompt into an OpenChamber chat to let the agent request your FueliX and TypeSafe Jev keys on private cards, store them in your macOS login Keychain, and configure the plugin:
 
 ```text
-Install and configure td-opencode-plugin (v0.6.0):
+Install and configure td-opencode-plugin (v0.7.0):
 1. If `fuelix-api-key` is not already in my macOS Keychain (`security find-generic-password -s fuelix-api-key -a "$USER"`), call `openchamber_secret` (`secret.request`, label "FueliX API key", placeholder "sk-...") to ask for it on a private card, store it in my login Keychain under service `fuelix-api-key` via `/usr/bin/security -i` without printing or logging the key, and delete the temporary secret file.
 2. Call `openchamber_secret` (`secret.request`, label "TypeSafe Jev API key (optional)", placeholder "gzak_...") to ask for my TELUS TypeSafe gateway key on a private card. If I save one, store it in my login Keychain under service `typesafe-api-key` via `/usr/bin/security -i` without printing or logging the key, and delete the temporary secret file.
-3. Update `~/.config/opencode/opencode.json` (keeping a backup first) to register `{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": { "jev": { "enabled": true } } }` in `plugins` (set `jev.enabled` to `false` if I declined the TypeSafe key) and remove any old `provider.fuelix-openai`, `provider.fuelix`, `providers.fuelix-anthropic`, or legacy `jev-plugin.js` entries.
+3. Update `~/.config/opencode/opencode.json` (keeping a backup first) to register `{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.7.0", "options": { "jev": { "enabled": true } } }` in `plugins` (set `jev.enabled` to `false` if I declined the TypeSafe key) and remove any old `provider.fuelix-openai`, `provider.fuelix`, `providers.fuelix-anthropic`, or legacy `jev-plugin.js` entries.
 ```
 
 ### OpenChamber: plugin and extension together
@@ -51,7 +51,7 @@ Install and configure td-opencode-plugin (v0.6.0):
 Use OpenChamber 2.7.0 or later. Open **Settings → Extensions** and add this repository URL:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.6.0
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.7.0
 ```
 
 Review and approve the status-report file access, Small Model and session access, local guard service, and
@@ -73,7 +73,7 @@ Add the plugin to `~/.config/opencode/opencode.json` and pin the release tag:
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0", "options": {} }]
+  "plugins": [{ "package": "github:fsodanogm2dev/td-opencode-plugin#v0.7.0", "options": {} }]
 }
 ```
 
@@ -90,7 +90,7 @@ does not expand `~` in this path, and it reloads the plugin when files in the fo
 dependencies, so the clone needs no `bun install`. To update, check out the newer tag in the clone:
 
 ```bash
-git clone --branch v0.6.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
+git clone --branch v0.7.0 https://github.com/fsodanogm2dev/td-opencode-plugin.git ~/td-opencode-plugin
 ```
 
 ```jsonc
@@ -207,7 +207,9 @@ model-discovery result. It also manages saved execution guards. You inspect gene
 them. The plugin rejects matching permission-checked actions before execution. See [`docs/guards.md`](docs/guards.md)
 for scope, release, and enforcement limits.
 
-The status view lists added and removed models. **Reload report** reads the saved report; it does not run a check.
+The status view separates the latest check from shared model-change history. Earlier additions and removals remain
+available after an unchanged check or a plugin reload. See [`docs/model-history.md`](docs/model-history.md).
+**Reload report** reads the saved report; it does not run a check.
 
 Install the combined repository package from **Settings → Extensions** in OpenChamber web or desktop. See
 [`docs/openchamber-status.md`](docs/openchamber-status.md) for build steps, permissions, and report limitations.

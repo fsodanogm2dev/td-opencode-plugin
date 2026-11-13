@@ -26,6 +26,8 @@ export interface FakeOptions {
   /** Inactive built-in providers, for example `{ openai: { "gpt-7-new": {...} } }`. */
   readonly upstream?: Record<string, Record<string, AnyRecord>>
   readonly storage?: Record<string, unknown>
+  /** One storage map for several fake contexts, as `ctx.storage` is shared by all locations of a plugin. */
+  readonly sharedStorage?: Map<string, unknown>
   readonly connectionKey?: string
   /** Provider records that `provider.get` returns, by provider ID (the client shape is `{ data }`). */
   readonly configured?: Record<string, AnyRecord>
@@ -61,7 +63,8 @@ export function createFakeCtx(options: FakeOptions = {}) {
   const integrationNames = new Map<string, string>()
   const hooks: FakeHook[] = []
   const aisdkHooks: FakeHook[] = []
-  const storage = new Map<string, unknown>(Object.entries(options.storage ?? {}))
+  const storage = options.sharedStorage ?? new Map<string, unknown>()
+  for (const [key, value] of Object.entries(options.storage ?? {})) storage.set(key, value)
   const providerTransforms: ((editor: any) => void)[] = []
   const integrationTransforms: ((editor: any) => void)[] = []
   const shellHooks: { name: string; callback: (event: any) => void }[] = []

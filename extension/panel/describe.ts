@@ -3,7 +3,7 @@
  * Times stay as ISO strings so the view can show them as absolute and relative text.
  */
 import { everyText, plural } from "./format.ts"
-import type { LastChange, LastCheck, StatusReport } from "./report.ts"
+import type { LastChange, LastCheck, ModelHistoryEntry, StatusReport } from "./report.ts"
 
 export type Tone = "neutral" | "success" | "warning" | "error" | "info"
 
@@ -50,6 +50,29 @@ export type CheckView = {
 
 export type ChangeView = { at: string; summary: string; groups: ModelGroup[] }
 
+export type HistoryEntryView = {
+  kind: "baseline" | "change"
+  title: string
+  /** Text before the fetch time, for example "Model list fetched from FueliX ". */
+  fetchedLabel: string
+  fetchedAt: string
+  /** How many IDs the list had, and how many match this location's model types. */
+  counts: string
+  groups: ModelGroup[]
+}
+
+export type HistoryView =
+  | {
+      kind: "list"
+      since: string
+      truncated: boolean
+      /** Shown first. */
+      recent: HistoryEntryView[]
+      /** Every remaining entry, in one disclosure. */
+      older: HistoryEntryView[]
+    }
+  | { kind: "message"; title: string; body: string | null; tone: Tone }
+
 export type ProviderView = { id: string; count: string; titleModel: string }
 
 export type ReportView = {
@@ -61,6 +84,11 @@ export type ReportView = {
   /** Set when the report says a check was running when it was saved. */
   checkingWhenSaved: boolean
   check: CheckView
+  history: HistoryView
+  /**
+   * The plugin's current-run change. Hidden when the latest check already shows it, or when
+   * readable history has change entries that hold all its IDs.
+   */
   change: ChangeView | null
   models: { total: string; source: string; providers: ProviderView[] }
   setup: SetupLine[]
@@ -87,8 +115,75 @@ const notAppliedGroups = (added: string[], removed: string[]): ModelGroup[] => [
 ]
 
 const KEPT = "The plugin kept the current model list."
+const EARLIER_CHANGES = "Earlier changes are listed under Model change history."
+const NOT_IN_HISTORY = "The latest recorded change is shown below; it is not yet in the shared history."
 
-const describeCheck = (check: LastCheck | null, report: StatusReport): CheckView => {
+/** What the latest check adds about the history below it. */
+type HistoryNote = "none" | "earlier" | "not-in-history"
+
+/** Entries shown before the "older entries" disclosure. */
+export const HISTORY_RECENT = 5
+
+/** Text for every history state. One place, so tests and reviews read the same words. */
+export const HISTORY_TEXT = {
+  absent: "This plugin report does not include history.",
+  empty: "Model history is not available.",
+  unreadable: "History could not be read.",
+  unreadableBody: "The latest check and the rest of this report are still shown.",
+  noEntries: "No model lists are recorded yet.",
+  since: "Earliest recorded model list: ",
+  times: "Times show when the plugin fetched each model list. They are not the dates FueliX announced the models.",
+  truncated: "Older history is omitted from this view.",
+  fetchedDiscovery: "Model list fetched from FueliX ",
+  fetchedCache: "From a saved model list fetched ",
+} as const
+
+const listCounts = (total: number, eligible: number): string =>
+  `The list had ${plural(total, "model", "models")}. This plugin can register ${plural(eligible, "model", "models")} here.`
+
+/**
+ * Whether the history's change entries hold every added and removed ID of the
+ * current-run change. A starting list never counts: it shows what existed, not what changed.
+ */
+export const historyCoversChange = (change: LastChange, entries: readonly ModelHistoryEntry[]): boolean => {
+  const changes = entries.filter((entry) => entry.kind === "change")
+  const added = new Set(changes.flatMap((entry) => entry.added))
+  const removed = new Set(changes.flatMap((entry) => entry.removed))
+  return change.added.every((id) => added.has(id)) && change.removed.every((id) => removed.has(id))
+}
+
+const describeHistoryEntry = (entry: ModelHistoryEntry): HistoryEntryView => ({
+  kind: entry.kind,
+  title:
+    entry.kind === "baseline"
+      ? `Starting model list · ${plural(entry.eligible, "eligible model", "eligible models")}`
+      : countChanges(entry.added.length, entry.removed.length),
+  fetchedLabel: entry.source === "cache" ? HISTORY_TEXT.fetchedCache : HISTORY_TEXT.fetchedDiscovery,
+  fetchedAt: entry.fetchedAt,
+  counts: listCounts(entry.totalIDs, entry.eligible),
+  groups: entry.kind === "baseline" ? [] : appliedGroups([...entry.added], [...entry.removed]),
+})
+
+const describeHistory = (report: StatusReport): HistoryView => {
+  if (report.modelHistoryProblem) {
+    return { kind: "message", title: HISTORY_TEXT.unreadable, body: HISTORY_TEXT.unreadableBody, tone: "warning" }
+  }
+  if (report.modelHistory === undefined) return { kind: "message", title: HISTORY_TEXT.absent, body: null, tone: "neutral" }
+  if (report.modelHistory === null) return { kind: "message", title: HISTORY_TEXT.empty, body: null, tone: "neutral" }
+  // Newest first. A stable sort keeps the plugin's order for equal times.
+  const entries = [...report.modelHistory.entries]
+    .sort((a, b) => Date.parse(b.fetchedAt) - Date.parse(a.fetchedAt))
+    .map(describeHistoryEntry)
+  return {
+    kind: "list",
+    since: report.modelHistory.since,
+    truncated: report.modelHistory.truncated,
+    recent: entries.slice(0, HISTORY_RECENT),
+    older: entries.slice(HISTORY_RECENT),
+  }
+}
+
+const describeCheck = (check: LastCheck | null, report: StatusReport, historyNote: HistoryNote): CheckView => {
   if (check === null) {
     return {
       headline: "No check finished yet",
@@ -128,9 +223,13 @@ const describeCheck = (check: LastCheck | null, report: StatusReport): CheckView
     case "unchanged":
       return {
         ...base,
-        headline: "No model changes",
+        headline: "No changes in this check",
         tone: "neutral",
-        notes: ["The registered model list did not change.", ...reason],
+        notes: [
+          "The registered model list did not change.",
+          ...(historyNote === "earlier" ? [EARLIER_CHANGES] : historyNote === "not-in-history" ? [NOT_IN_HISTORY] : []),
+          ...reason,
+        ],
         groups: [],
         lastSuccess: null,
       }
@@ -278,14 +377,29 @@ export const describeReport = (report: StatusReport, now: number): ReportView =>
   const interval = report.configuration.refreshMinutes
   const stale = interval > 0 && ageMinutes > interval * 2 + STALE_GRACE_MINUTES ? { ageMinutes } : null
   const total = report.models.providers.reduce((sum, provider) => sum + provider.count, 0)
+  const history = describeHistory(report)
+  const entries = history.kind === "list" ? (report.modelHistory?.entries ?? []) : null
+  // Readable history replaces the current-run change card only when it holds that change.
+  // A failed history write must not hide a change the plugin applied.
+  const uncovered = report.lastChange !== null && entries !== null && !historyCoversChange(report.lastChange, entries)
+  const change = entries === null || uncovered ? describeChange(report.lastChange, report.lastCheck) : null
+  const historyNote: HistoryNote =
+    entries === null
+      ? "none"
+      : uncovered && change !== null
+        ? "not-in-history"
+        : entries.some((entry) => entry.kind === "change")
+          ? "earlier"
+          : "none"
   return {
     pluginVersion: report.pluginVersion,
     startedAt: report.startedAt,
     recordedAt: report.recordedAt,
     stale,
     checkingWhenSaved: report.checking,
-    check: describeCheck(report.lastCheck, report),
-    change: describeChange(report.lastChange, report.lastCheck),
+    check: describeCheck(report.lastCheck, report, historyNote),
+    history,
+    change,
     models: {
       total: `${plural(total, "model", "models")} from ${plural(report.models.providers.length, "provider", "providers")}`,
       source: MODEL_SOURCE[report.models.source],

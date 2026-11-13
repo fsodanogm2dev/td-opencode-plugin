@@ -11,7 +11,7 @@ described in [`guards.md`](guards.md).
 - The credential source, without the credential.
 - The model refresh interval, non-chat model setting, authentication hooks, shell key scrubbing, and batch-tool registration.
 - The latest discovery attempt, its outcome, and the latest successful check.
-- Models added or removed by discovery in the current plugin run. The latest change stays available after an unchanged check.
+- Shared model-change history with fetch timestamps and complete added/removed model-ID lists.
 
 Each setting under **What the plugin set up** includes a short explanation below its recorded value. These explain
 the credential source, request authentication, automatic checks, model types, provider activation, shell key protection,
@@ -29,7 +29,7 @@ Use OpenChamber 2.7.0 or later on web or desktop. Mobile and VS Code do not load
 In **Settings → Extensions**, add:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.6.0
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.7.0
 ```
 
 Review and approve report access, Small Model and session access, the local guard service, and **Add a plugin to OpenCode**.
@@ -50,7 +50,7 @@ host's bundled plugin. Enterprise mode allows bundled plugins only from administ
 ### Extension-only folder with a standalone plugin
 
 For custom plugin options, keep the standalone OpenCode plugin installation and add only the clone's `extension/`
-folder. Use plugin version 0.6.0 for guard enforcement. This folder does not install a plugin.
+folder. Use plugin version 0.7.0 for shared model history. This folder does not install a plugin.
 
 To rebuild the extension during development:
 
@@ -93,8 +93,11 @@ A report is a saved snapshot, not proof that the plugin is running. Check its re
 for the same project share a report path; the latest writer supplies the visible snapshot. The extension reads files
 on the connected OpenChamber server. A plugin on another machine cannot supply them.
 
-A new plugin run replaces the report. Earlier check times and model changes are not a history across restarts. If a
-plugin stops during discovery, its saved snapshot can still say that a check was in progress.
+The latest check is one comparison with the list already registered. **No changes in this check** does not erase
+earlier history. The shared history survives plugin reloads and is available to new chats that start from an updated
+cache. See [`model-history.md`](model-history.md) for timestamps, baseline records, filtering, and retention.
+
+The report is still a saved snapshot. If a plugin stops during discovery, it can say that a check was in progress.
 
 **Reload report** reads the file again. It does not contact FueliX. The plugin checks at startup when a key is available
 and then at `refreshMinutes` intervals. The default interval is 60 minutes; `0` disables periodic discovery.
@@ -110,6 +113,7 @@ the report does not inspect or verify those overrides.
 
 A missing report can mean the plugin is older, reporting is disabled, the plugin has not started for this project, or
 the plugin and OpenChamber use different home directories. The extension cannot determine which condition applies.
+Older reports without a history field still show the latest check and their current-run change record.
 
 ## Development checks
 
