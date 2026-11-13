@@ -25,7 +25,7 @@ at the same time. The status panel reports FueliX; Jev observations remain in it
 
 ```jsonc
 {
-  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.6.0",
+  "package": "github:fsodanogm2dev/td-opencode-plugin#v0.7.0",
   "options": {
     "jev": { "enabled": true, "model": "jev-1.14.0" }
   }

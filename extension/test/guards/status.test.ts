@@ -72,10 +72,20 @@ describe("status section", () => {
     expect(text(root)).toContain("from parent session")
   })
 
-  test("says Not enforced next to an active guard when the plugin is not reporting", async () => {
+  test("says Not enforced next to an active guard when the plugin reports its hook is not registered", async () => {
     const { root } = await start({ guards: [guard()], activations: [ACTIVE], runtime: runtime({ registered: false }) })
     expect(text(root)).toContain("Git commits blocked")
-    expect(text(root)).toContain("Not enforced.")
+    expect(text(root)).toContain(
+      "Not enforced. The plugin reported that its guard hook was not registered. Check the TD-Plugin installation in OpenCode.",
+    )
+    expect(text(root)).not.toMatch(/worktree/i)
+  })
+
+  test("a missing plugin report next to an active guard stays not confirmed", async () => {
+    const { root } = await start({ guards: [guard()], activations: [ACTIVE], runtime: null })
+    expect(text(root)).toContain("Enforcement not confirmed. No guard status report was found for this session’s location.")
+    expect(text(root)).not.toContain("Not enforced")
+    expect(text(root)).not.toMatch(/worktree/i)
   })
 
   test("service errors are not shown as no guards", async () => {

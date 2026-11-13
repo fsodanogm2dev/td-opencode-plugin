@@ -7,7 +7,8 @@
  * known fields and replaces known secrets. It keeps every model ID and every name in full. A report above
  * `MAX_REPORT_BYTES` is not written at all. The previous file stays in place.
  *
- * `lastChange` describes the current plugin run. It is not stored across a restart.
+ * `lastChange` describes the current plugin run. It is not stored across a restart. `modelHistory` is a projection
+ * of the persistent model-change history (`history.ts`). It holds model IDs only.
  */
 
 import { createHash, randomBytes } from "node:crypto"
@@ -79,6 +80,36 @@ export interface StatusChange {
   readonly removed: readonly string[]
 }
 
+export type ModelHistorySource = "discovery" | "cache"
+
+/**
+ * One list of model IDs in the history. `fetchedAt` is the time the plugin fetched the list from the gateway. It is
+ * not an announcement time and not the first release of a model. A `baseline` has no added or removed IDs. Source
+ * `cache` means that the list was recovered from the shared cache.
+ */
+export interface ModelHistoryEntry {
+  readonly kind: "baseline" | "change"
+  readonly fetchedAt: string
+  readonly source: ModelHistorySource
+  /** All IDs of the list. */
+  readonly totalIDs: number
+  /** IDs of the list that this location registers. */
+  readonly eligible: number
+  readonly added: readonly string[]
+  readonly removed: readonly string[]
+}
+
+export interface ModelHistory {
+  /** `fetchedAt` of the oldest retained list. The history does not describe anything earlier. */
+  readonly since: string
+  /** `true` when older lists or entries are not in `entries`. */
+  readonly truncated: boolean
+  /** Newest first. At most `MAX_HISTORY_ENTRIES`. */
+  readonly entries: readonly ModelHistoryEntry[]
+}
+
+export const MAX_HISTORY_ENTRIES = 50
+
 export interface FuelixStatusReport {
   readonly version: 1
   readonly pluginVersion: string
@@ -98,6 +129,8 @@ export interface FuelixStatusReport {
   readonly lastSuccessfulCheckAt: string | null
   /** Latest check that changed the applied list. An unchanged check does not clear it. */
   readonly lastChange: StatusChange | null
+  /** Absent in reports of older plugins. `null`: nothing recorded yet, or the store is unreadable. */
+  readonly modelHistory?: ModelHistory | null
 }
 
 /**
@@ -191,6 +224,24 @@ function ids(value: unknown, secrets: readonly string[]): string[] {
   return value.map((id) => text(id, secrets))
 }
 
+function sanitizeHistory(history: ModelHistory | null, secrets: readonly string[]): ModelHistory | null {
+  if (!history || typeof history !== "object") return null
+  const entries = Array.isArray(history.entries) ? history.entries.slice(0, MAX_HISTORY_ENTRIES) : []
+  return {
+    since: iso(history.since),
+    truncated: history.truncated === true || (Array.isArray(history.entries) && history.entries.length > MAX_HISTORY_ENTRIES),
+    entries: entries.map((entry) => ({
+      kind: entry?.kind === "baseline" ? "baseline" : "change",
+      fetchedAt: iso(entry?.fetchedAt),
+      source: entry?.source === "cache" ? "cache" : "discovery",
+      totalIDs: count(entry?.totalIDs),
+      eligible: count(entry?.eligible),
+      added: entry?.kind === "baseline" ? [] : ids(entry?.added, secrets),
+      removed: entry?.kind === "baseline" ? [] : ids(entry?.removed, secrets),
+    })),
+  }
+}
+
 /** A fixed reason text, scrubbed like every other string. Any other text becomes `REASONS.unexpected`. */
 function scrubReason(reason: unknown, secrets: readonly string[]): string {
   const fixed = typeof reason === "string" && REASON_TEXTS.includes(reason) ? reason : REASONS.unexpected
@@ -247,6 +298,7 @@ export function sanitizeReport(report: FuelixStatusReport, secrets: readonly str
       : null,
     lastSuccessfulCheckAt: isoOrNull(report.lastSuccessfulCheckAt),
     lastChange: change ? { at: iso(change.at), added: ids(change.added, secrets), removed: ids(change.removed, secrets) } : null,
+    ...(report.modelHistory === undefined ? {} : { modelHistory: sanitizeHistory(report.modelHistory, secrets) }),
   }
 }
 
@@ -303,6 +355,7 @@ export interface StatusState {
   readonly lastCheck: StatusCheck | null
   readonly lastSuccessfulCheckAt: string | null
   readonly lastChange: StatusChange | null
+  readonly modelHistory?: ModelHistory | null
 }
 
 export type StatusPatch = Partial<Omit<StatusState, "configuration">> & {

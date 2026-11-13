@@ -16,7 +16,14 @@ import {
 } from "@openchamber/sdk/ui"
 
 import type { PanelState } from "./controller.ts"
-import { describeReport, type ModelGroup, type ReportView } from "./describe.ts"
+import {
+  describeReport,
+  HISTORY_TEXT,
+  type HistoryEntryView,
+  type HistoryView,
+  type ModelGroup,
+  type ReportView,
+} from "./describe.ts"
 import { everyText, relativeTime, timeText } from "./format.ts"
 import { REPORT_FOLDER } from "./hash.ts"
 
@@ -232,7 +239,7 @@ export const createView = (options: ViewOptions): View => {
     mounted.push(mountEmpty(slot, { title: t, body }))
   }
 
-  const groups = (parent: HTMLElement, list: ModelGroup[]) => {
+  const groups = (parent: HTMLElement, list: ModelGroup[], key: string) => {
     for (const group of list) {
       const wrap = h("div", "group")
       const label = h("h3", "group-title", `${group.label} (${group.ids.length})`)
@@ -240,6 +247,7 @@ export const createView = (options: ViewOptions): View => {
       for (const id of group.ids) ul.append(h("li", "chip", id))
       if (group.ids.length > FOLD_AFTER) {
         const details = h("details", "fold")
+        details.dataset.key = `${key}:${group.label}`
         const summary = h("summary", "fold-summary")
         summary.append(label)
         details.append(summary, ul)
@@ -256,6 +264,54 @@ export const createView = (options: ViewOptions): View => {
     if (iso) p.append(timeNode(iso))
     if (after) p.append(after)
     parent.append(p)
+  }
+
+  const historyKey = (entry: HistoryEntryView): string => `history:${entry.kind}:${entry.fetchedAt}`
+
+  const historyItem = (parent: HTMLElement, entry: HistoryEntryView, key: string) => {
+    const li = h("li", "hist-item")
+    li.dataset.kind = entry.kind
+    const dot = h("span", "hist-dot")
+    dot.setAttribute("aria-hidden", "true")
+    li.append(dot, h("p", "summary", entry.title))
+    line(li, "meta", entry.fetchedLabel, entry.fetchedAt)
+    li.append(h("p", "meta", entry.counts))
+    groups(li, entry.groups, key)
+    parent.append(li)
+  }
+
+  const renderHistory = (history: HistoryView) => {
+    const node = section("Model change history", "sec-history")
+    if (history.kind === "message") {
+      const p = h("p", "hist-state")
+      p.dataset.tone = history.tone
+      const dot = h("span", "dot")
+      dot.setAttribute("aria-hidden", "true")
+      p.append(dot, h("span", "", history.title))
+      node.append(p)
+      if (history.body) node.append(h("p", "note", history.body))
+      return
+    }
+    line(node, "meta", HISTORY_TEXT.since, history.since)
+    node.append(h("p", "meta", HISTORY_TEXT.times))
+    if (history.truncated) node.append(h("p", "note", HISTORY_TEXT.truncated))
+    if (history.recent.length === 0) {
+      node.append(h("p", "note", HISTORY_TEXT.noEntries))
+      return
+    }
+    const list = h("ol", "hist")
+    for (const entry of history.recent) historyItem(list, entry, historyKey(entry))
+    node.append(list)
+    if (history.older.length > 0) {
+      const details = h("details", "fold hist-more")
+      details.dataset.key = "history-older"
+      const count = history.older.length
+      details.append(h("summary", "fold-summary hist-more-summary", `Show ${count === 1 ? "1 older entry" : `${count} older entries`}`))
+      const older = h("ol", "hist")
+      for (const entry of history.older) historyItem(older, entry, historyKey(entry))
+      details.append(older)
+      node.append(details)
+    }
   }
 
   const renderReport = (state: Extract<PanelState, { kind: "report" }>) => {
@@ -295,19 +351,21 @@ export const createView = (options: ViewOptions): View => {
         h("p", "note", "A check was running when the plugin saved this report. That does not mean a check is running now."),
       )
     }
-    groups(check, v.check.groups)
+    groups(check, v.check.groups, "check")
     if (v.check.lastSuccess) {
       if (v.check.lastSuccess.at) line(check, "meta", "Last successful check: ", v.check.lastSuccess.at)
       else check.append(h("p", "meta", "No successful check since the plugin started."))
     }
+
+    renderHistory(v.history)
 
     if (v.change) {
       const change = section("Latest change since the plugin started", "sec-change")
       const p = h("p", "summary", v.change.summary)
       change.append(p)
       line(change, "meta", "", v.change.at)
-      groups(change, v.change.groups)
-      change.append(h("p", "meta", "This history starts again when OpenCode restarts or reloads the plugin."))
+      groups(change, v.change.groups, "change")
+      change.append(h("p", "meta", "This card covers only the current plugin run. It resets when OpenCode restarts or reloads the plugin."))
     }
 
     // Models
@@ -353,6 +411,10 @@ export const createView = (options: ViewOptions): View => {
   }
 
   const render = (state: PanelState, cause: string) => {
+    // A repaint keeps open model lists and older history open.
+    const open = new Set(
+      [...content.querySelectorAll<HTMLDetailsElement>("details[data-key]")].filter((d) => d.open).map((d) => d.dataset.key),
+    )
     current = state
     view = null
     clear()
@@ -425,6 +487,9 @@ export const createView = (options: ViewOptions): View => {
       }
       case "report":
         renderReport(state)
+        for (const details of content.querySelectorAll<HTMLDetailsElement>("details[data-key]")) {
+          if (open.has(details.dataset.key)) details.open = true
+        }
         break
     }
 

@@ -6,6 +6,7 @@ import {
   activeHere,
   canEnable,
   endUnconfirmed,
+  ENFORCEMENT_TEXT,
   enforcedActivationCount,
   enforcement,
   enforcementText,
@@ -45,13 +46,23 @@ describe("enforcement status", () => {
     const value = enforcement(base({ runtime: null }), NOW)
     expect(value).toEqual({ kind: "not-enforced", reason: "no-runtime" })
     expect(enforcementText(value)).toMatchObject({ title: "Enforcement not confirmed", tone: "warning" })
-    expect(enforcementText(value).body).toContain("Existing rules may still be active.")
+    expect(enforcementText(value).body).toBe(
+      "No guard status report was found for this session’s location. The plugin may still be running; this panel cannot confirm it. Existing rules may still be active.",
+    )
     expect(canEnable(value)).toBe(false)
+  })
+
+  test("no status text tells the user to load a developer worktree", () => {
+    for (const { body } of Object.values(ENFORCEMENT_TEXT)) expect(body).not.toMatch(/worktree/i)
   })
 
   test("only registered: false says Not enforced", () => {
     const value = enforcement(base({ runtime: runtime({ registered: false }) }), NOW)
-    expect(enforcementText(value)).toMatchObject({ title: "Not enforced", tone: "error" })
+    expect(enforcementText(value)).toEqual({
+      title: "Not enforced",
+      body: "The plugin reported that its guard hook was not registered. Check the TD-Plugin installation in OpenCode.",
+      tone: "error",
+    })
     for (const reason of ["stale", "runtime-invalid", "store-missing", "store-unavailable", "store-invalid"] as const) {
       expect(enforcementText({ kind: "not-enforced", reason }).title).not.toBe("Not enforced")
     }

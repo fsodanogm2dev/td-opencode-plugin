@@ -95,6 +95,16 @@ const CASES: Case[] = [
     width: 300,
     height: 1700,
   },
+  { label: "Model history: change from another chat (300px)", directory: PROJECT, answer: report(scenarios.history), width: 300, height: 1900 },
+  { label: "Model history (300px), light", directory: PROJECT, answer: report(scenarios.history), light: true, width: 300, height: 1900 },
+  { label: "Model history: long, older history omitted", directory: PROJECT, answer: report(scenarios.historyLong), height: 2000 },
+  {
+    label: "Model history could not be read",
+    directory: PROJECT,
+    answer: report({ ...scenarios.unchanged, modelHistory: { since: "soon", truncated: false, entries: [] } }),
+    height: 1500,
+  },
+  { label: "Model history: none yet", directory: PROJECT, answer: report(scenarios.historyNull), width: 300, height: 1500 },
 ]
 
 const grid = document.getElementById("grid")!

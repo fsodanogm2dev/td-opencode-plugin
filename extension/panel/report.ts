@@ -26,6 +26,27 @@ export type LastCheck = {
 
 export type LastChange = { at: string; added: string[]; removed: string[] }
 
+/**
+ * One recorded model list. `fetchedAt` is when the plugin fetched that list, or
+ * the fetch time saved with a cached list. It is not when FueliX announced a model.
+ * `eligible` counts the IDs that match this location's model type options.
+ */
+export type ModelHistoryEntry = {
+  kind: "baseline" | "change"
+  fetchedAt: string
+  source: "discovery" | "cache"
+  totalIDs: number
+  eligible: number
+  added: readonly string[]
+  removed: readonly string[]
+}
+
+/** Model lists shared by all locations, newest first. `since` is the oldest list kept. */
+export type ModelHistory = { since: string; truncated: boolean; entries: readonly ModelHistoryEntry[] }
+
+/** The plugin reports at most this many history entries. */
+export const MODEL_HISTORY_MAX = 50
+
 export type StatusReport = {
   version: 1
   pluginVersion: string
@@ -46,6 +67,13 @@ export type StatusReport = {
   lastCheck: LastCheck | null
   lastSuccessfulCheckAt: string | null
   lastChange: LastChange | null
+  /** Absent in reports from plugins without history. `null` when the plugin has none yet. */
+  modelHistory?: ModelHistory | null
+  /**
+   * Set by the parser only, never read from the file: `modelHistory` was present but
+   * damaged. The rest of the report is still valid, and `modelHistory` is left out.
+   */
+  modelHistoryProblem?: { field: string }
 }
 
 export type ParseResult =
@@ -120,6 +148,54 @@ const readLastChange = (value: unknown): LastChange | null => {
   }
 }
 
+const integer = (value: unknown, field: string): number =>
+  Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : fail(field)
+
+const readHistoryEntry = (value: unknown, index: number): ModelHistoryEntry => {
+  const at = `modelHistory.entries[${index}]`
+  const raw = object(value, at)
+  const kind = oneOf(raw.kind, ["baseline", "change"] as const, `${at}.kind`)
+  const totalIDs = integer(raw.totalIDs, `${at}.totalIDs`)
+  const eligible = integer(raw.eligible, `${at}.eligible`)
+  if (eligible > totalIDs) fail(`${at}.eligible`)
+  const added = textList(raw.added, `${at}.added`)
+  const removed = textList(raw.removed, `${at}.removed`)
+  // A starting list records what existed, not what changed.
+  if (kind === "baseline" && (added.length > 0 || removed.length > 0)) fail(`${at}.added`)
+  return {
+    kind,
+    fetchedAt: isoTime(raw.fetchedAt, `${at}.fetchedAt`),
+    source: oneOf(raw.source, ["discovery", "cache"] as const, `${at}.source`),
+    totalIDs,
+    eligible,
+    added,
+    removed,
+  }
+}
+
+const readModelHistory = (value: unknown): ModelHistory | null => {
+  if (value === null) return null
+  const raw = object(value, "modelHistory")
+  if (!Array.isArray(raw.entries)) return fail("modelHistory.entries")
+  if (raw.entries.length > MODEL_HISTORY_MAX) return fail("modelHistory.entries")
+  return {
+    since: isoTime(raw.since, "modelHistory.since"),
+    truncated: bool(raw.truncated, "modelHistory.truncated"),
+    entries: raw.entries.map(readHistoryEntry),
+  }
+}
+
+/** Damaged history never makes the whole report unreadable. It is marked instead. */
+const historyFields = (raw: Raw): Pick<StatusReport, "modelHistory" | "modelHistoryProblem"> => {
+  if (!("modelHistory" in raw) || raw.modelHistory === undefined) return {}
+  try {
+    return { modelHistory: readModelHistory(raw.modelHistory) }
+  } catch (error) {
+    if (error instanceof Invalid) return { modelHistoryProblem: { field: error.message } }
+    throw error
+  }
+}
+
 const readProviders = (value: unknown): ProviderModels[] => {
   if (!Array.isArray(value)) return fail("models.providers")
   return value.map((entry, index) => {
@@ -170,6 +246,7 @@ const readReport = (raw: Raw): StatusReport => {
     lastCheck: readLastCheck(raw.lastCheck),
     lastSuccessfulCheckAt: nullableIso(raw.lastSuccessfulCheckAt, "lastSuccessfulCheckAt"),
     lastChange: readLastChange(raw.lastChange),
+    ...historyFields(raw),
   }
 }
 

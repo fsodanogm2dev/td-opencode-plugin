@@ -48,7 +48,6 @@ type Tone = "success" | "neutral" | "warning" | "error"
 type EnforcementKey = Enforcement["kind"] | Extract<Enforcement, { kind: "not-enforced" }>["reason"]
 
 const MAY_BE_ACTIVE = "Existing rules may still be active."
-const LOAD_PLUGIN = "Load this worktree version of td-opencode-plugin in OpenCode to register guard enforcement."
 
 /**
  * Only a fresh report with `registered: false` proves that nothing is enforced.
@@ -64,7 +63,7 @@ export const ENFORCEMENT_TEXT: Record<EnforcementKey, { title: string; body: str
   "not-enforced": { title: "Guard status unknown", body: MAY_BE_ACTIVE, tone: "warning" },
   "no-runtime": {
     title: "Enforcement not confirmed",
-    body: `td-opencode-plugin has not reported from this location. ${LOAD_PLUGIN} ${MAY_BE_ACTIVE}`,
+    body: `No guard status report was found for this session’s location. The plugin may still be running; this panel cannot confirm it. ${MAY_BE_ACTIVE}`,
     tone: "warning",
   },
   "runtime-invalid": {
@@ -74,7 +73,7 @@ export const ENFORCEMENT_TEXT: Record<EnforcementKey, { title: string; body: str
   },
   "not-registered": {
     title: "Not enforced",
-    body: `The plugin runs here, but its guard check is not registered. ${LOAD_PLUGIN}`,
+    body: "The plugin reported that its guard hook was not registered. Check the TD-Plugin installation in OpenCode.",
     tone: "error",
   },
   stale: {
