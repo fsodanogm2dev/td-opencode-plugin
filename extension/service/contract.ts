@@ -63,6 +63,7 @@ export type ErrorCode =
   | "OUTCOME_UNKNOWN"
   | "SESSION_BRIDGE_UNAVAILABLE"
   | "SESSION_LOOKUP_FAILED"
+  | "MODEL_CHECK_REQUEST_FAILED"
   | "INTERNAL_ERROR"
 
 const MESSAGES: Record<ErrorCode, string> = {
@@ -88,6 +89,7 @@ const MESSAGES: Record<ErrorCode, string> = {
   OUTCOME_UNKNOWN: "The change may already be applied. Reload the guard data or retry the same request.",
   SESSION_BRIDGE_UNAVAILABLE: "OpenCode access is unavailable, so the session cannot be verified.",
   SESSION_LOOKUP_FAILED: "OpenCode did not answer the session lookup.",
+  MODEL_CHECK_REQUEST_FAILED: "The model check request could not be written.",
   INTERNAL_ERROR: "The guard service failed unexpectedly.",
 }
 
@@ -113,6 +115,7 @@ const STATUS: Record<ErrorCode, number> = {
   OUTCOME_UNKNOWN: 503,
   SESSION_BRIDGE_UNAVAILABLE: 503,
   SESSION_LOOKUP_FAILED: 503,
+  MODEL_CHECK_REQUEST_FAILED: 500,
   INTERNAL_ERROR: 503,
 }
 

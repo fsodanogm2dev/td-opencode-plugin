@@ -346,7 +346,7 @@ describe("Guards tab", () => {
     await tick()
     expect((root.querySelector("#tab-setup") as HTMLElement).hidden).toBe(false)
     expect((root.querySelector("#tab-guards") as HTMLElement).hidden).toBe(true)
-    expect(text(root.querySelector("#tab-setup")!)).toContain("Reload report")
+    expect(text(root.querySelector("#tab-setup")!)).toContain("Reload saved report")
   })
 
   test("the service's lifecycle view wins over raw facts, and a missing view keeps the guard on", async () => {

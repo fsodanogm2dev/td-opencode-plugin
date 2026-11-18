@@ -10,6 +10,7 @@ export type ShellKeyScrubbing = "enabled" | "disabled" | "failed"
 export type BatchTools = "registered" | "failed"
 export type ModelSource = "cache" | "catalog" | "discovery"
 export type CheckOutcome = "updated" | "unchanged" | "no-key" | "empty" | "rejected" | "failed"
+export type CheckTrigger = "automatic" | "manual"
 export type ReloadResult = "not-needed" | "succeeded" | "failed"
 
 export type ProviderModels = { id: string; count: number; titleModel: string | null }
@@ -22,6 +23,14 @@ export type LastCheck = {
   removed: string[]
   reason: string | null
   reload: ReloadResult
+  /**
+   * Absent in reports of plugins before 0.8.0, or when the value is not valid. While the report's
+   * `checking` is true, `trigger` and `requestId` describe the running check and the other fields
+   * are still the previous result.
+   */
+  trigger?: CheckTrigger
+  /** The ID of the panel request this check answers. `null`: not a panel request. Absent like `trigger`. */
+  requestId?: string | null
 }
 
 export type LastChange = { at: string; added: string[]; removed: string[] }
@@ -122,6 +131,17 @@ const textList = (value: unknown, field: string): string[] => {
 }
 
 const OUTCOMES: readonly CheckOutcome[] = ["updated", "unchanged", "no-key", "empty", "rejected", "failed"]
+
+/** A request ID is base64url text. Longer or other text is treated as absent. */
+const REQUEST_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+/** Optional fields from plugin 0.8.0. A bad value is dropped; it never makes the report invalid. */
+const checkOrigin = (raw: Raw): Pick<LastCheck, "trigger" | "requestId"> => {
+  const trigger = raw.trigger === "automatic" || raw.trigger === "manual" ? raw.trigger : undefined
+  const requestId =
+    raw.requestId === null ? null : typeof raw.requestId === "string" && REQUEST_ID.test(raw.requestId) ? raw.requestId : undefined
+  return { ...(trigger ? { trigger } : {}), ...(requestId !== undefined ? { requestId } : {}) }
+}
 const RELOADS: readonly ReloadResult[] = ["not-needed", "succeeded", "failed"]
 
 const readLastCheck = (value: unknown): LastCheck | null => {
@@ -135,6 +155,7 @@ const readLastCheck = (value: unknown): LastCheck | null => {
     removed: textList(raw.removed, "lastCheck.removed"),
     reason: nullableText(raw.reason, "lastCheck.reason"),
     reload: oneOf(raw.reload, RELOADS, "lastCheck.reload"),
+    ...checkOrigin(raw),
   }
 }
 

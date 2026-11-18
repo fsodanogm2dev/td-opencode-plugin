@@ -9,6 +9,7 @@ import type { Plugin } from "@opencode/plugin"
 import { setupFuelix } from "./fuelix/index.ts"
 import { setupGuards } from "./guards/index.ts"
 import { setupJev } from "./jev/index.ts"
+import { createFileManualCheckSource, type ManualCheckSource } from "./fuelix/manual-check.ts"
 import { createFileStatusWriter, type StatusReportWriter } from "./fuelix/status.ts"
 import { createLogger } from "./log.ts"
 import { parseOptions } from "./options.ts"
@@ -27,6 +28,8 @@ export interface PluginSteps {
   readonly setupFuelix: typeof setupFuelix
   readonly setupJev: typeof setupJev
   readonly statusReport: () => StatusReportWriter
+  /** Source of manual model check requests. The default reads the file below the home directory. */
+  readonly manualCheck?: () => ManualCheckSource
 }
 
 const defaultSteps: PluginSteps = { setupGuards, setupFuelix, setupJev, statusReport: createFileStatusWriter }
@@ -53,7 +56,10 @@ export function createPlugin(steps: PluginSteps = defaultSteps): Plugin.Plugin {
 
       // A FueliX setup failure is logged and does not stop OpenCode.
       try {
-        cleanups.push(await steps.setupFuelix(ctx, options.fuelix, log, { statusReport: steps.statusReport() }))
+        cleanups.push(await steps.setupFuelix(ctx, options.fuelix, log, {
+            statusReport: steps.statusReport(),
+            manualCheck: steps.manualCheck?.() ?? createFileManualCheckSource(),
+          }))
       } catch (error) {
         log.error("FueliX setup failed", { error: errorMessage(error) })
       }

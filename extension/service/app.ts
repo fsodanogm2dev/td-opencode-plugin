@@ -4,7 +4,8 @@
  *
  * The service is the only writer of guard intent. Nothing here executes, interprets, or broadens rules.
  */
-import { createHash, timingSafeEqual } from "node:crypto"
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto"
+import { join } from "node:path"
 import {
   ApiError,
   type Activation,
@@ -50,6 +51,8 @@ export interface AppOptions {
   /** `null` when the host gave no OpenCode access: viewing and releasing still work. */
   readonly bridge: SessionBridge | null
   readonly lockTimeoutMs?: number
+  /** A new request ID: 22 base64url characters. Tests replace it. */
+  readonly requestId?: () => string
   readonly log?: (code: string) => void
 }
 
@@ -116,6 +119,13 @@ function readDirectory(value: string | null): string | null {
   const absolute = value.startsWith("/") || /^[A-Za-z]:[\\/]/.test(value)
   if (!absolute || value.length > MAX_DIRECTORY_LENGTH || value.includes("\0")) throw new ApiError("INVALID_REQUEST")
   return value
+}
+
+/** Manual model check request: the file that the plugin polls. Contract: `src/fuelix/manual-check.ts`. */
+const MODEL_CHECK_VERSION = 1
+
+function newRequestId(): string {
+  return randomBytes(16).toString("base64url")
 }
 
 function stable(value: unknown): string {
@@ -337,6 +347,33 @@ export function createApp(options: AppOptions): App {
     })
   }
 
+  /**
+   * Writes `<root>/requests/model-check.json` atomically (temporary file, then rename). The plugin polls the file.
+   * The route holds no state: a new request replaces the previous file.
+   */
+  async function requestModelCheck(body: string | null): Promise<AppResponse> {
+    if (body !== null && body.trim() !== "") onlyKeys(parseJsonObject(body), [])
+    const requestId = (options.requestId ?? newRequestId)()
+    const requestedAt = new Date(runtime.now()).toISOString()
+    const text = JSON.stringify({ version: MODEL_CHECK_VERSION, requestId, requestedAt })
+    const dir = join(root, "requests")
+    const target = join(dir, "model-check.json")
+    const temporary = join(dir, `.model-check.${runtime.token()}.tmp`)
+    try {
+      await runtime.fs.mkdirp(dir, 0o700)
+      try {
+        await runtime.fs.writeNew(temporary, text, 0o600)
+        await runtime.fs.rename(temporary, target)
+      } catch (error) {
+        await runtime.fs.removeFile(temporary).catch(() => {})
+        throw error
+      }
+    } catch {
+      throw new ApiError("MODEL_CHECK_REQUEST_FAILED")
+    }
+    return { status: 202, body: { ok: true, data: { requestId, requestedAt } } }
+  }
+
   async function route(request: AppRequest, url: URL): Promise<AppResponse> {
     const { pathname } = url
     const method = request.method.toUpperCase()
@@ -350,6 +387,10 @@ export function createApp(options: AppOptions): App {
     if (pathname === "/state") {
       allowed("GET")
       return state(url.searchParams)
+    }
+    if (pathname === "/model-check") {
+      allowed("POST")
+      return requestModelCheck(request.body)
     }
     if (pathname === "/guards") {
       allowed("POST")

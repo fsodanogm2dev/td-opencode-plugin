@@ -1,7 +1,10 @@
 /**
  * Panel entry. Connects to OpenChamber and follows the current location and session.
  *
- * - Plugin setup: reads that location's saved report. It never writes files and never runs a model check.
+ * - Plugin setup: reads that location's saved report. It never writes files. Only when the user
+ *   selects Check models now, it sends one `POST /model-check` to this extension's service and then
+ *   reads the saved report again until the plugin answers. It never checks on open, on a timer, or
+ *   on a poll; the plugin's own automatic check is unchanged.
  * - Guards: reads and changes guards only through this extension's local service, and only after a
  *   user click. It calls the Small Model only when the user selects Generate. It never sends prompts
  *   or changes sessions.
@@ -9,10 +12,11 @@
 import { connectHost, type HostClient } from "@openchamber/sdk"
 import { applyHostReady } from "@openchamber/sdk/ui"
 
-import { createController, type Controller } from "./controller.ts"
+import { createController, type CheckRequester, type Controller, type Timers } from "./controller.ts"
 import { createGuardsController, type GuardsController } from "./guards/controller.ts"
 import { createGuardService } from "./guards/service.ts"
 import { createGuardsView, type GuardsView } from "./guards/view.ts"
+import { createCheckRequester } from "./model-check.ts"
 import { createView, type View } from "./view.ts"
 
 /** How often the panel reads the report again while it is open and visible. */
@@ -33,6 +37,12 @@ export type StartOptions = {
   now?: () => number
   /** Test seam for operation IDs. */
   opId?: () => string
+  /** Test seam: replaces the `POST /model-check` request. */
+  requestCheck?: CheckRequester
+  /** Test seams for the check's report polling. */
+  checkPollMs?: number
+  checkTimeoutMs?: number
+  timers?: Timers
 }
 
 export type Panel = {
@@ -51,20 +61,27 @@ export const startPanel = (options: StartOptions): Panel => {
 
   // `controller` is assigned right below; the view only calls back on a click.
   let controller: Controller
+  const embedded = win.parent !== win
+  const host = options.host ?? connectHost()
+  const requestCheck = options.requestCheck ?? createCheckRequester({ serviceRequest: (request) => host.serviceRequest(request) })
   const view = createView({
     root: options.root,
     onReload: () => controller.reload(),
+    onCheck: () => controller.checkNow(),
     locale: () => locale,
     ...(options.now ? { now: options.now } : {}),
   })
   controller = createController({
     reader: { readFile: (path) => host.readFile(path) },
     onChange: (state, cause) => view.render(state, cause),
+    requestCheck,
+    onCheckChange: (check) => view.renderCheck(check),
+    ...(options.checkPollMs !== undefined ? { checkPollMs: options.checkPollMs } : {}),
+    ...(options.checkTimeoutMs !== undefined ? { checkTimeoutMs: options.checkTimeoutMs } : {}),
+    ...(options.timers ? { timers: options.timers } : {}),
+    ...(options.now ? { now: options.now } : {}),
   })
   view.render(controller.state(), "host")
-
-  const embedded = win.parent !== win
-  const host = options.host ?? connectHost()
 
   let guards: GuardsController
   const guardsView = createGuardsView({

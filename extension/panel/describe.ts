@@ -2,6 +2,7 @@
  * Turns a parsed report into plain text for the panel. Pure: no DOM, no clock.
  * Times stay as ISO strings so the view can show them as absolute and relative text.
  */
+import type { ManualCheckFailure, ManualCheckState } from "./controller.ts"
 import { everyText, plural } from "./format.ts"
 import type { LastChange, LastCheck, ModelHistoryEntry, StatusReport } from "./report.ts"
 
@@ -183,7 +184,11 @@ const describeHistory = (report: StatusReport): HistoryView => {
   }
 }
 
-const describeCheck = (check: LastCheck | null, report: StatusReport, historyNote: HistoryNote): CheckView => {
+const describeCheck = (
+  check: LastCheck | null,
+  report: Pick<StatusReport, "lastSuccessfulCheckAt" | "checking">,
+  historyNote: HistoryNote,
+): CheckView => {
   if (check === null) {
     return {
       headline: "No check finished yet",
@@ -194,7 +199,11 @@ const describeCheck = (check: LastCheck | null, report: StatusReport, historyNot
       lastSuccess: null,
     }
   }
-  const reason = check.reason ? [`Reason: ${check.reason}`] : []
+  const reason = [
+    ...(check.reason ? [`Reason: ${check.reason}`] : []),
+    // While a check runs, `trigger` names the running check, not this result.
+    ...(check.trigger === "manual" && !report.checking ? [MANUAL_TEXT.startedHere] : []),
+  ]
   const lastSuccess = { at: report.lastSuccessfulCheckAt }
   const base = { finishedAt: check.finishedAt }
   switch (check.outcome) {
@@ -269,6 +278,171 @@ const describeCheck = (check: LastCheck | null, report: StatusReport, historyNot
         groups: notAppliedGroups(check.added, check.removed),
         lastSuccess,
       }
+  }
+}
+
+/** Text for the check the user started with Check models now. One place, so tests and reviews read the same words. */
+export const MANUAL_TEXT = {
+  title: "Check you started",
+  button: "Check models now",
+  buttonBusy: "Checking models…",
+  hint: "Asks FueliX for the model list now, through the plugin. It sends no prompt and uses no model.",
+  reload: "Reload saved report",
+  reloadHint: "Reload saved report reads the saved report again. It does not run a model check.",
+  requested: "Checking models…",
+  requestedBody: "The plugin got the request. The panel waits for its saved report.",
+  sending: "Asking the plugin to check FueliX.",
+  running: "Checking models…",
+  runningBody: "The plugin is asking FueliX for the model list now.",
+  waitingKept: "The saved report below stays on screen until the check finishes.",
+  checked: "Checked ",
+  tried: "Tried ",
+  startedHere: "Started with Check models now.",
+  timeout: "No plugin answered the check",
+  timeoutBody:
+    "The running plugin may be older than 0.8.0, or not loaded for this project. The saved report is unchanged.",
+  requestKept: "The saved report is unchanged.",
+  announceStart: "Checking models.",
+} as const
+
+export type ManualCheckView = {
+  tone: Tone
+  headline: string
+  notes: string[]
+  /** Text before the time, for example "Checked ". `null` when there is no time to show. */
+  timeLabel: string | null
+  at: string | null
+  groups: ModelGroup[]
+  /** The check is in flight. */
+  running: boolean
+  /** One sentence for the live region. */
+  announce: string
+}
+
+/** Actions for codes from OpenChamber or the extension service. Fixed text only. */
+export const CHECK_FAILURE: Record<string, { headline: string; action: string }> = {
+  MODEL_CHECK_REQUEST_FAILED: {
+    headline: "The service could not pass the check to the plugin",
+    action: "Select Check models now to try again.",
+  },
+  NO_SERVICE: {
+    headline: "The extension service is not running",
+    action: "Turn the extension off and on in Settings → Extensions, then try again.",
+  },
+  SERVICE_FAILED: {
+    headline: "The extension service stopped",
+    action: "Turn the extension off and on in Settings → Extensions, then try again.",
+  },
+  SERVICE_UNAVAILABLE: {
+    headline: "The extension service is not available",
+    action: "Wait a moment, then try again. If this does not stop, turn the extension off and on in Settings → Extensions.",
+  },
+  UNAUTHORIZED: {
+    headline: "The extension service refused the panel",
+    action: "Close this panel and open it again so it gets a new service token.",
+  },
+  NOT_FOUND: {
+    headline: "The extension service cannot run checks",
+    action: "The service is older than this panel. Update the extension in Settings → Extensions.",
+  },
+  NOT_GRANTED: {
+    headline: "The extension service is not approved",
+    action: "Approve this extension's service in Settings → Extensions, then try again.",
+  },
+  DISABLED: { headline: "The extension is paused", action: "Turn it on in Settings → Extensions, then try again." },
+  HOST_TIMEOUT: {
+    headline: "OpenChamber did not answer in time",
+    action: "The check may still run. Select Reload saved report in a minute to see its result.",
+  },
+  HOST_UNAVAILABLE: {
+    headline: "The panel lost its connection to OpenChamber",
+    action: "Close this panel and open it again.",
+  },
+}
+
+const failureText = (failure: ManualCheckFailure): { tone: Tone; headline: string; notes: string[] } => {
+  const known = CHECK_FAILURE[failure.code]
+  if (known) return { tone: failure.kind === "unclear" ? "warning" : "error", headline: known.headline, notes: [known.action] }
+  const message = failure.message.trim()
+  if (failure.kind === "unclear") {
+    return {
+      tone: "warning",
+      headline: "No answer from the extension service",
+      notes: [
+        ...(message ? [`Reason: ${message}`] : []),
+        "The check may still run. Select Reload saved report in a minute to see its result.",
+      ],
+    }
+  }
+  return {
+    tone: "error",
+    headline: "Could not start the check",
+    notes: [message ? `Reason: ${message}` : `Error code: ${failure.code}.`],
+  }
+}
+
+/**
+ * Text for the check the user started. Returns `null` when there is nothing to show
+ * (no check yet, or a check for another location).
+ */
+export const describeManualCheck = (state: ManualCheckState, directory: string | null | undefined): ManualCheckView | null => {
+  if (state.kind === "idle" || state.directory !== directory) return null
+  const inFlight = (headline: string, body: string, announce: string): ManualCheckView => ({
+    tone: "info",
+    headline,
+    notes: [body, MANUAL_TEXT.waitingKept],
+    timeLabel: null,
+    at: null,
+    groups: [],
+    running: true,
+    announce,
+  })
+  switch (state.kind) {
+    case "requested":
+      return state.requestId === null
+        ? inFlight(MANUAL_TEXT.requested, MANUAL_TEXT.sending, MANUAL_TEXT.announceStart)
+        : inFlight(MANUAL_TEXT.requested, MANUAL_TEXT.requestedBody, MANUAL_TEXT.announceStart)
+    case "running":
+      return inFlight(MANUAL_TEXT.running, MANUAL_TEXT.runningBody, "The plugin is checking models.")
+    case "failed": {
+      const { tone, headline, notes } = failureText(state.failure)
+      return {
+        tone,
+        headline,
+        notes: [...notes, MANUAL_TEXT.requestKept],
+        timeLabel: MANUAL_TEXT.tried,
+        at: state.at,
+        groups: [],
+        running: false,
+        announce: `Check did not start. ${headline}.`,
+      }
+    }
+    case "timeout":
+      return {
+        tone: "warning",
+        headline: MANUAL_TEXT.timeout,
+        notes: [MANUAL_TEXT.timeoutBody],
+        timeLabel: MANUAL_TEXT.tried,
+        at: state.at,
+        groups: [],
+        running: false,
+        announce: `${MANUAL_TEXT.timeout}.`,
+      }
+    case "done": {
+      // The card itself says the user started this check, so the trigger note is left out.
+      const { trigger: _trigger, ...check } = state.check
+      const view = describeCheck(check, { lastSuccessfulCheckAt: null, checking: false }, "none")
+      return {
+        tone: view.tone,
+        headline: view.headline,
+        notes: view.notes,
+        timeLabel: MANUAL_TEXT.checked,
+        at: state.check.finishedAt,
+        groups: view.groups,
+        running: false,
+        announce: `Model check result: ${view.headline}.`,
+      }
+    }
   }
 }
 

@@ -33,6 +33,7 @@ describe("fetchModelIDs", () => {
     }).catch((e) => e)
     expect(error).toBeInstanceOf(DiscoveryError)
     expect(error.status).toBe(401)
+    expect(error.kind).toBe("http")
     expect(error.message).toContain("401")
     expect(error.message).not.toContain(KEY)
   })
@@ -47,12 +48,14 @@ describe("fetchModelIDs", () => {
       },
     }).catch((e) => e)
     expect(error).toBeInstanceOf(DiscoveryError)
+    expect(error.kind).toBe("network")
     expect(error.message).not.toContain(KEY)
   })
 
   test("rejects an unexpected body", async () => {
     const error = await fetchModelIDs({ baseURL: "https://x.test", key: KEY, timeoutMs: 1000, fetch: async () => json({ nope: true }) }).catch((e) => e)
     expect(error).toBeInstanceOf(DiscoveryError)
+    expect(error.kind).toBe("invalid")
   })
 
   test("times out when fetch never answers", async () => {
@@ -60,6 +63,7 @@ describe("fetchModelIDs", () => {
     const error = await fetchModelIDs({ baseURL: "https://x.test", key: KEY, timeoutMs: 30, fetch: () => new Promise<Response>(() => {}) }).catch((e) => e)
     expect(error).toBeInstanceOf(DiscoveryError)
     expect(error.message).toContain("timed out")
+    expect(error.kind).toBe("timeout")
     expect(Date.now() - started).toBeLessThan(1000)
   })
 })

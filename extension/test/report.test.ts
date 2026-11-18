@@ -136,3 +136,41 @@ describe("matchesLocation", () => {
     expect(matchesLocation("/work/(a)/[redacted]", "/work/(a)/c")).toBe(true)
   })
 })
+
+describe("lastCheck trigger and requestId (plugin 0.8.0)", () => {
+  const withCheck = (fields: Record<string, unknown>) => ({ ...baseReport(), lastCheck: { ...baseReport().lastCheck, ...fields } })
+
+  test("reads valid values", () => {
+    const parsed = parseReport(json(withCheck({ trigger: "manual", requestId: "AbC-_0123456789abcdefgh" })))
+    expect(parsed.ok && parsed.report.lastCheck).toMatchObject({ trigger: "manual", requestId: "AbC-_0123456789abcdefgh" })
+    const automatic = parseReport(json(withCheck({ trigger: "automatic", requestId: null })))
+    expect(automatic.ok && automatic.report.lastCheck).toMatchObject({ trigger: "automatic", requestId: null })
+  })
+
+  test("an older report without the fields is valid and has neither", () => {
+    const parsed = parseReport(json(baseReport()))
+    expect(parsed.ok).toBe(true)
+    if (!parsed.ok) return
+    expect("trigger" in parsed.report.lastCheck!).toBe(false)
+    expect("requestId" in parsed.report.lastCheck!).toBe(false)
+  })
+
+  test("invalid values are dropped; the report stays valid", () => {
+    for (const fields of [
+      { trigger: "cron", requestId: 7 },
+      { trigger: 1, requestId: "<script>" },
+      { trigger: null, requestId: "x".repeat(65) },
+    ]) {
+      const parsed = parseReport(json(withCheck(fields)))
+      expect(parsed.ok, JSON.stringify(fields)).toBe(true)
+      if (!parsed.ok) continue
+      expect(parsed.report.lastCheck?.trigger).toBeUndefined()
+      expect(parsed.report.lastCheck?.requestId).toBeUndefined()
+    }
+  })
+
+  test("any reason text is plain text, not an enum", () => {
+    const parsed = parseReport(json(withCheck({ outcome: "failed", reason: "FueliX returned HTTP 418" })))
+    expect(parsed.ok && parsed.report.lastCheck?.reason).toBe("FueliX returned HTTP 418")
+  })
+})
