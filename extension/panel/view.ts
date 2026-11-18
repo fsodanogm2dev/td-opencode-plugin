@@ -1,7 +1,7 @@
 /**
  * Draws the panel. All report data goes in as text (`textContent`), never as HTML.
- * The header, the Reload report button, and the live region are mounted once, so
- * focus stays on the button across repaints.
+ * The header, the footer buttons (Check models now, Reload saved report), and the
+ * live region are mounted once, so focus stays on a button across repaints.
  */
 import {
   mountBadge,
@@ -15,10 +15,12 @@ import {
   type TabsHandle,
 } from "@openchamber/sdk/ui"
 
-import type { PanelState } from "./controller.ts"
+import { isCheckInFlight, type ManualCheckState, type PanelState } from "./controller.ts"
 import {
+  describeManualCheck,
   describeReport,
   HISTORY_TEXT,
+  MANUAL_TEXT,
   type HistoryEntryView,
   type HistoryView,
   type ModelGroup,
@@ -32,6 +34,8 @@ type Disposable = { dispose: () => void }
 export type ViewOptions = {
   root: HTMLElement
   onReload: () => void
+  /** Starts a model check. Without it, the panel shows no Check models now button. */
+  onCheck?: () => void
   now?: () => number
   locale?: () => string
 }
@@ -46,6 +50,8 @@ export type View = {
   /** Number of guards active in this session, shown on the Guards tab. */
   setGuardCount: (count: number) => void
   render: (state: PanelState, cause: string) => void
+  /** Shows the state of the check the user started. */
+  renderCheck: (check: ManualCheckState) => void
   /** Updates relative times and the "out of date" check without a full repaint. */
   tick: () => void
   dispose: () => void
@@ -76,7 +82,7 @@ const ERRORS: Record<string, { title: string; body: string }> = {
     body: `This extension can read only ${REPORT_FOLDER}/*.json. Add the extension again if this does not stop.`,
   },
   DISABLED: { title: "Extension paused", body: "Turn it on again in Settings → Extensions." },
-  HOST_TIMEOUT: { title: "OpenChamber did not answer", body: "Select Reload report to try again." },
+  HOST_TIMEOUT: { title: "OpenChamber did not answer", body: "Select Reload saved report to try again." },
   HOST_UNAVAILABLE: { title: "OpenChamber is not connected", body: "Close this panel and open it again." },
   DENIED: {
     title: "The system refused to read the report",
@@ -118,11 +124,19 @@ export const createView = (options: ViewOptions): View => {
   const content = h("div", "content")
   content.id = "content"
 
+  // Primary action first: a real check. The secondary action only reads the saved file.
   const footer = h("footer", "ftr")
+  const actions = h("div", "ftr-actions")
+  const checkSlot = h("div", "ftr-check")
   const buttonSlot = h("div", "ftr-button")
-  const hint = h("p", "ftr-hint", "Reads the saved report again. It does not run a model check.")
+  actions.append(...(options.onCheck ? [checkSlot] : []), buttonSlot)
+  const hints = h("div", "ftr-hints")
+  const checkHint = h("p", "ftr-hint", MANUAL_TEXT.hint)
+  checkHint.id = "check-hint"
+  const hint = h("p", "ftr-hint", MANUAL_TEXT.reloadHint)
   hint.id = "reload-hint"
-  footer.append(buttonSlot, hint)
+  hints.append(...(options.onCheck ? [checkHint] : []), hint)
+  footer.append(actions, hints)
 
   const live = h("p", "sr-only")
   live.setAttribute("aria-live", "polite")
@@ -159,18 +173,53 @@ export const createView = (options: ViewOptions): View => {
   }
   applyTab()
 
+  // A busy button is disabled, and a browser may then move focus to the page.
+  // The button that started the action takes focus back when the action ends.
+  type Action = "reload" | "check"
+  const focusBack: Record<Action, HTMLElement | null> = { reload: null, check: null }
+  const rememberFocus = (action: Action, slot: HTMLElement) => {
+    const node = slot.querySelector("button")
+    focusBack[action] = node && document.activeElement === node ? node : null
+  }
+  const restoreFocus = (action: Action) => {
+    const target = focusBack[action]
+    focusBack[action] = null
+    if (!target || !target.isConnected) return
+    const active = document.activeElement
+    if (active === null || active === document.body || active === target) target.focus()
+  }
+
   const button: ButtonHandle = mountButton(buttonSlot, {
-    label: "Reload report",
+    label: MANUAL_TEXT.reload,
     variant: "outline",
     size: "sm",
     disabled: true,
-    onClick: () => options.onReload(),
+    onClick: () => {
+      rememberFocus("reload", buttonSlot)
+      options.onReload()
+    },
   })
   buttonSlot.querySelector("button")?.setAttribute("aria-describedby", "reload-hint")
+
+  const onCheck = options.onCheck
+  const checkButton: ButtonHandle | null = onCheck
+    ? mountButton(checkSlot, {
+        label: MANUAL_TEXT.button,
+        variant: "default",
+        size: "sm",
+        disabled: true,
+        onClick: () => {
+          rememberFocus("check", checkSlot)
+          onCheck()
+        },
+      })
+    : null
+  checkSlot.querySelector("button")?.setAttribute("aria-describedby", "check-hint")
 
   let badge: BadgeHandle | null = null
   let mounted: Disposable[] = []
   let current: PanelState = { kind: "connecting" }
+  let manual: ManualCheckState = { kind: "idle" }
   let view: ReportView | null = null
   const times: Array<{ node: HTMLElement; iso: string; withAbsolute: boolean }> = []
 
@@ -314,6 +363,26 @@ export const createView = (options: ViewOptions): View => {
     }
   }
 
+  /** The check the user started. Drawn first: it is the newest thing on screen. */
+  const renderManual = (state: PanelState) => {
+    if (state.kind === "connecting" || state.kind === "no-host") return
+    const v = describeManualCheck(manual, state.directory)
+    if (!v) return
+    const node = section(MANUAL_TEXT.title, "sec-manual")
+    node.classList.add("manual")
+    node.dataset.tone = v.tone
+    if (v.running) node.setAttribute("aria-busy", "true")
+    const headline = h("p", "headline")
+    headline.dataset.tone = v.tone
+    const dot = h("span", v.running ? "dot pulse" : "dot")
+    dot.setAttribute("aria-hidden", "true")
+    headline.append(dot, h("span", "", v.headline))
+    node.append(headline)
+    if (v.timeLabel && v.at) line(node, "meta", v.timeLabel, v.at)
+    for (const note of v.notes) node.append(h("p", "note", note))
+    groups(node, v.groups, "manual")
+  }
+
   const renderReport = (state: Extract<PanelState, { kind: "report" }>) => {
     const v = describeReport(state.report, now())
     view = v
@@ -423,7 +492,9 @@ export const createView = (options: ViewOptions): View => {
     const canReload = state.kind !== "connecting" && state.kind !== "no-host" && state.kind !== "loading"
     const reloading = canReload && state.reloading
     button.update({ disabled: !canReload, loading: reloading })
+    paintCheckButton()
     if (state.kind !== "report") setBadge(null)
+    renderManual(state)
 
     switch (state.kind) {
       case "connecting": {
@@ -495,9 +566,31 @@ export const createView = (options: ViewOptions): View => {
 
     if (cause === "reload" && !reloading) {
       live.textContent = state.kind === "report" && !state.reloadError ? "Report reloaded." : "Report reload finished."
+      restoreFocus("reload")
     } else if (cause === "directory" && state.kind !== "loading") {
       live.textContent = ""
     }
+  }
+
+  const paintCheckButton = () => {
+    if (!checkButton) return
+    const connected = current.kind !== "connecting" && current.kind !== "no-host"
+    const running = isCheckInFlight(manual)
+    checkButton.update({
+      label: running ? MANUAL_TEXT.buttonBusy : MANUAL_TEXT.button,
+      disabled: !connected,
+      loading: running,
+    })
+  }
+
+  const renderCheck = (next: ManualCheckState) => {
+    const previous = manual
+    manual = next
+    render(current, "check")
+    const directory = current.kind === "connecting" || current.kind === "no-host" ? undefined : current.directory
+    const v = describeManualCheck(next, directory)
+    if (v && live.textContent !== v.announce) live.textContent = v.announce
+    if (isCheckInFlight(previous) && !isCheckInFlight(next)) restoreFocus("check")
   }
 
   const tick = () => {
@@ -529,11 +622,13 @@ export const createView = (options: ViewOptions): View => {
       if (focused) tabsSlot.querySelector<HTMLElement>(`[role=tab][aria-selected="true"]`)?.focus()
     },
     render,
+    renderCheck,
     tick,
     dispose: () => {
       clear()
       badge?.dispose()
       button.dispose()
+      checkButton?.dispose()
       tabs.dispose()
     },
   }

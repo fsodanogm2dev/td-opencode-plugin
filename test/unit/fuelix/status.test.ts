@@ -265,7 +265,7 @@ describe("status report lifecycle", () => {
       },
     })
     const done = await checkDone(c)
-    expect(done.lastCheck).toMatchObject({ outcome: "failed", reason: REASONS.checkFailed, reload: "not-needed" })
+    expect(done.lastCheck).toMatchObject({ outcome: "failed", reason: REASONS.unreachable, reload: "not-needed" })
     expect(JSON.stringify(c.reports)).not.toContain("ECONNREFUSED")
     expect(JSON.stringify(c.reports)).not.toContain(KEY)
     expect(log.lines.join("\n")).not.toContain(KEY)

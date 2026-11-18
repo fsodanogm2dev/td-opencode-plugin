@@ -39,11 +39,29 @@ export const REASONS = {
   providerEmptied: "Result would remove every model of a provider",
   keyRejected: "The gateway rejected the API key",
   checkFailed: "Model discovery check failed",
+  timedOut: "Model discovery timed out",
+  unreachable: "Could not reach FueliX",
+  invalidResponse: "FueliX returned an invalid model list",
   reloadFailed: "Provider reload failed",
   unexpected: "Unexpected status",
 } as const
 
-export type StatusReason = (typeof REASONS)[keyof typeof REASONS]
+/** Fixed text for an HTTP status other than 401 or 403. `status` is a 3-digit integer, so the text holds no data. */
+export function httpReason(status: number | undefined): string {
+  return Number.isInteger(status) && (status as number) >= 100 && (status as number) <= 599
+    ? `FueliX returned HTTP ${status}`
+    : REASONS.checkFailed
+}
+
+const HTTP_REASON_PATTERN = /^FueliX returned HTTP [1-5][0-9]{2}$/
+
+/** A text of `REASONS`, or the text of `httpReason`. */
+export type StatusReason = string
+
+export type CheckTrigger = "automatic" | "manual"
+
+/** Request IDs are 16 random bytes as base64url: 22 characters. */
+export const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/
 
 export interface StatusConfiguration {
   readonly refreshMinutes: number
@@ -72,6 +90,13 @@ export interface StatusCheck {
   /** One of `REASONS`, after scrubbing. */
   readonly reason: string | null
   readonly reload: ReloadResult
+  /**
+   * Additive and optional: absent in reports of older plugins. While `checking` is true, `trigger` and `requestId`
+   * describe the running check. The other fields then still describe the previous finished check.
+   */
+  readonly trigger?: CheckTrigger
+  /** The `requestId` of the manual request that started the check. `null` for an automatic check. */
+  readonly requestId?: string | null
 }
 
 export interface StatusChange {
@@ -244,7 +269,8 @@ function sanitizeHistory(history: ModelHistory | null, secrets: readonly string[
 
 /** A fixed reason text, scrubbed like every other string. Any other text becomes `REASONS.unexpected`. */
 function scrubReason(reason: unknown, secrets: readonly string[]): string {
-  const fixed = typeof reason === "string" && REASON_TEXTS.includes(reason) ? reason : REASONS.unexpected
+  const known = typeof reason === "string" && (REASON_TEXTS.includes(reason) || HTTP_REASON_PATTERN.test(reason))
+  const fixed = known ? (reason as string) : REASONS.unexpected
   return scrub(fixed, secrets)
 }
 
@@ -294,6 +320,15 @@ export function sanitizeReport(report: FuelixStatusReport, secrets: readonly str
           removed: ids(check.removed, secrets),
           reason: reason === null || reason === undefined ? null : scrubReason(reason, secrets),
           reload: oneOf<ReloadResult>(check.reload, RELOADS, "not-needed"),
+          ...(check.trigger === "automatic" || check.trigger === "manual"
+            ? {
+                trigger: check.trigger,
+                requestId:
+                  check.trigger === "manual" && typeof check.requestId === "string" && REQUEST_ID_PATTERN.test(check.requestId)
+                    ? check.requestId
+                    : null,
+              }
+            : {}),
         }
       : null,
     lastSuccessfulCheckAt: isoOrNull(report.lastSuccessfulCheckAt),

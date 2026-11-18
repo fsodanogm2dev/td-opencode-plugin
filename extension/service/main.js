@@ -1,6 +1,6 @@
 // service/main.ts
 import { homedir } from "node:os";
-import { join as join3 } from "node:path";
+import { join as join4 } from "node:path";
 
 // service/backend-port.ts
 import { createHash } from "node:crypto";
@@ -511,7 +511,8 @@ var backendSchema = {
 };
 
 // service/app.ts
-import { createHash as createHash2, timingSafeEqual } from "node:crypto";
+import { createHash as createHash2, randomBytes as randomBytes2, timingSafeEqual } from "node:crypto";
+import { join as join3 } from "node:path";
 
 // service/contract.ts
 var MESSAGES = {
@@ -536,6 +537,7 @@ var MESSAGES = {
   OUTCOME_UNKNOWN: "The change may already be applied. Reload the guard data or retry the same request.",
   SESSION_BRIDGE_UNAVAILABLE: "OpenCode access is unavailable, so the session cannot be verified.",
   SESSION_LOOKUP_FAILED: "OpenCode did not answer the session lookup.",
+  MODEL_CHECK_REQUEST_FAILED: "The model check request could not be written.",
   INTERNAL_ERROR: "The guard service failed unexpectedly."
 };
 var STATUS = {
@@ -560,6 +562,7 @@ var STATUS = {
   OUTCOME_UNKNOWN: 503,
   SESSION_BRIDGE_UNAVAILABLE: 503,
   SESSION_LOOKUP_FAILED: 503,
+  MODEL_CHECK_REQUEST_FAILED: 500,
   INTERNAL_ERROR: 503
 };
 
@@ -1452,6 +1455,10 @@ function readDirectory(value) {
     throw new ApiError("INVALID_REQUEST");
   return value;
 }
+var MODEL_CHECK_VERSION = 1;
+function newRequestId() {
+  return randomBytes2(16).toString("base64url");
+}
 function stable(value) {
   if (Array.isArray(value))
     return `[${value.map(stable).join(",")}]`;
@@ -1636,6 +1643,29 @@ function createApp(options) {
       bridge: bridgeStatus
     });
   }
+  async function requestModelCheck(body) {
+    if (body !== null && body.trim() !== "")
+      onlyKeys(parseJsonObject(body), []);
+    const requestId = (options.requestId ?? newRequestId)();
+    const requestedAt = new Date(runtime.now()).toISOString();
+    const text2 = JSON.stringify({ version: MODEL_CHECK_VERSION, requestId, requestedAt });
+    const dir = join3(root, "requests");
+    const target = join3(dir, "model-check.json");
+    const temporary = join3(dir, `.model-check.${runtime.token()}.tmp`);
+    try {
+      await runtime.fs.mkdirp(dir, 448);
+      try {
+        await runtime.fs.writeNew(temporary, text2, 384);
+        await runtime.fs.rename(temporary, target);
+      } catch (error) {
+        await runtime.fs.removeFile(temporary).catch(() => {});
+        throw error;
+      }
+    } catch {
+      throw new ApiError("MODEL_CHECK_REQUEST_FAILED");
+    }
+    return { status: 202, body: { ok: true, data: { requestId, requestedAt } } };
+  }
   async function route(request, url) {
     const { pathname } = url;
     const method = request.method.toUpperCase();
@@ -1650,6 +1680,10 @@ function createApp(options) {
     if (pathname === "/state") {
       allowed("GET");
       return state(url.searchParams);
+    }
+    if (pathname === "/model-check") {
+      allowed("POST");
+      return requestModelCheck(request.body);
     }
     if (pathname === "/guards") {
       allowed("POST");
@@ -1781,7 +1815,7 @@ if (!Number.isInteger(port) || port <= 0 || port > 65535 || !token) {
 var app = createApp({
   runtime: nodeRuntime(),
   schema: backendSchema,
-  root: join3(homedir(), ".td-opencode-plugin"),
+  root: join4(homedir(), ".td-opencode-plugin"),
   token,
   bridge: createSessionBridge(process.env),
   log: (code2) => console.error(`td-guards service: ${code2}`)

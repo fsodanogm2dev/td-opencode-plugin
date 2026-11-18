@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.0 (beta), 2026-11-18
+
+Both plugin and extension use version 0.8.0. Update both to use the new button.
+
+### Added
+
+- **Check models now** in the Plugin setup tab runs one model check on request, through the plugin, with the same key
+  resolution, drop protection, and history recording as the automatic check. The panel shows the result or the failure
+  and keeps the saved models and history visible. **Reload report** is renamed **Reload saved report**.
+
+### Changed
+
+- A failed check now names its cause: timeout, FueliX unreachable, an HTTP status, or an invalid model list. A rejected
+  key keeps its own message.
+
 ## 0.7.0 (beta), 2026-11-12
 
 This release adds shared model-change history to the TD-Plugin extension. Both plugin and extension use version 0.7.0.

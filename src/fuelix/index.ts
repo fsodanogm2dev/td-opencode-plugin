@@ -18,16 +18,20 @@ import {
 } from "./credentials.ts"
 import { createModelHistoryTracker, createStorageModelHistory, type ModelHistoryStore } from "./history.ts"
 import { DiscoveryError, fetchModelIDs, readCachedModels, writeCachedModels, type FetchFn } from "./discovery.ts"
+import { startManualCheckWatcher, type ManualCheckRequest, type ManualCheckSource } from "./manual-check.ts"
 import { buildModelInfo, buildProviderInfo, enrichFromUpstream, type BuiltModel } from "./models.ts"
 import { classifyKind, routeModel } from "./rules.ts"
 import {
   createStatusRecorder,
+  httpReason,
   REASONS,
   type AuthSource,
   type CheckOutcome,
+  type CheckTrigger,
   type ModelHistory,
   type ModelSource,
   type ReloadResult,
+  type StatusCheck,
   type StatusProvider,
   type StatusReason,
   type StatusReportWriter,
@@ -66,6 +70,12 @@ export interface FuelixDeps {
    * not `false`. The default is the store on `ctx.storage`. `null` turns the history off.
    */
   readonly modelHistory?: ModelHistoryStore | null
+  /**
+   * Source of manual check requests (`manual-check.ts`). Used only when a status report writer exists and
+   * `options.statusReport` is not `false`. Without it, the plugin never polls. `src/index.ts` injects the file source.
+   * The poll uses `setInterval` and `clearInterval` of these deps, with `source.intervalMs` or 2000 ms.
+   */
+  readonly manualCheck?: ManualCheckSource
 }
 
 /** A discovery result may drop at most this share of the current IDs. */
@@ -130,9 +140,20 @@ function authSourceFor(keys: ResolvedKeys): AuthSource {
   return keys.source === "env" ? "environment" : (keys.source ?? "none")
 }
 
+/** A fixed text for each kind of discovery failure. Never the error message. */
 function failureReason(error: unknown): StatusReason {
-  if (error instanceof DiscoveryError && (error.status === 401 || error.status === 403)) return REASONS.keyRejected
-  return REASONS.checkFailed
+  if (!(error instanceof DiscoveryError)) return REASONS.checkFailed
+  if (error.status === 401 || error.status === 403) return REASONS.keyRejected
+  switch (error.kind) {
+    case "timeout":
+      return REASONS.timedOut
+    case "network":
+      return REASONS.unreachable
+    case "http":
+      return httpReason(error.status)
+    case "invalid":
+      return REASONS.invalidResponse
+  }
 }
 
 interface BuiltSummary {
@@ -436,12 +457,25 @@ export async function setupFuelix(
     activation: state.activation,
   })
   let applied: { plan: Plan; summary: BuiltSummary } | undefined
+  const startedISO = startedAt.toISOString()
+  const noKeyCheck: StatusCheck = {
+    startedAt: startedISO,
+    finishedAt: startedISO,
+    outcome: "no-key",
+    added: [],
+    removed: [],
+    reason: REASONS.noKey,
+    reload: "not-needed",
+    trigger: "automatic",
+    requestId: null,
+  }
+  // The latest check as the report holds it. The running state of the next check starts from it.
+  let reportedCheck: StatusCheck | null = state.keys.key ? null : noKeyCheck
   let recorder: ReturnType<typeof createStatusRecorder> | undefined
   if (writeReport) {
     try {
       const summary = summarize(plan)
       applied = { plan, summary }
-      const startedISO = startedAt.toISOString()
       recorder = createStatusRecorder({
         directory,
         startedAt,
@@ -461,17 +495,7 @@ export async function setupFuelix(
           },
           models: { source: modelsSource.value, providers: summary.providers },
           // Without a key, no check runs at startup. The snapshot says so.
-          lastCheck: state.keys.key
-            ? null
-            : {
-                startedAt: startedISO,
-                finishedAt: startedISO,
-                outcome: "no-key",
-                added: [],
-                removed: [],
-                reason: REASONS.noKey,
-                reload: "not-needed",
-              },
+          lastCheck: reportedCheck,
           lastSuccessfulCheckAt: null,
           lastChange: null,
           ...(modelHistory !== undefined ? { modelHistory } : {}),
@@ -489,9 +513,17 @@ export async function setupFuelix(
   let disposed = false
   let running = false
   let needsReload = false // A reload failed. The next cycle retries it.
-  const discover = async (skipKeys = false): Promise<void> => {
-    if (disposed || running) return
+  // A manual request that arrived during a check. The running check began before it, so it needs its own run.
+  let queuedManual: ManualCheckRequest | undefined
+  const discover = async (skipKeys = false, manual?: ManualCheckRequest): Promise<void> => {
+    if (disposed) return
+    if (running) {
+      if (manual) queuedManual = manual
+      return
+    }
     running = true
+    const trigger: CheckTrigger = manual ? "manual" : "automatic"
+    const requestId = manual?.requestId ?? null
     const checkStarted = now()
     let outcome: CheckOutcome | undefined
     let reason: StatusReason | null = null
@@ -503,26 +535,46 @@ export async function setupFuelix(
       const finishedISO = finished.toISOString()
       const finalOutcome = outcome ?? "unchanged"
       const reported = finalOutcome === "updated"
+      reportedCheck = {
+        startedAt: checkStarted.toISOString(),
+        finishedAt: finishedISO,
+        outcome: finalOutcome,
+        added: reported ? added : [],
+        removed: reported ? removed : [],
+        reason,
+        reload,
+        trigger,
+        requestId,
+      }
       recorder.update({
         checking: false,
         configuration: reportConfiguration(),
         ...(applied ? { models: { source: modelsSource.value, providers: applied.summary.providers } } : {}),
-        lastCheck: {
-          startedAt: checkStarted.toISOString(),
-          finishedAt: finishedISO,
-          outcome: finalOutcome,
-          added: reported ? added : [],
-          removed: reported ? removed : [],
-          reason,
-          reload,
-        },
+        lastCheck: reportedCheck,
         ...(finalOutcome === "updated" || finalOutcome === "unchanged" ? { lastSuccessfulCheckAt: finishedISO } : {}),
         ...(change ? { lastChange: { at: finishedISO, added, removed } } : {}),
         ...(modelHistory !== undefined ? { modelHistory } : {}),
       })
     }
     try {
-      recorder?.update({ checking: true })
+      if (recorder) {
+        // While the check runs, `trigger` and `requestId` describe it. The other fields still describe the previous
+        // finished check. A manual check without a previous one gets a provisional record.
+        const previous =
+          reportedCheck ??
+          (manual
+            ? ({
+                startedAt: checkStarted.toISOString(),
+                finishedAt: checkStarted.toISOString(),
+                outcome: "unchanged",
+                added: [],
+                removed: [],
+                reason: null,
+                reload: "not-needed",
+              } satisfies StatusCheck)
+            : null)
+        recorder.update({ checking: true, ...(previous ? { lastCheck: { ...previous, trigger, requestId } } : {}) })
+      }
       let activationChanged = false
       if (!skipKeys) {
         const next = await resolveKeys(resolveInput)
@@ -613,6 +665,9 @@ export async function setupFuelix(
       finishCheck([], [], false)
     } finally {
       running = false
+      const next = queuedManual
+      queuedManual = undefined
+      if (next && !disposed) void discover(false, next)
     }
   }
 
@@ -643,8 +698,27 @@ export async function setupFuelix(
     ;(interval as { unref?: () => void } | undefined)?.unref?.()
   }
 
+  // 9. Manual check requests. They need the status report, which shows the result to the user.
+  let stopManualWatcher: (() => void) | undefined
+  if (recorder && deps.manualCheck) {
+    try {
+      stopManualWatcher = startManualCheckWatcher({
+        source: deps.manualCheck,
+        now,
+        startedAt,
+        log,
+        setInterval: startInterval,
+        clearInterval: stopInterval,
+        onRequest: (request) => void discover(false, request),
+      })
+    } catch {
+      log.warn("FueliX manual model check not started")
+    }
+  }
+
   return async () => {
     disposed = true
+    stopManualWatcher?.()
     recorder?.close() // Disposal writes no report.
     tracker?.close()
     if (interval !== undefined) stopInterval(interval)
