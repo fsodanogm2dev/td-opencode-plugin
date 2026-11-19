@@ -29,7 +29,7 @@ Use OpenChamber 2.7.0 or later on web or desktop. Mobile and VS Code do not load
 In **Settings → Extensions**, add:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.8.0
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.8.1
 ```
 
 Review and approve report access, Small Model and session access, the local guard service, and **Add a plugin to OpenCode**.
@@ -50,14 +50,14 @@ host's bundled plugin. Enterprise mode allows bundled plugins only from administ
 ### Extension-only folder with a standalone plugin
 
 For custom plugin options, keep the standalone OpenCode plugin installation and add only the clone's `extension/`
-folder. Use plugin version 0.8.0 for shared model history and Check models now. This folder does not install a plugin.
+folder. Use plugin version 0.8.1 for shared model history and Check models now. This folder does not install a plugin.
 
 To rebuild the extension during development:
 
 ```bash
 cd extension
 bun install
-bun run build
+bun run build:all
 bun run check
 ```
 
@@ -67,7 +67,7 @@ permissions. Open **TD-Plugin extension** from the rail while viewing the projec
 The built JavaScript ships with both packages. OpenChamber does not compile TypeScript when it installs them.
 
 For a combined folder install from a clone, add the repository root, not `extension/`. To rebuild both components,
-install dependencies at the root and in `extension/`, then run `bun run build` from the root.
+install dependencies at the root and in `extension/`, then run `bun run build:all` from the root.
 
 ## Reports and permissions
 
@@ -103,7 +103,7 @@ The report is still a saved snapshot. If a plugin stops during discovery, it can
 available and then at `refreshMinutes` intervals.
 
 **Check models now** runs one check on request. The extension service writes a request file,
-`~/.td-opencode-plugin/requests/model-check.json`. Each running plugin (0.8.0 or later) reads it within about 2 seconds
+`~/.td-opencode-plugin/requests/model-check.json`. Each running plugin (0.8.1 or later) reads it within about 2 seconds
 and runs its normal check, with the same key resolution and safety rules. If a check is already running, one more check
 follows it. The panel waits up to 45 seconds for the result. If no plugin answers, the saved report stays unchanged. The
 request sends no prompt and uses no model. The default interval is 60 minutes; `0` disables periodic discovery.
@@ -126,7 +126,7 @@ Older reports without a history field still show the latest check and their curr
 From the repository root:
 
 ```bash
-bun run build
+bun run build:all
 bun run test
 bun run typecheck
 bun run extension:typecheck

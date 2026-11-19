@@ -1,6 +1,6 @@
 {
   "name": "td-opencode-plugin-status",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "OpenChamber extension for td-opencode-plugin: plugin setup report and execution guards.",
   "license": "UNLICENSED",

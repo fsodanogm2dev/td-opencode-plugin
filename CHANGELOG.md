@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1 (beta), 2026-11-18
+
+### Fixed
+
+- Installing the plugin from git (`github:fsodanogm2dev/td-opencode-plugin#<tag>`) failed in OpenCode with "git dep
+  preparation failed". npm prepares a git dependency when the package has a `build` script, and that step fails inside
+  OpenCode. The root script is now `build:all`, and a test keeps such scripts out of the root package.
+
 ## 0.8.0 (beta), 2026-11-18
 
 Both plugin and extension use version 0.8.0. Update both to use the new button.

@@ -34,6 +34,14 @@ interface RootManifest {
 const readJson = async <T>(path: string): Promise<T> => JSON.parse(await readFile(path, "utf8")) as T
 
 describe("root package manifest", () => {
+  test("has no script that makes npm prepare a git install", async () => {
+    // npm (pacote) runs a full dependency install and build in the clone when any of these scripts exists.
+    // Inside OpenCode that step fails, so `github:` installs of the plugin would never load.
+    const pkg = await readJson<{ scripts?: Record<string, string> }>(join(ROOT, "package.json"))
+    const triggers = ["build", "prepare", "prepack", "preinstall", "install", "postinstall"]
+    expect(triggers.filter((name) => pkg.scripts?.[name] !== undefined)).toEqual([])
+  })
+
   test("declares the OpenChamber extension with the standalone OpenCode plugin", async () => {
     const pkg = await readJson<RootManifest>(join(ROOT, "package.json"))
     expect(pkg.openchamber).toEqual({
