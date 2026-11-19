@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.2 (beta), 2026-11-18
+
+### Changed
+
+- The panel header labels the location line **Project**, so it is not read as the plugin's install location. A new
+  line quotes the exact plugin version from the report and where the plugin was loaded from: OpenChamber extension,
+  git package, npm package, or local folder. The report records only that category (`pluginSource`), never the path.
+  Older reports show the version only.
+
 ## 0.8.1 (beta), 2026-11-18
 
 ### Fixed

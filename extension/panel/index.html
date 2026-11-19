@@ -37,6 +37,15 @@
         color: var(--oc-muted, gray);
       }
       .hdr-place { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+      /* Small labels say what each header line names: the project, then the plugin that wrote the report. */
+      .hdr-label {
+        display: inline-block; margin-right: 6px; transform: translateY(-1px);
+        font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+        color: var(--oc-muted, gray);
+      }
+      .hdr-label[hidden] { display: none; }
+      .hdr-plugin { margin-top: 3px; font-size: 12px; color: var(--oc-fg, inherit); overflow-wrap: anywhere; }
+      .hdr-plugin[hidden] { display: none; }
       .hdr-path {
         font-family: var(--oc-mono, monospace); font-size: 11px; color: var(--oc-muted, gray);
         overflow-wrap: anywhere;

@@ -17,6 +17,7 @@ import { homedir as osHomedir } from "node:os"
 import { join } from "node:path"
 import pkg from "../../package.json" with { type: "json" }
 import { redact, type Logger } from "../log.ts"
+import { currentPluginSource, PLUGIN_SOURCES, type PluginSource } from "./plugin-source.ts"
 
 export const STATUS_REPORT_VERSION = 1
 
@@ -138,6 +139,8 @@ export const MAX_HISTORY_ENTRIES = 50
 export interface FuelixStatusReport {
   readonly version: 1
   readonly pluginVersion: string
+  /** Where the running plugin was loaded from. Absent in reports of older plugins. The path is never recorded. */
+  readonly pluginSource?: PluginSource
   /** Location that produced the report. `null` is the global location. */
   readonly directory: string | null
   readonly startedAt: string
@@ -283,6 +286,9 @@ export function sanitizeReport(report: FuelixStatusReport, secrets: readonly str
   return {
     version: STATUS_REPORT_VERSION,
     pluginVersion: text(report.pluginVersion, secrets),
+    ...(typeof report.pluginSource === "string" && PLUGIN_SOURCES.includes(report.pluginSource as PluginSource)
+      ? { pluginSource: report.pluginSource }
+      : {}),
     directory: typeof report.directory === "string" ? text(report.directory, secrets) : null,
     startedAt: iso(report.startedAt),
     recordedAt: iso(report.recordedAt),
@@ -416,6 +422,8 @@ export interface StatusRecorderInput {
   /** Secrets known now. The recorder also remembers earlier values, so a rotated key stays redacted. */
   readonly secrets: () => readonly (string | undefined)[]
   readonly pluginVersion?: string
+  /** Defaults to the detection from this module's URL. */
+  readonly pluginSource?: PluginSource
 }
 
 function errorCode(error: unknown): string | undefined {
@@ -455,6 +463,7 @@ export function createStatusRecorder(input: StatusRecorderInput): StatusRecorder
       {
         version: STATUS_REPORT_VERSION,
         pluginVersion: input.pluginVersion ?? PLUGIN_VERSION,
+        pluginSource: input.pluginSource ?? currentPluginSource(),
         directory: input.directory,
         startedAt: input.startedAt.toISOString(),
         recordedAt: input.now().toISOString(),
