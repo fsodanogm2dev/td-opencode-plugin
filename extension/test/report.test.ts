@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 
-import { matchesLocation, parseReport } from "../panel/report.ts"
+import { matchesLocation, parseReport, type PluginSource } from "../panel/report.ts"
 import { baseReport, json, scenarios } from "./support/fixtures.ts"
 
 describe("parseReport", () => {
@@ -172,5 +172,27 @@ describe("lastCheck trigger and requestId (plugin 0.8.0)", () => {
   test("any reason text is plain text, not an enum", () => {
     const parsed = parseReport(json(withCheck({ outcome: "failed", reason: "FueliX returned HTTP 418" })))
     expect(parsed.ok && parsed.report.lastCheck?.reason).toBe("FueliX returned HTTP 418")
+  })
+})
+
+describe("pluginSource", () => {
+  test("reads each install source", () => {
+    for (const source of ["extension", "git", "npm", "folder"]) {
+      const parsed = parseReport(json({ ...baseReport(), pluginSource: source }))
+      expect(parsed.ok ? parsed.report.pluginSource : null).toBe(source as PluginSource)
+    }
+  })
+
+  test("an older report without it is valid and has none", () => {
+    const parsed = parseReport(json(baseReport()))
+    expect(parsed.ok && "pluginSource" in parsed.report).toBe(false)
+  })
+
+  test("an invalid value is dropped; the report stays valid", () => {
+    for (const value of ["github", "", 3, null, { kind: "git" }]) {
+      const parsed = parseReport(json({ ...baseReport(), pluginSource: value }))
+      expect(parsed.ok, JSON.stringify(value)).toBe(true)
+      expect(parsed.ok && parsed.report.pluginSource).toBeUndefined()
+    }
   })
 })

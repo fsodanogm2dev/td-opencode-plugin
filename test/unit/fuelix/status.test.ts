@@ -539,6 +539,47 @@ describe("sanitizeReport", () => {
     expect(clean.lastCheck).toMatchObject({ startedAt: "1970-01-01T00:00:00.000Z", outcome: "failed", reason: REASONS.unexpected, reload: "not-needed" })
   })
 
+  test("keeps a valid pluginSource, omits an invalid or absent one", () => {
+    expect(sanitizeReport({ ...base(), pluginSource: "extension" }).pluginSource).toBe("extension")
+    for (const bad of ["/Users/me/.config/openchamber/extensions/x", "EXTENSION", 3, null, {}]) {
+      const clean = sanitizeReport({ ...base(), pluginSource: bad } as unknown as FuelixStatusReport)
+      expect("pluginSource" in clean).toBe(false)
+    }
+    expect("pluginSource" in sanitizeReport(base())).toBe(false)
+  })
+
+  test("the recorder adds the detected or injected pluginSource", async () => {
+    const reports: FuelixStatusReport[] = []
+    const make = (pluginSource?: "git") =>
+      createStatusRecorder({
+        directory: null,
+        startedAt: new Date(0),
+        now: () => new Date(0),
+        write: async (report) => {
+          reports.push(report)
+        },
+        log: createMemoryLogger(),
+        initial: {
+          checking: false,
+          configuration: base().configuration,
+          models: { source: "catalog", providers: [] },
+          lastCheck: null,
+          lastSuccessfulCheckAt: null,
+          lastChange: null,
+        },
+        secrets: () => [],
+        ...(pluginSource ? { pluginSource } : {}),
+      })
+    const injected = make("git")
+    injected.update({})
+    await injected.flush()
+    const detected = make()
+    detected.update({})
+    await detected.flush()
+    expect(reports[0]!.pluginSource).toBe("git")
+    expect(reports[1]!.pluginSource).toBe("folder") // This test file runs from a source checkout.
+  })
+
   test("redacts exact keys and secret-like tokens and keeps everything else in full", () => {
     const other = "custom-secret-value-123"
     const report = base()

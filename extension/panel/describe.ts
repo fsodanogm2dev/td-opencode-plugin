@@ -4,7 +4,7 @@
  */
 import type { ManualCheckFailure, ManualCheckState } from "./controller.ts"
 import { everyText, plural } from "./format.ts"
-import type { LastChange, LastCheck, ModelHistoryEntry, StatusReport } from "./report.ts"
+import type { LastChange, LastCheck, ModelHistoryEntry, PluginSource, StatusReport } from "./report.ts"
 
 export type Tone = "neutral" | "success" | "warning" | "error" | "info"
 
@@ -75,6 +75,18 @@ export type HistoryView =
   | { kind: "message"; title: string; body: string | null; tone: Tone }
 
 export type ProviderView = { id: string; count: string; titleModel: string }
+
+/** How the header names each plugin install source. */
+export const PLUGIN_SOURCE_LABEL: Record<PluginSource, string> = {
+  extension: "OpenChamber extension",
+  git: "git package",
+  npm: "npm package",
+  folder: "local folder",
+}
+
+/** The header's plugin line without its "Plugin" label: the version as reported, then the source when known. */
+export const pluginDetail = (report: Pick<StatusReport, "pluginVersion" | "pluginSource">): string =>
+  report.pluginSource ? `${report.pluginVersion} · ${PLUGIN_SOURCE_LABEL[report.pluginSource]}` : report.pluginVersion
 
 export type ReportView = {
   pluginVersion: string

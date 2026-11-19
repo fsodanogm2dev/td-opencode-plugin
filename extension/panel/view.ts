@@ -21,6 +21,7 @@ import {
   describeReport,
   HISTORY_TEXT,
   MANUAL_TEXT,
+  pluginDetail,
   type HistoryEntryView,
   type HistoryView,
   type ModelGroup,
@@ -101,10 +102,22 @@ export const createView = (options: ViewOptions): View => {
   const header = h("header", "hdr")
   const headerText = h("div", "hdr-text")
   const title = h("h1", "hdr-title", "TD-Plugin extension")
-  const place = h("p", "hdr-place", "Connecting to OpenChamber…")
+  // The location line names the project the report describes, not where the plugin loads from.
+  const label = (text: string) => h("span", "hdr-label", text)
+  const place = h("p", "hdr-place")
+  const placeLabel = label("Project")
+  const placeName = h("span", "hdr-name", "Connecting to OpenChamber…")
+  // A space between label and value, so the text reads "Project name" to screen readers and in copies.
+  place.append(placeLabel, " ", placeName)
+  placeLabel.hidden = true
   const placePath = h("p", "hdr-path")
   placePath.hidden = true
-  headerText.append(title, place, placePath)
+  // Which plugin wrote the report on screen. Shown only while a report is loaded.
+  const plugin = h("p", "hdr-plugin")
+  const pluginText = h("span", "hdr-plugin-detail")
+  plugin.append(label("Plugin"), " ", pluginText)
+  plugin.hidden = true
+  headerText.append(title, place, placePath, plugin)
   const badgeSlot = h("div", "hdr-badge")
   header.append(headerText, badgeSlot)
 
@@ -250,20 +263,28 @@ export const createView = (options: ViewOptions): View => {
 
   const setPlace = (directory: string | null | undefined) => {
     if (directory === undefined) {
-      place.textContent = "Connecting to OpenChamber…"
+      placeLabel.hidden = true
+      placeName.textContent = "Connecting to OpenChamber…"
       placePath.hidden = true
       return
     }
     if (directory === null) {
-      place.textContent = "No project open"
+      placeLabel.hidden = true
+      placeName.textContent = "No project open"
       placePath.textContent = "Report for sessions without a project"
       placePath.title = ""
     } else {
-      place.textContent = basename(directory)
+      placeLabel.hidden = false
+      placeName.textContent = basename(directory)
       placePath.textContent = directory
       placePath.title = directory
     }
     placePath.hidden = false
+  }
+
+  const setPlugin = (detail: string | null) => {
+    plugin.hidden = detail === null
+    pluginText.textContent = detail ?? ""
   }
 
   const section = (heading: string, id: string): HTMLElement => {
@@ -494,6 +515,7 @@ export const createView = (options: ViewOptions): View => {
     button.update({ disabled: !canReload, loading: reloading })
     paintCheckButton()
     if (state.kind !== "report") setBadge(null)
+    setPlugin(state.kind === "report" ? pluginDetail(state.report) : null)
     renderManual(state)
 
     switch (state.kind) {
@@ -504,7 +526,8 @@ export const createView = (options: ViewOptions): View => {
         break
       }
       case "no-host":
-        place.textContent = "Not connected"
+        placeLabel.hidden = true
+        placeName.textContent = "Not connected"
         if (state.reason === "not-embedded") {
           empty("Open this panel in OpenChamber", "Add this folder in OpenChamber under Settings → Extensions.")
         } else if (state.reason === "no-answer") {

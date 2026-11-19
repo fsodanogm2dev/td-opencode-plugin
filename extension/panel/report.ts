@@ -9,6 +9,8 @@ export type Activation = "enabled" | "auto"
 export type ShellKeyScrubbing = "enabled" | "disabled" | "failed"
 export type BatchTools = "registered" | "failed"
 export type ModelSource = "cache" | "catalog" | "discovery"
+/** How the plugin was installed. */
+export type PluginSource = "extension" | "git" | "npm" | "folder"
 export type CheckOutcome = "updated" | "unchanged" | "no-key" | "empty" | "rejected" | "failed"
 export type CheckTrigger = "automatic" | "manual"
 export type ReloadResult = "not-needed" | "succeeded" | "failed"
@@ -59,6 +61,8 @@ export const MODEL_HISTORY_MAX = 50
 export type StatusReport = {
   version: 1
   pluginVersion: string
+  /** Absent in reports of older plugins, or when the value is not valid. */
+  pluginSource?: PluginSource
   directory: string | null
   startedAt: string
   recordedAt: string
@@ -229,6 +233,12 @@ const readProviders = (value: unknown): ProviderModels[] => {
   })
 }
 
+const PLUGIN_SOURCES: readonly PluginSource[] = ["extension", "git", "npm", "folder"]
+
+/** Optional. A bad value is dropped; it never makes the report invalid. */
+const pluginSource = (value: unknown): Pick<StatusReport, "pluginSource"> =>
+  typeof value === "string" && (PLUGIN_SOURCES as readonly string[]).includes(value) ? { pluginSource: value as PluginSource } : {}
+
 const readReport = (raw: Raw): StatusReport => {
   const configuration = object(raw.configuration, "configuration")
   const authHooks = object(configuration.authHooks, "configuration.authHooks")
@@ -236,6 +246,7 @@ const readReport = (raw: Raw): StatusReport => {
   return {
     version: 1,
     pluginVersion: text(raw.pluginVersion, "pluginVersion"),
+    ...pluginSource(raw.pluginSource),
     directory: raw.directory === null ? null : text(raw.directory, "directory"),
     startedAt: isoTime(raw.startedAt, "startedAt"),
     recordedAt: isoTime(raw.recordedAt, "recordedAt"),

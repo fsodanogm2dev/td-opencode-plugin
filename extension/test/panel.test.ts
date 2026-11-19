@@ -612,3 +612,88 @@ describe("Check models now", () => {
     expect(text(root.querySelector('[aria-labelledby="sec-check"]')!)).toContain("2 models added, 1 removed")
   })
 })
+
+describe("header", () => {
+  const visible = (node: Element | null) => node !== null && !(node as HTMLElement).hidden
+  const placeText = (root: HTMLElement) => {
+    const place = root.querySelector<HTMLElement>(".hdr-place")!
+    return [...place.children].filter(visible).map((n) => n.textContent).join(" ")
+  }
+  const pluginLine = (root: HTMLElement) => root.querySelector<HTMLElement>(".hdr-plugin")!
+
+  test("labels the project, and names the plugin and its install source", async () => {
+    const { root, mock } = await start()
+    await serve(mock, PROJECT, json({ ...scenarios.added, pluginVersion: "0.8.1", pluginSource: "extension" }))
+    mock.ready(PROJECT)
+    await tick()
+    expect(placeText(root)).toBe("Project example-project")
+    expect(root.querySelector(".hdr-path")?.textContent).toBe(PROJECT)
+    expect(visible(pluginLine(root))).toBe(true)
+    expect(pluginLine(root).textContent).toBe("Plugin 0.8.1 · OpenChamber extension")
+    // The footer names the same version.
+    expect(text(root)).toContain("Plugin 0.8.1 saved this report")
+  })
+
+  test("each source has its own label; the version is quoted as reported", async () => {
+    const { root, mock } = await start()
+    const labels = { git: "git package", npm: "npm package", folder: "local folder" } as const
+    mock.ready(PROJECT)
+    await tick()
+    for (const [source, label] of Object.entries(labels)) {
+      await serve(mock, PROJECT, json({ ...scenarios.added, pluginVersion: "v0.8.1-rc.1", pluginSource: source }))
+      button(root, "Reload saved report").click()
+      await tick(6)
+      expect(pluginLine(root).textContent).toBe(`Plugin v0.8.1-rc.1 · ${label}`)
+    }
+  })
+
+  test("an older report shows the version only", async () => {
+    const { root, mock } = await start()
+    await serve(mock, PROJECT, json({ ...scenarios.added, pluginVersion: "0.7.0" }))
+    mock.ready(PROJECT)
+    await tick()
+    expect(pluginLine(root).textContent).toBe("Plugin 0.7.0")
+  })
+
+  test("an invalid source shows the version only and the report still loads", async () => {
+    const { root, mock } = await start()
+    await serve(mock, PROJECT, json({ ...scenarios.added, pluginVersion: "0.8.1", pluginSource: "github" }))
+    mock.ready(PROJECT)
+    await tick()
+    expect(pluginLine(root).textContent).toBe("Plugin 0.8.1")
+    expect(text(root)).toContain("2 models added, 1 removed")
+  })
+
+  test("without a loaded report there is no plugin line", async () => {
+    const { root, mock } = await start()
+    expect(visible(pluginLine(root))).toBe(false)
+    mock.ready(PROJECT)
+    await tick()
+    expect(text(root)).toContain("No report for this location")
+    expect(placeText(root)).toBe("Project example-project")
+    expect(visible(pluginLine(root))).toBe(false)
+    expect(pluginLine(root).textContent).toBe("Plugin ")
+  })
+
+  test("a report that loses its file hides the plugin line again", async () => {
+    const { root, mock } = await start()
+    await serve(mock, PROJECT, json({ ...scenarios.added, pluginSource: "npm" }))
+    mock.ready(PROJECT)
+    await tick()
+    expect(visible(pluginLine(root))).toBe(true)
+    mock.files.delete(await reportPath(PROJECT))
+    button(root, "Reload saved report").click()
+    await tick(6)
+    expect(visible(pluginLine(root))).toBe(false)
+  })
+
+  test("no project and not connected show no Project label", async () => {
+    const { root, mock } = await start()
+    expect(placeText(root)).toBe("Connecting to OpenChamber…")
+    await serve(mock, null, json(scenarios.global))
+    mock.ready(null)
+    await tick()
+    expect(placeText(root)).toBe("No project open")
+    expect(pluginLine(root).textContent).toBe("Plugin 0.4.0")
+  })
+})
