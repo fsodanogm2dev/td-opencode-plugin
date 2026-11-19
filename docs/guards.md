@@ -109,7 +109,7 @@ for the current location; a missing or stale report is not proof that guards are
 In OpenChamber desktop, open **Settings → Extensions** and add:
 
 ```text
-https://github.com/fsodanogm2dev/td-opencode-plugin#v0.8.0
+https://github.com/fsodanogm2dev/td-opencode-plugin#v0.8.1
 ```
 
 Remove a previous manual `td-opencode-plugin` entry before using the combined package. Do not load two copies.

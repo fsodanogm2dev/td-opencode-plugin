@@ -1,6 +1,6 @@
 {
   "name": "td-opencode-plugin",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "OpenCode V2 plugin for TELUS Digital: FueliX model catalog, secure key handling, and accurate usage.",
   "type": "module",
@@ -26,7 +26,7 @@
     "test": "bun test test/unit",
     "test:integration": "bun test test/integration --timeout 180000",
     "typecheck": "tsc --noEmit",
-    "build": "bun run extension:build && bun run plugin:build",
+    "build:all": "bun run extension:build && bun run plugin:build",
     "plugin:build": "bun scripts/build-extension-plugin.ts",
     "plugin:check": "bun scripts/build-extension-plugin.ts --check",
     "extension:build": "cd extension && bun run build",
